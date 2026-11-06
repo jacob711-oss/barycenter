@@ -216,6 +216,10 @@ body.mDemo .rail,body.mDemo .campad,body.mDemo .hint,body.mDemo .insp,body.mDemo
 .arow input{width:80px}.aform{display:flex;gap:6px;flex-wrap:wrap}.aform input{flex:1 1 120px}
 .pbig{font-family:var(--f-display);font-size:54px;line-height:1;color:var(--flare)}.pgrid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
 .pgrid div{border:1px solid var(--line);border-radius:8px;padding:8px 10px}.pgrid .k{display:block;font-family:var(--f-mono);font-size:10.5px;color:var(--dim)}.pgrid .v{font-size:16px}
+.lbrow{display:grid;grid-template-columns:34px 1fr auto auto;gap:10px;align-items:center;padding:7px 10px;border:1px solid var(--line);border-radius:8px;font-size:13px}
+.lbrow .r{font-family:var(--f-mono);color:var(--dim)}.lbrow .nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.lbrow .st{color:var(--flare);font-family:var(--f-mono)}.lbrow .dn{font-family:var(--f-mono);font-size:11px;color:var(--dim)}
+.lbrow.me{border-color:rgba(255,180,84,.7);background:rgba(40,28,12,.55)}.lbrow.top1 .r{color:#ffd76a}.lbrow.top2 .r{color:#d8dee9}.lbrow.top3 .r{color:#e0a36a}
+.lbtog{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--dim)}
 .donebg{pointer-events:auto;display:grid;place-items:center;background:rgba(4,6,12,.6)}
 .donecard{width:min(440px,calc(100% - 32px));padding:24px;text-align:center;display:flex;flex-direction:column;gap:10px}.donecard h2{font-family:var(--f-display);font-weight:500;margin:0}
 .dstars{font-size:46px;letter-spacing:6px;color:var(--flare)}.dstars .off{color:rgba(255,255,255,.15)}
@@ -503,7 +507,7 @@ body.mDemo .rail,body.mDemo .campad,body.mDemo .hint,body.mDemo .insp,body.mDemo
 </div>
 <div id="home" class="home" role="dialog" aria-label="Home">
   <div class="hcard">
-    <div class="hhead"><h1 class="htitle">Bary<b>center</b></h1><p class="htag">A 3D sandbox for gravity, worlds and stars</p><div class="hacct"><button class="chip" id="hAcctBtn" title="Accounts: save progress on this device">👤 <span id="hAcctName">Guest</span></button><button class="chip" id="hPlays" title="Total plays by everyone, and your stats">▶ <b id="hPlaysN">0</b> <span id="hPlaysL">plays</span></button></div></div>
+    <div class="hhead"><h1 class="htitle">Bary<b>center</b></h1><p class="htag">A 3D sandbox for gravity, worlds and stars</p><div class="hacct"><button class="chip" id="hAcctBtn" title="Accounts: save progress on this device">👤 <span id="hAcctName">Guest</span></button><button class="chip" id="hPlays" title="Total plays by everyone, and your stats">▶ <b id="hPlaysN">0</b> <span id="hPlaysL">plays</span></button><button class="chip" id="hLb" title="World leaderboard for stars">🏆 Leaderboard</button></div></div>
     <div id="hMain" class="hview">
       <button class="hb" id="hChal"><span class="ht">Challenges</span><span class="hd" id="hChalSub">Goals from easy to fiendish</span></button>
       <button class="hb" id="hDemo"><span class="ht">Demo &amp; tutorial</span><span class="hd">Watch the highlights, or learn the controls step by step</span></button>
@@ -536,6 +540,7 @@ body.mDemo .rail,body.mDemo .campad,body.mDemo .hint,body.mDemo .insp,body.mDemo
     <div id="acctList" class="hview" style="gap:6px"></div>
     <form id="acctForm" class="aform"><input id="acctNew" maxlength="20" placeholder="Your name" autocomplete="off"><input id="acctPin" maxlength="4" inputmode="numeric" placeholder="PIN (optional)" autocomplete="off"><button class="btn primary" type="submit">Create account</button></form>
     <p class="hfoot" id="acctMsg" aria-live="polite"></p>
+    <button class="btn" id="acctLb">🏆 World leaderboard</button>
   </div>
 </div>
 <div id="playsBox" class="ovl" hidden role="dialog" aria-label="Plays">
@@ -546,11 +551,20 @@ body.mDemo .rail,body.mDemo .campad,body.mDemo .hint,body.mDemo .insp,body.mDemo
     <p class="hfoot">A play is each time anyone starts free play, a challenge, the demo or the tutorial. The total counts every player; the boxes above are yours, on this device. Only the number is sent, nothing about you.</p>
   </div>
 </div>
+<div id="lbBox" class="ovl" hidden role="dialog" aria-label="Leaderboard">
+  <div class="obox panel">
+    <div class="hbar"><h2>🏆 Leaderboard</h2><button class="btn" id="lbClose" aria-label="Close">×</button></div>
+    <p class="hfoot" id="lbMe"></p>
+    <div id="lbList" class="hview" style="gap:5px"></div>
+    <label class="lbtog" id="lbTogW"><input type="checkbox" id="lbShow"> Show my account on the world leaderboard</label>
+    <p class="hfoot">Stars from challenges, for every player in the world. Only your account name, stars and challenges done are shared. Don't use your full real name.</p>
+  </div>
+</div>
 <div id="chDone" class="home donebg" hidden role="dialog" aria-label="Challenge result">
   <div class="donecard panel">
     <div id="dStars" class="dstars"></div>
     <h2 id="dTitle"></h2><p id="dText" class="hfoot"></p>
-    <div class="actions" style="justify-content:center"><button id="dNext" class="btn primary">Next challenge</button><button id="dRetry" class="btn">Try again</button><button id="dList" class="btn ghost">All challenges</button></div>
+    <div class="actions" style="justify-content:center"><button id="dNext" class="btn primary">Next challenge</button><button id="dRetry" class="btn">Try again</button><button id="dList" class="btn ghost">All challenges</button><button id="dLb" class="btn ghost">🏆 Leaderboard</button></div>
   </div>
 </div>
 <div id="demoCap" class="democap panel" hidden><div><span id="demoStep" class="k"></span><div id="demoTitle" class="chtitle"></div><div id="demoText" class="chgoal"></div></div><button id="demoExit" class="btn">Exit demo</button></div>
@@ -2924,7 +2938,7 @@ window.addEventListener('keyup',e=>{const k=CAMKEYS[e.key.toLowerCase()]||(e.key
 window.addEventListener('blur',()=>CAMHELD.clear());
 window.addEventListener('keydown',e=>{
   if(['INPUT','SELECT','TEXTAREA'].includes(e.target.tagName))return;
-  if(!$('acct').hidden||!$('playsBox').hidden){if(e.key==='Escape'){$('acct').hidden=true;$('playsBox').hidden=true}return}
+  if(!$('acct').hidden||!$('playsBox').hidden||!$('lbBox').hidden){if(e.key==='Escape'){$('acct').hidden=true;$('playsBox').hidden=true;$('lbBox').hidden=true}return}
   if(!$('home').hidden||!$('chDone').hidden){if(e.key==='Escape'&&!$('home').hidden)homeView('hMain');return}
   if(document.body.classList.contains('mDemo')){if(e.key==='Escape')stopDemo();return}
   {const lk=e.key.toLowerCase();if(!e.ctrlKey&&!e.metaKey&&!e.altKey&&(CAMKEYS[lk]||(lk==='f'&&!S.sel))){CAMHELD.add(CAMKEYS[lk]||'down');return}}
@@ -2950,6 +2964,10 @@ const lsSet=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}};
 // device accounts: every account has its own progress record; "guest" keeps the original key
 let ACC=lsGet(ACC_KEY);if(!ACC||!Array.isArray(ACC.list))ACC={list:[],cur:'guest',devicePlays:0};
 if(ACC.cur!=='guest'&&!ACC.list.some(a=>a.id===ACC.cur))ACC.cur='guest';
+const rndHex=n=>{const a=new Uint8Array(n);crypto.getRandomValues(a);return [...a].map(x=>x.toString(16).padStart(2,'0')).join('')};
+const newUid=()=>{const h=rndHex(16);return `${h.slice(0,8)}-${h.slice(8,12)}-4${h.slice(13,16)}-${'89ab'[parseInt(h[16],16)&3]}${h.slice(17,20)}-${h.slice(20,32)}`};
+function ensureLbIds(a){if(!a.uid){a.uid=newUid();a.sec=rndHex(16)}if(a.lb===undefined)a.lb=true;return a}
+ACC.list.forEach(ensureLbIds);
 let ACCN=0;// account creations and switches this session (tutorial step and challenge)
 const progKey=id=>id==='guest'?PROG_KEY:PROG_KEY+'.'+id;
 const blankProg=()=>({stars:{},plays:0,by:{free:0,chal:0,demo:0,tut:0},secs:0,keyed:1});
@@ -3072,6 +3090,10 @@ CCN(3.05,{t:'Trophy shelf',g:'Sign in to an account, then crash a planet you add
   setup:()=>{scen('solar')();CH.ref.orig=new Set(S.bodies.map(b=>b.name))},
   check:()=>{const acc=!!curAcc();const hit2=evHas(e=>e.k==='merge'&&(e.a==='Jupiter'&&!CH.ref.orig.has(e.b)||e.b==='Jupiter'&&!CH.ref.orig.has(e.a)));
     return[acc&&hit2,(acc?0.5:0)+(hit2?0.5:0),acc?(hit2?'Hit!':`Signed in as ${accName()} · now hit Jupiter`):'Sign in or create an account first']},stars:byTime(45,120)});
+CCN(2.05,{t:'On the board',g:'Open the 🏆 leaderboard (👤 at the top, then World leaderboard), then give Mars a new moon that stays in orbit for 3 years.',hint:'Pick Moon in the toolbar and click close to Mars, inside the orbits of Phobos and Deimos. Zoom in a lot first.',
+  setup:()=>{scen('solar')();CH.ref.n=LBOPEN},
+  check:()=>{const seen=LBOPEN>CH.ref.n;const P=BN('Mars'),gp=P&&parentOf(P),hill=gp?orb(P,gp).a*Math.cbrt(P.m/(3*gp.m)):Infinity;const ok=!!(seen&&P&&mine().some(b=>{if(b===P)return false;const o=orb(b,P);return o.bound&&o.d<hill}));
+    const p=hold('o',ok,3);return[p>=1,seen?0.3+0.7*p:0,seen?(ok?holdTxt(p,3):'Leaderboard checked · now give Mars a moon'):'Open the leaderboard first']},fail:()=>BN('Mars')?'':'Mars was destroyed',stars:byTime(90,200)});
 CHALS.sort((a,b)=>a.diff-b.diff);
 loadProg();
 const NCH=CHALS.length;
@@ -3110,7 +3132,7 @@ function chTick(){
   if(!CH.active||CH.done)return;const c=CH.active;let r;try{r=c.check()}catch(e){r=[false,0,'']}
   const [done,p,txt,metric]=r;$('chProg').textContent=CH.failed||txt||'';$('chBar').style.width=Math.round(Math.max(0,Math.min(1,p||0))*100)+'%';
   const t=realSecs();$('chTime').textContent=`${Math.floor(t/60)}:${String(Math.floor(t%60)).padStart(2,'0')}`;
-  if(done){CH.done=true;const st=Math.max(1,Math.min(3,c.stars(metric)));const prev=starsOf(CH.idx);if(st>prev)PROG.stars[c.t]=st;saveProg();updateAcctUI();
+  if(done){CH.done=true;const st=Math.max(1,Math.min(3,c.stars(metric)));const prev=starsOf(CH.idx);if(st>prev){PROG.stars[c.t]=st;lbSubmit()}saveProg();updateAcctUI();
     $('dStars').innerHTML='★'.repeat(st)+'<span class="off">'+'★'.repeat(3-st)+'</span>';$('dTitle').textContent=`Challenge ${CH.idx+1} complete!`;
     $('dText').textContent=`${c.t} · ${Math.floor(t/60)}:${String(Math.floor(t%60)).padStart(2,'0')}${st<3?' · Faster or more precise solutions earn more stars.':' · Perfect!'}${prev>st?` Your best is still ${prev} ★.`:''}`;
     $('dNext').hidden=CH.idx>=CHALS.length-1;$('dNext').textContent='Next challenge';$('dRetry').hidden=false;$('dList').textContent='All challenges';$('chDone').hidden=false;$('chHud').hidden=true;return}
@@ -3141,6 +3163,7 @@ const TSTEPS=[
  ['Star types','Pick the Star tool and choose a type, such as Hypergiant, Brown dwarf or Black dwarf, then click to place one.',r=>S.bodies.some(b=>b.id>r.base&&(b.type==='star'||b.type==='dwarf'||b.type==='neutron')&&!/^Betelgeuse/.test(b.name)),r=>{r.base=S.bodies.reduce((m,b)=>Math.max(m,b.id),0)}],
  ['Black hole','Pick Black hole and click near the Sun. Watch it pull things in (and drag it around).',()=>S.bodies.some(b=>b.type==='blackhole')],
  ['Save your progress','Click 👤 in the top bar and create an account (a PIN is optional). Your stars and plays save on this device.',r=>ACCN>r.n||!!curAcc()&&r.had===false,r=>{r.n=ACCN;r.had=!!curAcc()}],
+ ['Leaderboard','Open 👤 in the top bar and press 🏆 World leaderboard to see the players with the most stars.',r=>LBOPEN>r.n,r=>{r.n=LBOPEN}],
  ['Views','Try the toolbar views: turn on Zones (habitable zones), Heat (temperature map) or Sky (background stars).',r=>S.zones!==r.z||S.heat!==r.h||S.sky!==r.s,r=>{r.z=S.zones;r.h=S.heat;r.s=S.sky}],
 ];
 function startTutorial(){leaveHome();countPlay('tut');$('chDone').hidden=true;CH.loading=true;load(SCEN.find(x=>x.id==='solar'));CH.loading=false;TUT.on=true;TUT.i=0;TUT.finished=false;tutStep()}
@@ -3159,7 +3182,7 @@ const fmtPlay=s=>s<60?`${Math.round(s)} s`:s<3600?`${Math.floor(s/60)} min`:`${M
 function progOf(id){if(id===ACC.cur)return PROG;const v=lsGet(progKey(id))||{};return{stars:v.stars||{},plays:v.plays||0}}
 const starSum=st=>Object.values(st||{}).reduce((a,b)=>a+(+b||0),0);
 function updateAcctUI(){const n=accName();$('hAcctName').textContent=curAcc()?n:'Guest · make an account';$('hPlaysN').textContent=(GLOBAL!=null?GLOBAL:PROG.plays).toLocaleString();$('hPlaysL').textContent=GLOBAL!=null?'plays by everyone':'plays';$('acctBtn').title=`Account: ${n} (saved on this device)`}
-function switchAcc(id,quiet){if(id===ACC.cur)return;saveProg();ACC.cur=id;saveAcc();loadProg();ACCN++;updateAcctUI();
+function switchAcc(id,quiet){if(id===ACC.cur)return;saveProg();ACC.cur=id;saveAcc();loadProg();ACCN++;updateAcctUI();lbSubmit();
   if(!$('home').hidden){if(!$('hChalView').hidden)renderGrid();homeView($('hChalView').hidden?($('hDemoView').hidden?'hMain':'hDemoView'):'hChalView')}
   if(!quiet)toast(`Signed in as ${accName()} · progress saves on this device`);renderAcct()}
 let acctPend=null;
@@ -3173,18 +3196,18 @@ function renderAcct(msg){const L=$('acctList');L.textContent='';$('acctMsg').tex
       else{const b=document.createElement('button');b.className='btn';b.textContent=a.guest?'Use guest':'Sign in';b.onclick=()=>{if(a.pin){acctPend=a.id;renderAcct()}else switchAcc(a.id)};r.appendChild(b)}}
     else if(!a.guest){const so=document.createElement('button');so.className='btn';so.textContent='Sign out';so.onclick=()=>switchAcc('guest');
       const del=document.createElement('button');del.className='btn';del.textContent='Delete';del.title='Delete this account and its progress from this device';
-      del.onclick=()=>{if(del.dataset.sure){const id=a.id;switchAcc('guest',true);ACC.list=ACC.list.filter(x=>x.id!==id);try{localStorage.removeItem(progKey(id))}catch(e){}saveAcc();renderAcct(`Deleted ${a.name}`);updateAcctUI()}else{del.dataset.sure=1;del.textContent='Sure?'}};r.append(so,del)}
+      del.onclick=()=>{if(del.dataset.sure){const id=a.id;lbRemove(a);switchAcc('guest',true);ACC.list=ACC.list.filter(x=>x.id!==id);try{localStorage.removeItem(progKey(id))}catch(e){}saveAcc();renderAcct(`Deleted ${a.name}`);updateAcctUI()}else{del.dataset.sure=1;del.textContent='Sure?'}};r.append(so,del)}
     L.appendChild(r)}}
 function openAcct(){acctPend=null;$('playsBox').hidden=true;$('acct').hidden=false;renderAcct();setTimeout(()=>{if(!curAcc())$('acctNew').focus()},0)}
 $('acctForm').addEventListener('submit',e=>{e.preventDefault();const name=$('acctNew').value.trim().replace(/\s+/g,' ').slice(0,20),pin=$('acctPin').value.trim();
   if(!name){renderAcct('Type a name first');return}if(/^guest$/i.test(name)||ACC.list.some(a=>a.name.toLowerCase()===name.toLowerCase())){renderAcct('That name is taken on this device');return}
   if(pin&&!/^\d{4}$/.test(pin)){renderAcct('A PIN is 4 digits (or leave it empty)');return}
   const fromGuest=ACC.cur==='guest'&&!ACC.list.length&&(PROG.plays||Object.keys(PROG.stars).length);
-  const a={id:'a'+Date.now().toString(36)+Math.floor(Math.random()*1e4).toString(36),name,created:Date.now()};if(pin)a.pin=pinHash(pin);
+  const a=ensureLbIds({id:'a'+Date.now().toString(36)+Math.floor(Math.random()*1e4).toString(36),name,created:Date.now()});if(pin)a.pin=pinHash(pin);
   // the first account takes over what was played as guest, so nothing is lost
   if(fromGuest){lsSet(progKey(a.id),PROG);lsSet(PROG_KEY,blankProg())}
   ACC.list.push(a);saveAcc();$('acctNew').value='';$('acctPin').value='';switchAcc(a.id,true);toast(`Account ${name} created · progress saves on this device`);
-  renderAcct(fromGuest?'Your guest progress moved into this account.':'')});
+  renderAcct(fromGuest?'Your guest progress moved into this account.':'');lbSubmit()});
 function openPlays(){$('acct').hidden=true;const p=PROG;$('pWho').textContent='Plays';$('pN').textContent=(GLOBAL!=null?GLOBAL:p.plays).toLocaleString();$('pNL').textContent=GLOBAL!=null?'plays by everyone, worldwide':'plays on this account (the worldwide total could not be loaded)';
   const g=$('pGrid');g.textContent='';for(const [k,v] of [['Your plays',p.plays],['Plays on this device',ACC.devicePlays||0],['Free play',p.by.free],['Challenges started',p.by.chal],['Challenges complete',`${doneCount()} / ${NCH}`],['Stars',`${totalStars()} / ${NCH*3}`],['Tutorials',p.by.tut],['Demos watched',p.by.demo],["Time played",fmtPlay(p.secs||0)],['Accounts here',ACC.list.length+1]]){const d=document.createElement('div');d.innerHTML='<span class="k"></span><span class="v"></span>';d.children[0].textContent=k;d.children[1].textContent=v;g.appendChild(d)}
   $('playsBox').hidden=false}
@@ -3195,6 +3218,37 @@ for(const id of ['acct','playsBox'])$(id).addEventListener('click',e=>{if(e.targ
 setInterval(()=>{if(document.hidden||!$('home').hidden)return;PROG.secs=(PROG.secs||0)+5;if(Math.round(PROG.secs)%30===0)saveProg()},5000);
 addEventListener('pagehide',saveProg);
 updateAcctUI();gCount('get');
+
+/* world leaderboard for stars (Supabase: a public read-only view and a submit function that checks each account's secret) */
+const SB_URL='',SB_KEY='';
+const lbOn=()=>!!(SB_URL&&SB_KEY);let LBOPEN=0,lbCache=null;
+function sbFetch(path,body){const h={apikey:SB_KEY,'content-type':'application/json'};if(/^eyJ/.test(SB_KEY))h.authorization='Bearer '+SB_KEY;
+  const ctl=new AbortController();setTimeout(()=>ctl.abort(),8000);
+  return fetch(SB_URL.replace(/\/$/,'')+path,{method:body?'POST':'GET',headers:h,body:body?JSON.stringify(body):undefined,signal:ctl.signal,cache:'no-store'}).then(r=>{if(!r.ok)throw new Error('HTTP '+r.status);return r.status===204?null:r.json()})}
+function lbSubmit(){const a=curAcc();if(!a||!lbOn())return;ensureLbIds(a);saveAcc();
+  if(!a.lb){lbRemove(a);return}
+  sbFetch('/rest/v1/rpc/submit_score',{p_id:a.uid,p_secret:a.sec,p_name:a.name,p_stars:totalStars(),p_done:doneCount()}).then(()=>{lbCache=null;if(!$('lbBox').hidden)openLb()}).catch(()=>{})}
+function lbRemove(a){if(!a||!a.uid||!lbOn())return;sbFetch('/rest/v1/rpc/remove_score',{p_id:a.uid,p_secret:a.sec}).catch(()=>{})}
+function lbRow(i,name,stars,done,me){const r=document.createElement('div');r.className='lbrow'+(me?' me':'')+(i<3?' top'+(i+1):'');
+  r.innerHTML='<span class="r"></span><span class="nm"></span><span class="st"></span><span class="dn"></span>';r.children[0].textContent=i<3?['🥇','🥈','🥉'][i]:'#'+(i+1);r.children[1].textContent=name+(me?' (you)':'');r.children[2].textContent='★ '+stars;r.children[3].textContent=done+' done';return r}
+function openLb(){LBOPEN++;$('acct').hidden=true;$('playsBox').hidden=true;$('lbBox').hidden=false;const L=$('lbList'),a=curAcc();
+  $('lbTogW').hidden=!a;if(a)$('lbShow').checked=a.lb!==false;
+  $('lbMe').textContent=a?`You: ${a.name} · ★ ${totalStars()} · ${doneCount()} challenges done`:'Make an account (👤) to get on the leaderboard. Guest stars are not posted.';
+  if(!lbOn()){L.textContent='';const ms={};ACC.list.forEach(x=>ms[x.id]=x);
+    const rows=ACC.list.map(x=>{const pr=progOf(x.id);return{name:x.name,stars:starSum(pr.stars),done:Object.keys(pr.stars||{}).length,me:x.id===ACC.cur}}).sort((x,y)=>y.stars-x.stars);
+    const n=document.createElement('p');n.className='hfoot';n.textContent='The world leaderboard is not switched on yet. For now, here are the accounts on this device:';L.appendChild(n);
+    rows.forEach((x,i)=>L.appendChild(lbRow(i,x.name,x.stars,x.done,x.me)));if(!rows.length){const e=document.createElement('p');e.className='hfoot';e.textContent='No accounts yet.';L.appendChild(e)}return}
+  const show=list=>{L.textContent='';if(!list.length){const e=document.createElement('p');e.className='hfoot';e.textContent='Nobody yet: finish a challenge to be first!';L.appendChild(e)}
+    let meIn=false;list.forEach((x,i)=>{const me=a&&x.id===a.uid;if(me)meIn=true;L.appendChild(lbRow(i,x.name,x.stars,x.done,me))});
+    if(a&&a.lb!==false&&!meIn&&totalStars()>0){const e=document.createElement('p');e.className='hfoot';e.textContent=`You are not in the top ${list.length} yet. Keep earning stars!`;L.appendChild(e)}};
+  if(lbCache)show(lbCache);else{L.textContent='';const e=document.createElement('p');e.className='hfoot';e.textContent='Loading…';L.appendChild(e)}
+  sbFetch('/rest/v1/leaderboard_top?select=id,name,stars,done&order=stars.desc,updated_at.asc&limit=50').then(list=>{lbCache=list||[];if(!$('lbBox').hidden)show(lbCache)})
+    .catch(()=>{if(!lbCache){L.textContent='';const e=document.createElement('p');e.className='hfoot';e.textContent='Could not load the leaderboard. Check your internet connection.';L.appendChild(e)}})}
+$('hLb').addEventListener('click',openLb);$('acctLb').addEventListener('click',openLb);$('dLb').addEventListener('click',openLb);
+$('lbClose').addEventListener('click',()=>$('lbBox').hidden=true);$('lbBox').addEventListener('click',e=>{if(e.target.id==='lbBox')$('lbBox').hidden=true});
+$('lbShow').addEventListener('change',()=>{const a=curAcc();if(!a)return;a.lb=$('lbShow').checked;saveAcc();lbSubmit();toast(a.lb?'You are on the world leaderboard':'Hidden from the world leaderboard')});
+// post this account's stars once per visit, so older saves join the board too
+setTimeout(lbSubmit,1500);
 
 /* demo: an automatic tour of highlights */
 const DEMO=[
