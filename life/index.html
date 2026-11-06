@@ -208,9 +208,10 @@ body.mHome .endbadge,body.mDemo .endbadge{display:none!important}
 <aside class="dock panel" id="dock">
   <div class="tabs" role="tablist"><button class="tab" role="tab" data-tab="world" aria-selected="true">World</button><button class="tab" role="tab" data-tab="life" aria-selected="false">Life</button><button class="tab" role="tab" data-tab="insp" aria-selected="false">Inspect</button></div>
   <div class="pane" id="pane-world">
-    <div class="sl"><div class="row"><span class="k">Global temperature</span><span id="tempV">+0 °C</span></div><input type="range" id="tempS" min="-15" max="15" step="0.5" value="0"></div>
+    <div class="sl"><div class="row"><span class="k">Global temperature</span><span id="tempV">+0 °C</span></div><input type="range" id="tempS" min="-40" max="40" step="0.5" value="0"></div>
     <div class="sl"><div class="row"><span class="k">Rainfall</span><span id="rainV">100%</span></div><input type="range" id="rainS" min="0" max="250" step="5" value="100"></div>
     <div class="sl"><div class="row"><span class="k">Sea level</span><span id="seaV">0 m</span></div><input type="range" id="seaS" min="-100" max="100" step="2" value="0"></div>
+    <div class="sl"><div class="row"><span class="k">Human hunting limit</span><span id="quotaV">12 per hunter per year</span></div><input type="range" id="quotaS" min="1" max="30" step="1" value="12"></div>
     <div class="row"><span class="k">Seasons</span><button class="btn" id="seasonBtn" aria-pressed="true">On</button></div>
     <span class="k">Events · press again to stop</span>
     <div class="evs">
@@ -226,6 +227,7 @@ body.mHome .endbadge,body.mDemo .endbadge{display:none!important}
   </div>
   <div class="pane" id="pane-life" hidden>
     <div id="endBox" class="endbox" hidden></div>
+    <p class="note" id="lifeSum"></p>
     <span class="k">Population over time</span>
     <canvas id="graph"></canvas>
     <div class="splist" id="splist"></div>
@@ -306,9 +308,9 @@ const GW=300,GH=190,N=GW*GH,CELL=6;
 const hgt=new Float32Array(N),moist=new Float32Array(N),veg=new Float32Array(N),alg=new Float32Array(N),wet=new Float32Array(N),scar=new Float32Array(N),burn=new Float32Array(N),tBase=new Float32Array(N),sAmp=new Float32Array(N);
 const dw=new Uint8Array(N);
 const SEA0=0.34;
-const CL={temp:0,rain:1,seaM:0,seasons:true,dust:0,t0:0,tc:16,latK:20};
+const CL={huntQuota:12,temp:0,rain:1,seaM:0,seasons:true,dust:0,t0:0,tc:16,latK:20};
 const sea=()=>SEA0+CL.seaM*0.0006;
-const S={t:90,speed:7,paused:false,animals:[],trees:[],nextId:1,sel:null,follow:false,tool:'select',brush:4,count:2,hist:[],view:'normal',achieved:0,burning:new Set(),parts:[],scen:'meadow',terrainDirty:true,lastHist:0,maxGen:{},born:0,died:0,kills:0};
+const S={carcasses:[],villages:[],homes:[],oldAge:0,t:90,speed:7,paused:false,animals:[],trees:[],nextId:1,sel:null,follow:false,tool:'select',brush:4,count:2,hist:[],view:'normal',achieved:0,burning:new Set(),parts:[],scen:'meadow',terrainDirty:true,lastHist:0,maxGen:{},born:0,died:0,kills:0};
 
 /* ---------- species ---------- */
 // spd and sense in cells per day / cells; meta, thirst: share of a full tank used per day; life, mature, gest in days; t: comfortable temperature range in °C
@@ -413,8 +415,8 @@ function addAnimal(sp,x,y,o={}){if(S.animals.length>=MAXA||o.age===0&&(SPN[sp]||
   const a={id:S.nextId++,sp,x,y,dir:rnd()*TAU,e:o.e??rr(.55,.85),w:1,age:o.age??rr(s.mature*1.05,s.mature*2.2),sex:o.sex||(rnd()<.5?'f':'m'),genes:g,gen:o.gen||1,kids:0,kills:0,preg:0,pg:null,cd:rr(0,20),
     life:s.life*rr(.75,1.2),state:'wander',tx:0,ty:0,ttl:0,sick:0,col:furTint(s.col,g.fur),mom:o.mom||0,born:S.t};
   S.animals.push(a);S.maxGen[sp]=Math.max(S.maxGen[sp]||0,a.gen);return a}
-function kill(a,cause){if(a.dead)return;a.dead=true;a.cause=cause;S.died++;const C=S.causes||(S.causes={});const c=C[a.sp]||(C[a.sp]={});c[cause]=(c[cause]||0)+1;chEv('death',{sp:a.sp,cause});if(S.sel===a){S.selDead=cause}}
-function suitableFur(sp,i){return clamp(SP[sp].tmin-meanT(i)+4,0,30)}
+function kill(a,cause){if(a.dead)return;a.dead=true;a.cause=cause;S.died++;if(cause!=='removed'&&cause!=='meteor'&&cause!=='lost'&&S.carcasses.length<700){const m=SP[a.sp].mass*Math.pow(a.genes.size,1.5)*(a.age<SP[a.sp].mature?0.5:1);a.carc={carc:1,id:S.nextId++,x:a.x,y:a.y,sp:a.sp,dir:a.dir,meat:m,m0:m,t:S.t,cause};S.carcasses.push(a.carc)}if(cause==='old age'){S.oldAge=(S.oldAge||0)+1;if(S.parts.length<1400)S.parts.push({x:a.x,y:a.y,vx:0,vy:-0.4,life:1.6,max:1.6,k:'old'})}const C=S.causes||(S.causes={});const c=C[a.sp]||(C[a.sp]={});c[cause]=(c[cause]||0)+1;chEv('death',{sp:a.sp,cause});if(S.sel===a){S.selDead=cause}}
+function suitableFur(sp,i){return clamp(SP[sp].tmin-meanT(i)+8,0,35)}
 function spawnAt(sp,x,y,n,adapt,e){let made=0,tries=0;while(made<n&&tries<n*30){tries++;const px=x+(n>1?gauss()*Math.sqrt(n)*0.9:0),py=y+(n>1?gauss()*Math.sqrt(n)*0.9:0),i=idx(px,py);if(!habitatOK(sp,i))continue;
     const a=addAnimal(sp,px,py,{fur:adapt?suitableFur(sp,i):0,e});if(!a)break;made++}return made}
 function randomCell(test,tries=4000){for(let k=0;k<tries;k++){const x=rnd()*GW,y=rnd()*GH,i=idx(x,y);if(test(i,x,y))return[x,y]}return null}
@@ -423,15 +425,20 @@ const SPD_CELLS=1;// movement scale
 function stepAnimal(a,dt){
   const s=SP[a.sp],g=a.genes,i=idx(a.x,a.y);if(i<0){kill(a,'lost');return}
   a.age+=dt;if(a.age>a.life){kill(a,'old age');return}
+  const wasHidden=a.hidden;a.hidden=false;const H=a.home&&!a.home.gone?a.home:(a.home=null);if(H)H.last=S.t;
+  if(H&&H.owner!==a.id&&a.age>s.mature){a.home=null}// grown-up young leave to build their own
   const T=s.hab==='water'?Math.max(2,cellT(i)):cellT(i);
   // energy use: bigger, faster and sharper-sensed bodies cost more to run
   let use=s.meta*Math.pow(g.size,.75)*(0.55+0.45*g.speed*g.speed)*(0.9+0.1*g.sense*g.sense);
   const tmin=s.tmin-g.fur-(g.size-1)*4,tmax=s.tmax-g.fur*0.5+(g.size<1?(1-g.size)*3:0);
   const stress=Math.max(0,tmin-T)+Math.max(0,T-tmax);use+=stress*0.0065;a.stress=stress;
   if(a.sick>0){use+=.03;a.sick-=dt;if(a.sick<=0&&rnd()<.5)a.sick=0}
+  const [zlo,zhi]=zoneOf(a),outZone=(T<zlo||T>zhi)&&!(wasHidden||a.state==='rest');
+  if(outZone){a.outT=(a.outT||0)+dt;if(a.outT>420){kill(a,T<zlo?'cold':'heat');return}}else a.outT=0;
   if(a.preg>0)use*=1.25;
+  if(a.state==='rest')use*=0.65;// resting at home saves energy
   a.e-=use*dt;
-  if(s.thirst){a.w-=s.thirst*0.6*dt*(1+Math.max(0,T-24)*0.04);if(dw[i]<=2||(s.hab==='air'&&dw[i]<=4))a.w=1;else if(rainAt(i)>0.45)a.w=Math.min(1,a.w+0.25*dt*Math.min(1,(rainAt(i)-0.4)*3))}
+  if(s.thirst){a.w-=s.thirst*0.6*dt*(1+Math.max(0,T-24)*0.04);if(dw[i]<=2||(s.hab==='air'&&dw[i]<=4)){if(a.w<0.7&&S.parts.length<1400)S.parts.push({x:a.x,y:a.y-0.4,vx:0,vy:-0.5,life:1,max:1,k:'drop'});a.w=1}else if(rainAt(i)>0.45)a.w=Math.min(1,a.w+0.25*dt*Math.min(1,(rainAt(i)-0.4)*3))}
   if(a.e<=0){kill(a,stress>8?(T<tmin?'cold':'heat'):(a.sick>0?'disease':'starvation'));return}
   if(a.w<=0){kill(a,'thirst');return}
   if(s.hab==='water'&&!isWater(i)){a.e-=0.5*dt;if(a.e<=0){kill(a,'stranded');return}}
@@ -449,11 +456,21 @@ function stepAnimal(a,dt){
   let fx=0,fy=0,threat=false;
   if(PREDS[a.sp].length&&(a.state==='flee'||((a.id+((S.t*2)|0))%2===0))){nearSp(PREDS[a.sp],a.x,a.y,sense*0.55,(b,d2)=>{if(b.state==='hunt'||d2<sense*sense*0.12){const d=Math.sqrt(d2)+.1;fx+=(a.x-b.x)/d;fy+=(a.y-b.y)/d;threat=true}})}
   if(s.hab!=='water'&&s.hab!=='air'&&S.burning.size){for(let k=0;k<6;k++){const ang=k/6*TAU,j=idx(a.x+Math.cos(ang)*3,a.y+Math.sin(ang)*3);if(j>=0&&burn[j]>0){fx-=Math.cos(ang);fy-=Math.sin(ang);threat=true}}}
-  if(threat){mode='flee';a.dir=Math.atan2(fy,fx)+gauss()*0.25;spd*=1.5;a.e-=0.01*dt}
-  else if(s.thirst&&a.w<0.65&&dw[i]>2){mode='drink';spd*=1.3;let best=dw[i],bj=-1;const x=i%GW;for(const j of [i-1,i+1,i-GW,i+GW,i-GW-1,i-GW+1,i+GW-1,i+GW+1]){if(j<0||j>=N)continue;if(dw[j]<best){best=dw[j];bj=j}}
+  const hd=H?Math.hypot(H.x-a.x,H.y-a.y):1e9;
+  if(threat&&H&&H.prog>=1&&HOMEK[H.hk].safe&&hd<8){// run home and hide
+    if(hd<0.8){mode='hide';a.hidden=true;spd=0}else{mode='hide';a.dir=Math.atan2(H.y-a.y,H.x-a.x);spd*=1.5}}
+  else if(threat){mode='flee';a.dir=Math.atan2(fy,fx)+gauss()*0.25;spd*=1.5;a.e-=0.01*dt}
+  else if(outZone){mode='migrate';spd*=1.4;let best=-1e9,bd=a.dir;for(let k=0;k<12;k++){const ang=k/12*TAU,j=idx(a.x+Math.cos(ang)*4,a.y+Math.sin(ang)*4);if(j<0||!habitatOK(a.sp,j))continue;const t=tFor(a.sp,j),sc=-(Math.max(0,zlo-t)+Math.max(0,t-zhi));if(sc>best){best=sc;bd=ang}}a.dir=bd}
+  else if(a.preg>0&&a.preg<10&&H&&hd>1){mode='nesting';a.dir=Math.atan2(H.y-a.y,H.x-a.x)}
+  else if(s.thirst&&a.w<0.75&&dw[i]>2){mode='drink';spd*=1.3;let best=dw[i],bj=-1;const x=i%GW;for(const j of [i-1,i+1,i-GW,i+GW,i-GW-1,i-GW+1,i+GW-1,i+GW+1]){if(j<0||j>=N)continue;if(dw[j]<best){best=dw[j];bj=j}}
     if(bj>=0)a.dir=Math.atan2(((bj/GW)|0)+.5-a.y,bj%GW+.5-a.x)+gauss()*.2}
-  else if(a.e<(s.diet==='carn'?0.62:0.78)){mode=feed(a,s,g,i,sense,dt);if(mode==='eat')spd=0;else if(mode==='hunt')spd*=a.sprint?2.1:1.3;else if(mode==='track')spd*=1.7;else if(mode==='wander')spd*=1.8}
+  else if(a.e<(s.diet==='carn'?0.7:0.85)){mode=feed(a,s,g,i,sense,dt);if(mode==='eat')spd=0;else if(mode==='hunt')spd*=a.sprint?2.1:1.3;else if(mode==='track')spd*=1.7;else if(mode==='wander')spd*=1.8}
   else if(a.age>s.mature&&a.cd<=0&&!a.preg&&a.e>s.repE*(a.sex==='m'?0.92:1)){mode=mate(a,s,sense)}
+  // homes: build one when grown up, finish building it, and come back to rest
+  if(mode==='wander'&&a.age>s.mature){const hk=homeKind(a.sp);
+    if(hk&&!H&&a.e>0.45&&rnd()<0.15*dt){const near2=homeNear(a.x,a.y,hk==='burrow'?8:hk==='nest'?2.5:0.01);if(near2&&near2.oname===a.sp&&near2.hk===hk){a.home=near2}else{const h=buildHome(a,false);if(h)mode='build'}}
+    else if(H&&H.prog<1&&H.owner===a.id){if(hd<1.2){H.prog=Math.min(1,H.prog+dt/HOMEK[H.hk].days);mode='build';spd=0;if(H.prog>=1)chEv('homedone',{k:H.hk,sp:a.sp})}else{mode='build';a.dir=Math.atan2(H.y-a.y,H.x-a.x)}}
+    else if(H&&H.prog>=1&&a.e>0.6&&(!s.thirst||a.w>0.7)){if(hd<0.9){if(rnd()<0.85){mode='rest';spd=0;a.hidden=HOMEK[H.hk].safe?true:false}}else if(hd>7||rnd()<0.08){a.dir=lerpAng(a.dir,Math.atan2(H.y-a.y,H.x-a.x),0.6)}}}
   if(mode==='wander'){a.dir+=gauss()*0.5*Math.min(1,dt*2);
     if(s.thirst&&s.hab==='land'&&dw[i]>18&&rainAt(i)<0.6&&rnd()<0.4){// stay within reach of water
       let best=dw[i],bj=-1;for(const j of [i-1,i+1,i-GW,i+GW]){if(j>=0&&j<N&&dw[j]<best){best=dw[j];bj=j}}if(bj>=0)a.dir=lerpAng(a.dir,Math.atan2(((bj/GW)|0)+.5-a.y,bj%GW+.5-a.x),.5)}
@@ -463,8 +480,12 @@ function stepAnimal(a,dt){
   a.state=mode;
   if(spd>0)move(a,spd*dt*SPD_CELLS)}
 function lerpAng(a,b,t){let d=((b-a+Math.PI)%TAU+TAU)%TAU-Math.PI;return a+d*t}
-function move(a,dist){const steps=Math.max(1,Math.ceil(dist/1.5)),d=dist/steps;
-  for(let k=0;k<steps;k++){let ok=false;for(const off of [0,.6,-.6,1.2,-1.2,2.2,-2.2,Math.PI]){const ang=a.dir+off,nx=a.x+Math.cos(ang)*d,ny=a.y+Math.sin(ang)*d,j=idx(nx,ny);if(j>=0&&habitatOK(a.sp,j)){a.x=nx;a.y=ny;if(off)a.dir=ang;ok=true;break}}if(!ok){a.dir=rnd()*TAU;break}}}
+// every animal has a climate zone: a few degrees past its comfortable range. More than 60 weeks outside it is fatal,
+// so animals will not walk out of their zone, and if the climate shifts they head for somewhere bearable.
+function zoneOf(a){const s=SP[a.sp],g=a.genes;return[s.tmin-g.fur-(g.size-1)*4-12,s.tmax-g.fur*0.5+(g.size<1?(1-g.size)*3:0)+7]}
+const tFor=(sp,j)=>SP[sp].hab==='water'?Math.max(2,cellT(j)):cellT(j);
+function move(a,dist){const steps=Math.max(1,Math.ceil(dist/1.5)),d=dist/steps,[lo,hi]=zoneOf(a),ci=idx(a.x,a.y),ct=ci>=0?tFor(a.sp,ci):0,inZone=ct>=lo&&ct<=hi;
+  for(let k=0;k<steps;k++){let ok=false;for(const off of [0,.6,-.6,1.2,-1.2,2.2,-2.2,Math.PI]){const ang=a.dir+off,nx=a.x+Math.cos(ang)*d,ny=a.y+Math.sin(ang)*d,j=idx(nx,ny);if(j>=0&&habitatOK(a.sp,j)&&(!inZone||(()=>{const t=tFor(a.sp,j);return t>=lo&&t<=hi})())){a.x=nx;a.y=ny;if(off)a.dir=ang;ok=true;break}}if(!ok){a.dir=rnd()*TAU;break}}}
 function feed(a,s,g,i,sense,dt){
   if(s.diet==='herb'||s.diet==='omni'){
     if(s.diet==='omni'){// fruit first
@@ -478,6 +499,12 @@ function feed(a,s,g,i,sense,dt){
       for(let k=0;k<9;k++){const ang=rnd()*TAU,r=rnd()*sense,x=a.x+Math.cos(ang)*r,y=a.y+Math.sin(ang)*r,j=idx(x,y);if(j<0||!habitatOK(a.sp,j))continue;const v=F[j]-r*0.01;if(v>bv){bv=v;bx=x;by=y}}
       if(bv>0.1){a.tx=bx;a.ty=by;a.ttl=2;a.dir=Math.atan2(by-a.y,bx-a.x);return 'graze'}return 'wander'}}
   // carnivores (and omnivores without fruit)
+  // scavenging: a carcass nearby is an easy meal
+  if(S.carcasses.length){let c=null,cd2=(sense*0.8)**2;for(const k of carcNear(a.x,a.y,sense*0.8)){if(k.meat<=0.01||SP[k.sp].mass>s.mass*6)continue;const d2=(k.x-a.x)**2+(k.y-a.y)**2;if(d2<cd2){cd2=d2;c=k}}
+   if(c){if(cd2<1.5){eatCarcass(a,c,s.mass*0.9*dt);return 'scavenge'}a.dir=Math.atan2(c.y-a.y,c.x-a.x);return 'scavenge'}}
+  if(s.tp==='human'){if(S.t-(a.kyT??(a.kyT=S.t))>=365){a.kyT=S.t;a.ky=0}if((a.ky||0)>=CL.huntQuota){// hunting limit reached: gather plants and fruit instead
+    let best=null,bd=1e9;nearTrees(a.x,a.y,sense,(t,d2)=>{if(TK[t.k].fruit&&t.fruit>0.15&&d2<bd){bd=d2;best=t}});if(best){if(bd<2.5){const take=Math.min(best.fruit,0.5*dt);best.fruit-=take;a.e=Math.min(1,a.e+take*1.2);return 'eat'}a.dir=Math.atan2(best.y-a.y,best.x-a.x);return 'gather'}
+    if(veg[i]>0.12){const take=Math.min(veg[i]-0.06,0.1*dt);veg[i]-=take;a.e=Math.min(1,a.e+take*3);return 'eat'}return 'gather'}}
   let prey=null,pd=1e9;const R=sense;
   nearSp(s.prey,a.x,a.y,R,(b,d2)=>{if(!canCatch(a,b))return;
     const w=d2*(b.sick?0.5:1)*(b.age<SP[b.sp].mature?0.6:1);if(w<pd){pd=w;prey=b}});
@@ -493,16 +520,20 @@ function feed(a,s,g,i,sense,dt){
     if(prey.state!=='flee')p=Math.min(0.95,p+0.2);
     if(s.tp==='human')p=Math.max(p,0.55);// spears and teamwork
     {const pi=idx(prey.x,prey.y);if(SP[prey.sp].mass<0.5&&pi>=0&&veg[pi]>0.6)p*=0.7;if((SPN[prey.sp]||0)<20)p*=0.5}// small prey hide in thick grass
-    if(rnd()<p){kill(prey,'eaten');a.kills++;S.kills++;chEv('kill',{pred:a.sp,prey:prey.sp});a.e=Math.min(1,a.e+SP[prey.sp].mass/s.mass*1.3);a.hc=0.5;return 'eat'}
+    if(rnd()<p){kill(prey,'eaten');a.kills++;a.ky=(a.ky||0)+1;S.kills++;chEv('kill',{pred:a.sp,prey:prey.sp});if(prey.carc)eatCarcass(a,prey.carc,1e9);else a.e=Math.min(1,a.e+SP[prey.sp].mass/s.mass*1.3);a.hc=0.5;return 'eat'}
     a.hc=0.6;prey.dir=Math.atan2(prey.y-a.y,prey.x-a.x);return 'hunt'}
   return 'hunt'}
 // bears only take young deer; land and air hunters only catch fish near the shore
-function canCatch(a,b){if(b===a)return false;const A=SP[a.sp],B=SP[b.sp];if(a.sp==='bear'&&b.sp==='deer'&&b.age>SP.deer.mature)return false;if(B.hab==='water'&&A.hab==='land'){const j=idx(b.x,b.y);if(j<0||dwLand(j)>2)return false}return true}
+// eat from a carcass: up to `limit` of its meat, and no more than it takes to be full
+function eatCarcass(a,c,limit){const s=SP[a.sp],per=1.3/s.mass,take=Math.min(c.meat,limit,Math.max(0,(1-a.e)/per));c.meat-=take;a.e=Math.min(1,a.e+take*per);if(c.meat<=0.01&&!c.done){c.done=1;chEv('scavenged',{sp:a.sp})}}
+function canCatch(a,b){if(b===a||b.hidden)return false;const A=SP[a.sp],B=SP[b.sp];if(a.sp==='bear'&&b.sp==='deer'&&b.age>SP.deer.mature)return false;if(B.hab==='water'&&A.hab==='land'){const j=idx(b.x,b.y);if(j<0||dwLand(j)>2)return false}return true}
 function mate(a,s,sense){if(a.sex==='m'){let f=null,fd=1e9;nearSp([a.sp],a.x,a.y,sense,(b,d2)=>{if(b.sex==='f'&&!b.preg&&b.age>s.mature&&b.cd<=0&&b.e>s.repE&&d2<fd){fd=d2;f=b}});
-    if(!f&&((a.id+(S.t|0))%4)===0)nearSp([a.sp],a.x,a.y,45,(b,d2)=>{if(b.sex==='f'&&b.age>s.mature&&d2<fd){fd=d2;f=b}});if(!f)return 'wander';a.dir=Math.atan2(f.y-a.y,f.x-a.x);if(fd>sense*sense)return 'mate';if(fd<2.2){f.preg=s.gest*rr(.9,1.1);f.pg=a.genes;f.pgen=a.gen;f.pdad=a.id;a.cd=s.gest*0.2+5;f.cd=s.gest+10;chEv('mate',{sp:a.sp})}return 'mate'}
+    if(!f&&((a.id+(S.t|0))%4)===0)nearSp([a.sp],a.x,a.y,45,(b,d2)=>{if(b.sex==='f'&&b.age>s.mature&&d2<fd){fd=d2;f=b}});if(!f)return 'wander';a.dir=Math.atan2(f.y-a.y,f.x-a.x);if(fd>sense*sense)return 'mate';if(fd<2.2){f.preg=s.gest*rr(.9,1.1);if(S.parts.length<1400)S.parts.push({x:(a.x+f.x)/2,y:(a.y+f.y)/2-0.4,vx:0,vy:-0.7,life:1.3,max:1.3,k:'heart'});f.pg=a.genes;f.pgen=a.gen;f.pdad=a.id;a.cd=s.gest*0.2+5;f.cd=s.gest+10;chEv('mate',{sp:a.sp})}return 'mate'}
   let m=null,md=1e9;nearSp([a.sp],a.x,a.y,sense,(b,d2)=>{if(b.sex==='m'&&b.age>s.mature&&b.cd<=0&&d2<md){md=d2;m=b}});if(!m)return 'wander';a.dir=Math.atan2(m.y-a.y,m.x-a.x);return 'mate'}
 function giveBirth(a){const s=SP[a.sp];const n=ri(s.litter[0],s.litter[1]);let born=0;
-  for(let k=0;k<n;k++){const g=mixGenes(a.genes,a.pg||a.genes);const b=addAnimal(a.sp,a.x+gauss()*.6,a.y+gauss()*.6,{genes:g,age:0,e:.8,gen:Math.max(a.gen,a.pgen||1)+1,mom:a.id});if(!b)break;if(s.hab!=='water')b.momRef=a;
+  const atHome=a.home&&!a.home.gone&&Math.hypot(a.home.x-a.x,a.home.y-a.y)<2;if(atHome)a.home.kids+=n;
+  if(S.parts.length<1400)S.parts.push({x:a.x,y:a.y-0.5,vx:0,vy:-0.8,life:1.4,max:1.4,k:'birth'});
+  for(let k=0;k<n;k++){const g=mixGenes(a.genes,a.pg||a.genes);const b=addAnimal(a.sp,a.x+gauss()*.6,a.y+gauss()*.6,{genes:g,age:0,e:.8,gen:Math.max(a.gen,a.pgen||1)+1,mom:a.id});if(!b)break;if(s.hab!=='water')b.momRef=a;if(atHome){b.home=a.home;b.e=0.92}
     if(!habitatOK(b.sp,idx(b.x,b.y))){b.x=a.x;b.y=a.y}born++;S.born++;const BB=S.births||(S.births={});BB[a.sp]=(BB[a.sp]||0)+1;chEv('birth',{sp:a.sp,gen:b.gen})}
   a.kids+=born;const dad=a.pdad&&S.animals.find(z=>z.id===a.pdad);if(dad)dad.kids+=born;a.e=Math.max(.3,a.e-0.04*born);a.pg=null}
 
@@ -537,11 +568,40 @@ function meteor(x,y,R=10){chEv('meteor',{});for(let yy=-R*1.6;yy<=R*1.6;yy++)for
   S.flash={x,y,t:1};terrainChanged()}
 function plague(sp){const L=S.animals.filter(a=>!a.dead&&(!sp||a.sp===sp));if(!L.length)return 0;let n=0;for(const a of L)if(rnd()<0.18){a.sick=rr(15,35);n++}return n}
 
+/* ---------- homes: burrows, nests, dens, lodges, huts, hives and anthills ---------- */
+const HOMEK={burrow:{n:'Burrow',ic:'🕳️',days:3,safe:1},nest:{n:'Nest',ic:'🪺',days:4},den:{n:'Den',ic:'🪨',days:4,safe:1},lodge:{n:'Lodge',ic:'🪵',days:12,safe:1},hut:{n:'Hut',ic:'🛖',days:10,safe:1},hive:{n:'Hive',ic:'🍯',days:6,safe:1},anthill:{n:'Anthill',ic:'⛰️',days:8,safe:1}};
+const MAXH=2400;
+function homeKind(sp){const s=SP[sp];if(s.homeK!==undefined)return s.homeK;let k=null;
+  if(sp==='x_human_hunter')k='hut';else if(/^x_(bee|wasp)$/.test(sp))k='hive';else if(sp==='x_ant')k='anthill';else if(/^x_(beaver|muskrat)$/.test(sp))k='lodge';else if(sp==='otter'||/otter$/.test(sp))k='den';else if(/penguin|puffin/.test(sp))k='nest';
+  else switch(s.tp){case 'rod':case 'snake':case 'rept':k='burrow';break;case 'bird':case 'rapt':case 'sbird':case 'gbird':k='nest';break;case 'scarn':case 'bcarn':case 'omni':k='den';break}
+  s.homeK=k;return k}
+const HB=6,HBW=Math.ceil(GW/HB);let hbuckets=new Map();
+function hKey(x,y){return ((y/HB)|0)*HBW+((x/HB)|0)}
+function addHomeBucket(h){const k=hKey(h.x,h.y);let L=hbuckets.get(k);if(!L)hbuckets.set(k,L=[]);L.push(h)}
+function rebuildHomes(){hbuckets=new Map();for(const h of S.homes)if(!h.gone)addHomeBucket(h)}
+function homeNear(x,y,r){const x0=Math.max(0,((x-r)/HB)|0),x1=((x+r)/HB)|0,y0=Math.max(0,((y-r)/HB)|0),y1=((y+r)/HB)|0;for(let by=y0;by<=y1;by++)for(let bx=x0;bx<=x1;bx++){const L=hbuckets.get(by*HBW+bx);if(L)for(const h of L)if(!h.gone&&(h.x-x)**2+(h.y-y)**2<r*r)return h}return null}
+const VNAMES=['Ashford','Brook','Cedar Hollow','Dunmore','Elkridge','Fernvale','Greystone','Hearth','Ironwood','Juniper','Kestrel','Longmeadow','Mossbank','Northwatch','Oakhill','Pinecrest','Quarry','Riverbend','Stonefire','Thornwick','Umber','Valewood','Willowmere','Yarrow'];
+function villageFor(a){let best=null,bd=30*30;for(const v of S.villages){const d=(v.x-a.x)**2+(v.y-a.y)**2;if(d<bd){bd=d;best=v}}return best}
+function hutSpot(v){const R=1.8+Math.sqrt(v.huts+1)*1.1;for(let t=0;t<24;t++){const ang=rnd()*TAU,r=rr(1.6,R),x=v.x+Math.cos(ang)*r,y=v.y+Math.sin(ang)*r,i=idx(x,y);if(i>=0&&!isWater(i)&&!homeNear(x,y,1.7))return[x,y]}return null}
+function buildHome(a,done){const k=homeKind(a.sp);if(!k||S.homes.length>=MAXH)return null;let x=a.x,y=a.y,vil=null;
+  if(k==='hut'){let v=villageFor(a);const p=v&&hutSpot(v);if(p){[x,y]=p;vil=v}else if(!homeNear(a.x,a.y,6)){vil={id:S.nextId++,x:a.x,y:a.y,name:VNAMES[S.villages.length%VNAMES.length]+(S.villages.length>=VNAMES.length?' '+(1+Math.floor(S.villages.length/VNAMES.length)):''),huts:0,born:S.t};S.villages.push(vil);chEv('village',{});if(typeof toast==='function'&&!CH.loading&&!S.quietBuild)toast(`🛖 Human hunters founded the village of ${vil.name}`)}else return null}
+  if(k==='nest'){let tr=null;nearTrees(x,y,3,t=>{if(!tr&&t.k!=='cactus')tr=t});if(tr){x=tr.x+rr(-.3,.3);y=tr.y+rr(-.3,.3)}}
+  const i=idx(x,y);if(i<0||isWater(i)||(k==='lodge'&&dw[i]>2)||homeNear(x,y,k==='hut'?2:1.2))return null;
+  const h={id:S.nextId++,hk:k,x,y,owner:a.id,oname:a.sp,prog:done?1:0,born:S.t,last:S.t,kids:0,vil:vil?vil.id:0};if(vil)vil.huts++;S.homes.push(h);addHomeBucket(h);a.home=h;chEv('home',{k,sp:a.sp});return h}
+// carcasses are kept in a coarse grid so hunters only look at the ones nearby
+const CB=8,CBW=Math.ceil(GW/CB);let cbuckets=new Map();
+function rebuildCarc(){cbuckets=new Map();for(const c of S.carcasses){const k=((c.y/CB)|0)*CBW+((c.x/CB)|0);let L=cbuckets.get(k);if(!L)cbuckets.set(k,L=[]);L.push(c)}}
+function carcNear(x,y,r){const out=[],x0=Math.max(0,((x-r)/CB)|0),x1=((x+r)/CB)|0,y0=Math.max(0,((y-r)/CB)|0),y1=((y+r)/CB)|0;for(let by=y0;by<=y1;by++)for(let bx=x0;bx<=x1;bx++){const L=cbuckets.get(by*CBW+bx);if(L)for(const c of L)out.push(c)}return out}
+function stepCarcasses(dt){for(const c of S.carcasses){c.meat-=c.m0*0.035*dt}S.carcasses=S.carcasses.filter(c=>c.meat>0.01&&S.t-c.t<40)}
+function stepHomes(dt){for(const h of S.homes){if(h.gone)continue;const i=idx(h.x,h.y);
+  if(i<0||(isWater(i)&&h.hk!=='lodge')){h.gone='flooded'}else if(burn[i]>0&&h.hk!=='burrow'){h.gone='burned'}else if(S.t-h.last>300){h.gone='abandoned'}}
+  if(S.homes.some(h=>h.gone)){for(const h of S.homes)if(h.gone&&h.vil){const v=S.villages.find(v=>v.id===h.vil);if(v)v.huts--}S.homes=S.homes.filter(h=>!h.gone);rebuildHomes();S.villages=S.villages.filter(v=>v.huts>0)}}
+
 /* ---------- one simulation step ---------- */
-function simStep(dt){S.t+=dt;SEASON=seasonF();if(CL.dust>0)CL.dust=Math.max(0,CL.dust-CL.dust*dt/420-0.0005*dt);
+function simStep(dt){S.t+=dt;if(S.carcasses.length)rebuildCarc();SEASON=seasonF();if(CL.dust>0)CL.dust=Math.max(0,CL.dust-CL.dust*dt/420-0.0005*dt);
   rebuildHash();const L=S.animals;for(let k=0;k<L.length;k++){const a=L[k];if(!a.dead)stepAnimal(a,dt)}
   stepFire(dt);
-  S.treeAcc=(S.treeAcc||0)+dt;if(S.treeAcc>=2){rebuildTrees();stepTrees(S.treeAcc);S.treeAcc=0;S.trees=S.trees.filter(t=>!t.dead)}
+  S.treeAcc=(S.treeAcc||0)+dt;if(S.treeAcc>=2){rebuildTrees();stepTrees(S.treeAcc);stepHomes(S.treeAcc);stepCarcasses(S.treeAcc);S.treeAcc=0;S.trees=S.trees.filter(t=>!t.dead)}
   if(S.animals.some(a=>a.dead))S.animals=S.animals.filter(a=>!a.dead);
   if(S.t-S.lastHist>=5){S.lastHist=S.t;sampleHist()}}
 function counts(){const c={};for(const k of SPK)c[k]=0;for(const a of S.animals)if(!a.dead)c[a.sp]++;return c}
@@ -969,7 +1029,8 @@ function drawTree(t,X,Y,z){const k=TK[t.k],s=(0.45+t.size*0.75)*z*CELL;
   else{const g=gx.createRadialGradient(X-s*.35,Y-s*.35,s*.1,X,Y,s*1.05);const c=t.k==='bush'?['#5b8a48','#2c4a27']:['#5f9443','#2c4f25'];g.addColorStop(0,c[0]);g.addColorStop(1,c[1]);gx.fillStyle=g;gx.beginPath();gx.arc(X,Y,s*(t.k==='bush'?.7:1),0,TAU);gx.fill();
     if(t.k==='bush'&&t.fruit>0.25&&z>0.8){gx.fillStyle='#5560c8';for(let q=0;q<Math.round(t.fruit*6);q++){const a=q*2.4+t.rot;gx.beginPath();gx.arc(X+Math.cos(a)*s*.4,Y+Math.sin(a)*s*.4,Math.max(1,s*.1),0,TAU);gx.fill()}}}
   if(t.hp<0.6){gx.fillStyle=`rgba(150,120,60,${(0.6-t.hp)*0.9})`;gx.beginPath();gx.arc(X,Y,s*.9,0,TAU);gx.fill()}}
-function drawAnimal(a,X,Y,z,big){const s=SP[a.sp],k=(a.age<s.mature?0.55+0.45*a.age/s.mature:1)*Math.pow(a.genes.size,.6);let L=s.len*k*z*(big||1)*0.9,Wd=L*s.wid;
+function drawAnimal(a,X,Y,z,big){if(a.hidden&&!big){gx.globalAlpha=.35;try{return drawAnimal_(a,X,Y,z,big)}finally{gx.globalAlpha=1}}return drawAnimal_(a,X,Y,z,big)}
+function drawAnimal_(a,X,Y,z,big){const s=SP[a.sp],k=(a.age<s.mature?0.55+0.45*a.age/s.mature:1)*Math.pow(a.genes.size,.6);let L=s.len*k*z*(big||1)*0.9,Wd=L*s.wid;
   if(!big&&L<5.5){const r=z<0.45?2:2.8;gx.fillStyle='rgba(0,0,0,.55)';gx.beginPath();gx.arc(X,Y,r+1,0,TAU);gx.fill();gx.fillStyle=SPCOL[a.sp];gx.beginPath();gx.arc(X,Y,r,0,TAU);gx.fill();return}
   if(!big&&L<9){const f=9/L;L*=f;Wd*=f}
   gx.save();gx.translate(X,Y);gx.rotate(a.dir);
@@ -981,7 +1042,7 @@ function drawAnimal(a,X,Y,z,big){const s=SP[a.sp],k=(a.age<s.mature?0.55+0.45*a.
   if(s.shape==='fish'){gx.globalAlpha=.9;gx.beginPath();gx.ellipse(0,0,L/2,Wd/2,0,0,TAU);gx.fill();gx.beginPath();gx.moveTo(-L*.4,0);gx.lineTo(-L*.75,-Wd*.6);gx.lineTo(-L*.75,Wd*.6);gx.fill();gx.globalAlpha=1;gx.restore();return}
   // tail
   if(a.sp==='fox'||a.sp==='wolf'||a.sp==='lion'||a.sp==='otter'){gx.strokeStyle=a.col;gx.lineWidth=Math.max(1,Wd*(a.sp==='fox'?.45:.25));gx.lineCap='round';gx.beginPath();gx.moveTo(-L*.4,0);gx.quadraticCurveTo(-L*.65,Wd*.3*Math.sin(S.t*3+a.id),-L*(a.sp==='fox'?.85:.75),0);gx.stroke()}
-  gx.beginPath();gx.ellipse(0,0,L/2,Wd/2,0,0,TAU);gx.fill();gx.strokeStyle='rgba(0,0,0,.55)';gx.lineWidth=Math.max(.8,L*.05);gx.stroke();
+  gx.beginPath();gx.ellipse(0,0,L/2,Wd/2,0,0,TAU);gx.fill();if(a.age>a.life*0.8){gx.fillStyle='rgba(200,200,200,.35)';gx.fill();gx.fillStyle=a.col}gx.strokeStyle='rgba(0,0,0,.55)';gx.lineWidth=Math.max(.8,L*.05);gx.stroke();
   if(a.sp==='zebra'&&L>6){gx.strokeStyle='#222';gx.lineWidth=Math.max(.6,L*.04);for(let q=-3;q<=3;q++){gx.beginPath();gx.moveTo(q*L*.1,-Wd*.45);gx.lineTo(q*L*.1+L*.03,Wd*.45);gx.stroke()}}
   if(a.sp==='camel'){gx.fillStyle='rgba(120,85,40,.45)';gx.beginPath();gx.arc(-L*.05,0,Wd*.35,0,TAU);gx.fill();gx.fillStyle=a.col}
   const hx=L*.5,hr=Wd*.42;gx.fillStyle=shadeCol(a.col,-18);gx.beginPath();gx.arc(hx,0,hr,0,TAU);gx.fill();gx.stroke();
@@ -992,6 +1053,16 @@ function drawAnimal(a,X,Y,z,big){const s=SP[a.sp],k=(a.age<s.mature?0.55+0.45*a.
   gx.restore()}
 const BADGES={};
 function badge(sp){let c=BADGES[sp];if(c)return c;c=document.createElement('canvas');c.width=c.height=36;const g=c.getContext('2d');g.fillStyle='rgba(8,14,11,.62)';g.beginPath();g.arc(18,18,16,0,TAU);g.fill();g.font='22px system-ui,"Apple Color Emoji","Segoe UI Emoji"';g.textAlign='center';g.textBaseline='middle';g.fillStyle='#fff';g.fillText(SP[sp].ic,18,20);BADGES[sp]=c;return c}
+function drawHome(h,X,Y,z){const r=Math.max(2.5,CELL*z*0.75),k=h.hk;gx.save();gx.globalAlpha=h.prog<1?0.35+0.55*h.prog:1;
+  if(k==='burrow'){gx.fillStyle='#8a6a46';gx.beginPath();gx.ellipse(X,Y,r,r*0.75,0,0,TAU);gx.fill();gx.fillStyle='#1a120c';gx.beginPath();gx.ellipse(X,Y+r*.08,r*.5,r*.36,0,0,TAU);gx.fill()}
+  else if(k==='nest'){gx.strokeStyle='#8a6a3a';gx.lineWidth=Math.max(1.2,r*.32);gx.beginPath();gx.arc(X,Y,r*.62,0,TAU);gx.stroke();gx.strokeStyle='#5a4228';gx.lineWidth=Math.max(.6,r*.1);gx.beginPath();gx.arc(X,Y,r*.8,0,TAU);gx.stroke();if(h.prog>=1&&z>1.2){gx.fillStyle='#f4efe4';for(let q=0;q<3;q++){gx.beginPath();gx.ellipse(X+(q-1)*r*.22,Y+(q%2)*r*.1,r*.15,r*.2,0,0,TAU);gx.fill()}}}
+  else if(k==='den'){gx.fillStyle='#6f6a62';for(const [dx,dy,rr2] of [[-.45,.1,.55],[.4,.05,.6],[0,-.35,.6]]){gx.beginPath();gx.arc(X+dx*r,Y+dy*r,rr2*r,0,TAU);gx.fill()}gx.fillStyle='#14100c';gx.beginPath();gx.ellipse(X,Y+r*.25,r*.38,r*.3,0,0,TAU);gx.fill()}
+  else if(k==='lodge'){gx.fillStyle='#6a4a2a';gx.beginPath();gx.ellipse(X,Y,r*1.2,r*.95,0,0,TAU);gx.fill();gx.strokeStyle='#3e2a16';gx.lineWidth=Math.max(.6,r*.1);for(let q=0;q<6;q++){const a2=q/6*Math.PI;gx.beginPath();gx.moveTo(X-Math.cos(a2)*r,Y-Math.sin(a2)*r*.8);gx.lineTo(X+Math.cos(a2)*r,Y+Math.sin(a2)*r*.8);gx.stroke()}}
+  else if(k==='hut'){gx.fillStyle='rgba(0,0,0,.3)';gx.beginPath();gx.ellipse(X+r*.3,Y+r*.35,r*1.3,r*1,0,0,TAU);gx.fill();gx.fillStyle='#b8925a';gx.beginPath();gx.arc(X,Y,r*1.25,0,TAU);gx.fill();gx.strokeStyle='#7a5a30';gx.lineWidth=Math.max(.6,r*.08);for(let q=0;q<10;q++){const a2=q/10*TAU;gx.beginPath();gx.moveTo(X,Y);gx.lineTo(X+Math.cos(a2)*r*1.25,Y+Math.sin(a2)*r*1.25);gx.stroke()}gx.fillStyle='#e8c070';gx.beginPath();gx.arc(X,Y,r*.22,0,TAU);gx.fill();
+    if(h.prog>=1){const f=.6+.4*Math.sin(performance.now()/120+h.id);gx.fillStyle=`rgba(255,${130+70*f|0},40,.9)`;gx.beginPath();gx.arc(X+r*1.9,Y+r*.6,r*.3*f+1,0,TAU);gx.fill()}}
+  else if(k==='hive'){gx.fillStyle='#e0b040';gx.beginPath();for(let q=0;q<6;q++){const a2=q/6*TAU;gx.lineTo(X+Math.cos(a2)*r*.8,Y+Math.sin(a2)*r*.8)}gx.closePath();gx.fill();gx.strokeStyle='#8a6a20';gx.lineWidth=1;gx.stroke()}
+  else if(k==='anthill'){gx.fillStyle='#a0784a';gx.beginPath();gx.ellipse(X,Y,r,r*.8,0,0,TAU);gx.fill();gx.fillStyle='#6a4a2a';gx.beginPath();gx.arc(X,Y,r*.2,0,TAU);gx.fill()}
+  gx.restore();if(S.sel===h){gx.strokeStyle='#ffc35a';gx.lineWidth=1.5;gx.beginPath();gx.arc(X,Y,r*1.6+4,0,TAU);gx.stroke()}}
 function hawkShape(L){gx.beginPath();gx.moveTo(L*.5,0);gx.lineTo(L*.05,-L*.12);gx.lineTo(-L*.1,-L*.9);gx.lineTo(-L*.3,-L*.85);gx.lineTo(-L*.2,-L*.1);gx.lineTo(-L*.55,-L*.18);gx.lineTo(-L*.55,L*.18);gx.lineTo(-L*.2,L*.1);gx.lineTo(-L*.3,L*.85);gx.lineTo(-L*.1,L*.9);gx.lineTo(L*.05,L*.12);gx.closePath()}
 function shadeCol(c,d){const m=c.match(/\d+/g);if(m)return`rgb(${clamp(+m[0]+d,0,255)},${clamp(+m[1]+d,0,255)},${clamp(+m[2]+d,0,255)})`;const n=parseInt(c.slice(1),16);return`rgb(${clamp((n>>16)+d,0,255)},${clamp((n>>8&255)+d,0,255)},${clamp((n&255)+d,0,255)})`}
 let lastPaint=0;
@@ -1001,14 +1072,28 @@ function render(now){ctx.fillStyle='#08100c';ctx.fillRect(0,0,W,H);
   const z=cam.z,vx0=wxOf(-40),vx1=wxOf(W+40),vy0=wyOf(-40),vy1=wyOf(H+40);
   // fire
   if(S.burning.size){for(const i of S.burning){const x=i%GW,y=(i/GW)|0;if(x<vx0||x>vx1||y<vy0||y>vy1)continue;const f=.6+.4*Math.sin(performance.now()/90+i);ctx.fillStyle=`rgba(255,${120+60*f|0},40,${.55+.3*f})`;ctx.fillRect(sx(x)-1,sy(y)-1,CELL*z+2,CELL*z+2)}}
+  // carcasses: a fallen body that turns to bones as it is eaten or rots away
+  if(z>0.5)for(const c of S.carcasses){if(c.x<vx0||c.x>vx1||c.y<vy0||c.y>vy1)continue;const X=sx(c.x),Y=sy(c.y),L=Math.max(5,SP[c.sp].len*z*0.9),f=c.meat/c.m0;ctx.save();ctx.translate(X,Y);ctx.rotate(c.dir);
+    if(f>0.3){ctx.globalAlpha=0.85;ctx.fillStyle='#5a4638';ctx.beginPath();ctx.ellipse(0,0,L/2,L*0.22,0,0,TAU);ctx.fill();ctx.fillStyle='#7a2e22';ctx.beginPath();ctx.ellipse(-L*.05,0,L*.18*(1-f)+L*.05,L*.1,0,0,TAU);ctx.fill()}
+    ctx.globalAlpha=f>0.3?0.5:0.85;ctx.strokeStyle='#ece6d8';ctx.lineWidth=Math.max(.8,L*.05);ctx.beginPath();ctx.moveTo(-L*.4,0);ctx.lineTo(L*.4,0);for(let q=-2;q<=2;q++){ctx.moveTo(q*L*.12,-L*.16);ctx.lineTo(q*L*.12,L*.16)}ctx.stroke();ctx.restore();if(S.sel===c){ctx.strokeStyle='#ffc35a';ctx.lineWidth=1.5;ctx.beginPath();ctx.arc(X,Y,L*.7+4,0,TAU);ctx.stroke()}}
+  // villages: trodden ground, a fence once they grow, and the name
+  if(z>0.45)for(const v of S.villages){const X=sx(v.x),Y=sy(v.y),R=(2.4+Math.sqrt(v.huts)*1.25)*CELL*z;ctx.fillStyle='rgba(120,92,58,.38)';ctx.beginPath();ctx.arc(X,Y,R,0,TAU);ctx.fill();
+    if(v.huts>=5){ctx.strokeStyle='#6a4a28';ctx.lineWidth=Math.max(1,z*1.2);ctx.setLineDash([Math.max(2,z*3),Math.max(2,z*2)]);ctx.beginPath();ctx.arc(X,Y,R*1.08,0,TAU);ctx.stroke();ctx.setLineDash([])}
+    const f=.6+.4*Math.sin(performance.now()/110+v.id);ctx.fillStyle=`rgba(255,${130+80*f|0},40,.95)`;ctx.beginPath();ctx.arc(X,Y,Math.max(2,CELL*z*.35*f),0,TAU);ctx.fill()}
+  // homes on the ground (nests are drawn after the trees, up in the branches)
+  const hv=[];if(z>0.6)for(const h of S.homes){if(h.x<vx0||h.x>vx1||h.y<vy0||h.y>vy1)continue;if(h.hk==='nest')hv.push(h);else drawHome(h,sx(h.x),sy(h.y),z)}
   // trees, sorted by y for a little depth
   const vis=[];for(const t of S.trees)if(!t.dead&&t.x>vx0&&t.x<vx1&&t.y>vy0&&t.y<vy1)vis.push(t);vis.sort((a,b)=>a.y-b.y);
   if(z<0.55){for(const t of vis){ctx.fillStyle=t.k==='pine'?'#1f3d24':t.k==='cactus'?'#5c8a4b':'#2f5527';const r=Math.max(1.2,(0.6+t.size)*z*CELL*0.8);ctx.fillRect(sx(t.x)-r/2,sy(t.y)-r/2,r,r)}}else for(const t of vis)drawTree(t,sx(t.x),sy(t.y),z);
+  for(const h of hv)drawHome(h,sx(h.x),sy(h.y),z);
+  if(z>0.7){ctx.font='600 12px IBM Plex Sans, system-ui';ctx.textAlign='center';for(const v of S.villages){const X=sx(v.x),Y=sy(v.y)-(2.4+Math.sqrt(v.huts)*1.25)*CELL*z-6;const t=`${v.name} · ${v.huts} hut${v.huts>1?'s':''}`;ctx.fillStyle='rgba(8,14,11,.65)';const w=ctx.measureText(t).width+12;ctx.fillRect(X-w/2,Y-13,w,18);ctx.fillStyle='#ffe2b0';ctx.fillText(t,X,Y)}ctx.textAlign='start'}
   // animals (birds last)
   const air=[];for(const a of S.animals){if(a.dead||a.x<vx0||a.x>vx1||a.y<vy0||a.y>vy1)continue;if(SP[a.sp].hab==='air'){air.push(a);continue}drawAnimal(a,sx(a.x),sy(a.y),z)}for(const a of air)drawAnimal(a,sx(a.x),sy(a.y),z);
   if(S.labels&&z>=1.8){let n=0;for(const a of S.animals){if(a.dead||a.x<vx0||a.x>vx1||a.y<vy0||a.y>vy1)continue;if(++n>400)break;const X=sx(a.x),Y=sy(a.y)-Math.max(7,SP[a.sp].len*z*0.55);ctx.drawImage(badge(a.sp),X-9,Y-16,18,18)}}
   // particles
-  for(const p of S.parts){const X=sx(p.x),Y=sy(p.y),u=p.life/p.max;if(p.k==='smoke'){ctx.fillStyle=`rgba(70,70,70,${u*.35})`;ctx.beginPath();ctx.arc(X,Y,(1-u)*10*z+2,0,TAU);ctx.fill()}else{ctx.fillStyle=`rgba(255,${180*u|0},60,${u})`;ctx.fillRect(X-1.5,Y-1.5,3,3)}}
+  for(const p of S.parts){const X=sx(p.x),Y=sy(p.y),u=p.life/p.max;if(p.k==='drop'){if(z<1.5)continue;ctx.globalAlpha=Math.min(1,u*1.5);ctx.fillStyle='#7fd0ff';ctx.beginPath();ctx.arc(X,Y,2.2,0,TAU);ctx.fill();ctx.beginPath();ctx.moveTo(X-2,Y-0.5);ctx.lineTo(X,Y-5);ctx.lineTo(X+2,Y-0.5);ctx.fill();ctx.globalAlpha=1;continue}
+    if(p.k==='heart'||p.k==='birth'||p.k==='old'){if(z<1)continue;ctx.globalAlpha=Math.min(1,u*1.5);ctx.font=`${p.k==='heart'?12:11}px system-ui`;ctx.textAlign='center';ctx.fillStyle=p.k==='heart'?'#ff7aa8':p.k==='birth'?'#fff3a0':'#c8c8c8';ctx.fillText(p.k==='heart'?'♥':p.k==='birth'?'✦':'✝',X,Y);ctx.globalAlpha=1;ctx.textAlign='start';continue}
+    if(p.k==='smoke'){ctx.fillStyle=`rgba(70,70,70,${u*.35})`;ctx.beginPath();ctx.arc(X,Y,(1-u)*10*z+2,0,TAU);ctx.fill()}else{ctx.fillStyle=`rgba(255,${180*u|0},60,${u})`;ctx.fillRect(X-1.5,Y-1.5,3,3)}}
   if(S.flash&&S.flash.t>0){const X=sx(S.flash.x),Y=sy(S.flash.y),r=(1-S.flash.t)*160*z+20;const g=ctx.createRadialGradient(X,Y,0,X,Y,r);g.addColorStop(0,`rgba(255,240,200,${S.flash.t})`);g.addColorStop(1,'rgba(255,120,40,0)');ctx.fillStyle=g;ctx.beginPath();ctx.arc(X,Y,r,0,TAU);ctx.fill()}
   if(S.falling){const f=S.falling,u=f.t;const X=sx(f.x)+(1-u)*-300,Y=sy(f.y)+(1-u)*-300;ctx.strokeStyle='rgba(255,200,120,.8)';ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(X-60,Y-60);ctx.lineTo(X,Y);ctx.stroke();ctx.fillStyle='#fff3d0';ctx.beginPath();ctx.arc(X,Y,5,0,TAU);ctx.fill()}
   // dust dims the world after a meteor
@@ -1049,6 +1134,8 @@ cv.addEventListener('wheel',e=>{e.preventDefault();zoomAt(Math.exp(-e.deltaY*(e.
 let CAMMOVED=0,ZOOMED=0;
 function pick(px,py){const wx=wxOf(px),wy=wyOf(py),r=Math.max(1.4,12/(cam.z*CELL));let best=null,bd=r*r;
   for(const a of S.animals){if(a.dead)continue;const d=(a.x-wx)**2+(a.y-wy)**2;if(d<bd){bd=d;best=a}}
+  if(!best){let cd=(r*1.1)**2;for(const c of S.carcasses){const d=(c.x-wx)**2+(c.y-wy)**2;if(d<cd){cd=d;best=c}}}
+  if(!best){let hd2=(r*1.1)**2;for(const h of S.homes){const d=(h.x-wx)**2+(h.y-wy)**2;if(d<hd2){hd2=d;best=h}}}
   if(!best){let td=(r*1.2)**2;for(const t of S.trees){if(t.dead)continue;const d=(t.x-wx)**2+(t.y-wy)**2;if(d<td){td=d;best=t}}}
   select(best)}
 function select(o){S.sel=o;S.selDead=null;if(!o)S.follow=false;buildInspector();if(o)showTab('insp')}
@@ -1098,9 +1185,10 @@ function dateTxt(){const y=Math.floor(S.t/365)+1,d=S.t%365;const se=['winter','s
 function showTab(t){document.querySelectorAll('.tab').forEach(b=>b.setAttribute('aria-selected',b.dataset.tab===t?'true':'false'));for(const p of ['world','life','insp'])$('pane-'+p).hidden=p!==t;if(t==='life')LIFEOPEN++;if(t==='insp'&&S.sel&&!S.sel.k)INSPOPEN++}
 let LIFEOPEN=0,INSPOPEN=0;
 document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>showTab(b.dataset.tab));
-function syncClimateUI(){$('tempS').value=CL.temp;$('rainS').value=Math.round(CL.rain*100);$('seaS').value=CL.seaM;$('tempV').textContent=(CL.temp>=0?'+':'')+CL.temp+' °C';$('rainV').textContent=Math.round(CL.rain*100)+'%';$('seaV').textContent=(CL.seaM>=0?'+':'')+CL.seaM+' m';$('seasonBtn').setAttribute('aria-pressed',CL.seasons);$('seasonBtn').textContent=CL.seasons?'On':'Off'}
+function syncClimateUI(){$('quotaS').value=CL.huntQuota;$('quotaV').textContent=CL.huntQuota+' per hunter per year';$('tempS').value=CL.temp;$('rainS').value=Math.round(CL.rain*100);$('seaS').value=CL.seaM;$('tempV').textContent=(CL.temp>=0?'+':'')+CL.temp+' °C';$('rainV').textContent=Math.round(CL.rain*100)+'%';$('seaV').textContent=(CL.seaM>=0?'+':'')+CL.seaM+' m';$('seasonBtn').setAttribute('aria-pressed',CL.seasons);$('seasonBtn').textContent=CL.seasons?'On':'Off'}
 $('tempS').oninput=e=>{CL.temp=+e.target.value;EVP.ice=EVP.heat=null;syncClimateUI();CLIMCH++};$('rainS').oninput=e=>{CL.rain=e.target.value/100;syncClimateUI();CLIMCH++};
-$('seaS').oninput=e=>{CL.seaM=+e.target.value;syncClimateUI();terrainChangedSoon();CLIMCH++};$('seasonBtn').onclick=()=>{CL.seasons=!CL.seasons;syncClimateUI()};
+$('seaS').oninput=e=>{CL.seaM=+e.target.value;syncClimateUI();terrainChangedSoon();CLIMCH++};$('quotaS').oninput=e=>{CL.huntQuota=+e.target.value;syncClimateUI();QUOTACH++};let QUOTACH=0;
+$('seasonBtn').onclick=()=>{CL.seasons=!CL.seasons;syncClimateUI()};
 let CLIMCH=0;
 // events: press once to start, press again to stop (the button shows which events are running)
 const EVP={};
@@ -1133,7 +1221,7 @@ $('dockBtn').onclick=()=>document.body.classList.toggle('dockOpen');
 
 /* species list and graph */
 const SPCOL={rabbit:'#d8b48a',mouse:'#a99886',deer:'#c98a52',bison:'#8a6346',zebra:'#e9e5dc',camel:'#e0bd7a',fox:'#ff8a3d',wolf:'#a9a6a2',lion:'#f0c36a',bear:'#9c6a44',hawk:'#c9a070',fish:'#8fd0ff',otter:'#7ea0b8',trees:'#5fbf5f',x_human_hunter:'#e0b080'};
-function renderLife(){const c=counts(),L=$('splist');if(L.dataset.n!=SPK.length){L.textContent='';L.dataset.n=SPK.length}renderEndangered(c);if(!L.children.length){for(const k of [...SPK,'trees']){const r=document.createElement('button');r.className='sprow';r.dataset.k=k;r.innerHTML='<i></i><span></span><b></b>';r.children[0].style.background=SPCOL[k];r.onclick=()=>k==='trees'?flyTree():flyTo(k);L.appendChild(r)}}
+function renderLife(){const c=counts(),L=$('splist');{const hc={};for(const h of S.homes)if(h.prog>=1)hc[h.hk]=(hc[h.hk]||0)+1;$('lifeSum').textContent=`Born: ${S.born} · died of old age: ${S.oldAge||0} · homes: ${Object.values(hc).reduce((a,b)=>a+b,0)}`+(Object.keys(hc).length?` (${Object.entries(hc).map(([k,n])=>n+' '+HOMEK[k].n.toLowerCase()+(n>1?(k==='hut'?'s':k==='burrow'?'s':'s'):'')).join(', ')})`:'')}if(L.dataset.n!=SPK.length){L.textContent='';L.dataset.n=SPK.length}renderEndangered(c);if(!L.children.length){for(const k of [...SPK,'trees']){const r=document.createElement('button');r.className='sprow';r.dataset.k=k;r.innerHTML='<i></i><span></span><b></b>';r.children[0].style.background=SPCOL[k];r.onclick=()=>k==='trees'?flyTree():flyTo(k);L.appendChild(r)}}
   for(const r of L.children){const k=r.dataset.k;const n=k==='trees'?S.trees.length:c[k];r.classList.toggle('zero',!n);
     r.style.display=k!=='trees'&&!n&&!(S.seen||{})[k]?'none':'';r.children[1].textContent=k==='trees'?'🌳 Trees':`${SP[k].ic} ${SP[k].pl}`+(n?` · speed ${avgGene(k,'speed').toFixed(2)} · fur ${avgGene(k,'fur').toFixed(0)}°`:'');r.children[2].textContent=n}
   drawGraph()}
@@ -1150,13 +1238,15 @@ let FOUND={};
 /* inspector */
 const NAMES=['Ash','Bree','Cleo','Dax','Echo','Fern','Gus','Hazel','Iris','Juno','Kit','Luna','Milo','Nell','Oak','Pip','Quill','Rue','Sage','Tilly','Uma','Vex','Wren','Yara','Zed','Basil','Clover','Dusty','Ember','Flint','Ginger','Hops','Ivy','Jasper','Koda','Lark','Maple','Nova','Olive','Pepper','Rowan','Sky','Thistle','Willow'];
 const nameOf=a=>NAMES[a.id%NAMES.length]+(a.id>NAMES.length?' '+'IVXLC'[Math.floor(a.id/NAMES.length)%5]:'');
-const STATE={wander:'Wandering',eat:'Eating',graze:'Looking for food',forage:'Foraging for fruit',hunt:'Hunting',track:'Tracking prey',follow:'Following its mother',flee:'Fleeing!',drink:'Going to drink',mate:'Looking for a mate'};
+const STATE={scavenge:'Eating a carcass',migrate:'Moving to a bearable climate',gather:'Gathering plants (hunting limit reached)',build:'Building a home',rest:'Resting at home',hide:'Hiding at home',nesting:'Going home to give birth',wander:'Wandering',eat:'Eating',graze:'Looking for food',forage:'Foraging for fruit',hunt:'Hunting',track:'Tracking prey',follow:'Following its mother',flee:'Fleeing!',drink:'Going to drink',mate:'Looking for a mate'};
 let inspRefs={};
 function buildInspector(){const o=S.sel,B=$('inspBody');B.textContent='';$('inspEmpty').hidden=!!o;B.hidden=!o;if(!o)return;inspRefs={};
   const h=document.createElement('h2');h.className='ititle';const sub=document.createElement('div');sub.className='isub';B.append(h,sub);inspRefs.sub=sub;inspRefs.h=h;
   const pic=document.createElement('canvas');pic.id='iPic';B.appendChild(pic);inspRefs.pic=pic;
   const kv=document.createElement('div');kv.className='kv';B.appendChild(kv);inspRefs.kv=kv;
-  if(!o.k){h.textContent=`${SP[o.sp].ic} ${nameOf(o)}`;
+  if(o.carc){h.textContent='🦴 Carcass';const n=document.createElement('p');n.className='note';n.textContent='When an animal dies it leaves a carcass. Hungry hunters and scavengers such as vultures, hyenas, foxes and bears eat it; whatever is left rots away in a few weeks.';B.appendChild(n)}
+  else if(o.hk){const K=HOMEK[o.hk];h.textContent=`${K.ic} ${K.n}`;const n=document.createElement('p');n.className='note';n.textContent=`Animals build homes to raise their young${K.safe?' and to hide from hunters':''}. Babies born at home start out stronger and live there with the family until they are grown. A home nobody uses for about a year crumbles away.`;B.appendChild(n)}
+  else if(!o.k){h.textContent=`${SP[o.sp].ic} ${nameOf(o)}`;
     const gk=document.createElement('span');gk.className='k';gk.textContent='Genes (edit to experiment)';B.appendChild(gk);
     for(const [g,lab,lo,hi,st] of [['speed','Speed',.5,2.2,.01],['size','Size',.5,2.2,.01],['sense','Senses',.5,2.2,.01],['fur','Fur (cold °C)',-10,40,.5]]){const row=document.createElement('label');row.className='gene';row.innerHTML='<span></span><input type="range"><span class="v"></span>';row.children[0].textContent=lab;const inp=row.children[1];inp.min=lo;inp.max=hi;inp.step=st;inp.value=o.genes[g];
       inp.oninput=()=>{o.genes[g]=+inp.value;if(g==='fur')o.col=furTint(SP[o.sp].col,o.genes.fur);GENEDIT++};inspRefs['g_'+g]=row.children[2];B.appendChild(row)}
@@ -1165,15 +1255,21 @@ function buildInspector(){const o=S.sel,B=$('inspBody');B.textContent='';$('insp
   const act=document.createElement('div');act.className='actions';B.appendChild(act);
   const mk=(t,f,cls)=>{const b=document.createElement('button');b.className='btn'+(cls?' '+cls:'');b.textContent=t;b.onclick=f;act.appendChild(b);return b};
   mk('Follow',()=>{S.follow=true;cam.z=Math.max(cam.z,3.5)});
-  if(!o.k){mk('Feed',()=>{o.e=1;o.w=1});mk('Clone',()=>{const c=addAnimal(o.sp,o.x+0.6,o.y+0.6,{genes:{...o.genes},age:o.age,gen:o.gen});if(c)toast(`Cloned ${nameOf(o)}`)})}
-  mk('Remove',()=>{if(o.k){o.dead=true;S.trees=S.trees.filter(t=>!t.dead)}else{kill(o,'removed');S.animals=S.animals.filter(a=>!a.dead)}select(null)},'danger');
+  if(!o.k&&!o.hk&&!o.carc){mk('Feed',()=>{o.e=1;o.w=1});mk('Clone',()=>{const c=addAnimal(o.sp,o.x+0.6,o.y+0.6,{genes:{...o.genes},age:o.age,gen:o.gen});if(c)toast(`Cloned ${nameOf(o)}`)})}
+  mk('Remove',()=>{if(o.carc){o.meat=0;S.carcasses=S.carcasses.filter(c=>c!==o)}else if(o.hk){o.gone='removed';S.homes=S.homes.filter(x=>!x.gone);rebuildHomes()}else if(o.k){o.dead=true;S.trees=S.trees.filter(t=>!t.dead)}else{kill(o,'removed');S.animals=S.animals.filter(a=>!a.dead)}select(null)},'danger');
   updateInspector()}
 function updateInspector(){const o=S.sel;if(!o||$('pane-insp').hidden)return;const R=inspRefs;if(!R.kv)return;
   if(o.dead){R.sub.textContent=`Died: ${o.cause||S.selDead}`;return}
+  if(o.gone){R.sub.textContent=`Gone: ${o.gone}`;return}
+  if(o.carc&&(o.meat<=0.01||!S.carcasses.includes(o))){R.sub.textContent='Nothing left';return}
   const i=idx(o.x,o.y),T=cellT(i);let rows;
-  if(!o.k){const s=SP[o.sp];R.sub.textContent=`${s.n}, ${o.sex==='f'?'female':'male'} · ${(o.age/365).toFixed(1)} years · generation ${o.gen}${o.preg>0?' · pregnant':''}${o.sick>0?' · sick':''}`;
+  if(o.carc){R.sub.textContent=`A ${SP[o.sp].n.toLowerCase()} that died of ${o.cause==='eaten'?'being hunted':o.cause}`;rows=[['Meat left',Math.round(o.meat/o.m0*100)+'%'],['Died',Math.round(S.t-o.t)+' days ago']]}
+  else if(o.hk){const res=S.animals.filter(a=>!a.dead&&a.home===o),own=S.animals.find(a=>a.id===o.owner&&!a.dead),bs=SP[o.oname]||{n:'animal'};R.sub.textContent=`${HOMEK[o.hk].n} built by ${own?nameOf(own)+' the '+bs.n.toLowerCase():'a '+bs.n.toLowerCase()}`;
+    const vv=o.vil&&S.villages.find(v=>v.id===o.vil);rows=[...(vv?[['Village',`${vv.name} · ${vv.huts} huts`]]:[]),['Built',o.prog>=1?'Finished':Math.round(o.prog*100)+'%'],['Age',((S.t-o.born)/365).toFixed(1)+' years'],['Living here',res.length],['Hiding inside',res.filter(a=>a.hidden).length],['Young born here',o.kids],['Builder',own?'Alive':'Gone']]}
+  else if(!o.k){const s=SP[o.sp];R.sub.textContent=`${s.n}, ${o.sex==='f'?'female':'male'} · ${(o.age/365).toFixed(1)} years · generation ${o.gen}${o.preg>0?' · pregnant':''}${o.sick>0?' · sick':''}`;
     const tmin=s.tmin-o.genes.fur-(o.genes.size-1)*4,tmax=s.tmax-o.genes.fur*0.5;
-    rows=[['Energy',Math.round(o.e*100)+'%'],['Water',s.thirst?Math.round(o.w*100)+'%':'—'],['Doing',STATE[o.state]||o.state],['Children',o.kids],['Kills',o.kills],['Eats',s.diet==='herb'?(s.hab==='water'?'Algae':'Plants'):s.diet==='omni'?'Fruit, fish, small animals, plants':s.tp==='human'?'Almost any animal, from rabbits to mammoths':((L=>L.length>6?L.slice(0,6).join(', ')+` and ${L.length-6} more`:L.join(', '))((s.prey||[]).map(k=>SP[k].pl)))],['Comfort',`${tmin.toFixed(0)} to ${tmax.toFixed(0)} °C`],['Here',`${T.toFixed(0)} °C${o.stress>1?' (stressed)':''}`]];
+    const st=o.age<s.mature*0.4?'Baby':o.age<s.mature?`Young · adult at ${(s.mature/365).toFixed(1)} yrs`:o.age>o.life*0.8?'Elderly':'Adult',br=o.age<s.mature?'Not yet':o.preg>0?`Pregnant · ${Math.ceil(o.preg)} days to go`:o.cd>0?`In ${Math.ceil(o.cd)} days`:o.e<s.repE?'Needs more food':'Ready';
+    rows=[['Life',`${(o.age/365).toFixed(1)} of about ${(o.life/365).toFixed(0)} years`],['Stage',st],['Can breed',br],['Home',o.home&&!o.home.gone?`${HOMEK[o.home.hk].n}${o.home.prog<1?' (building)':''} · ${Math.hypot(o.home.x-o.x,o.home.y-o.y).toFixed(0)} away`:homeKind(o.sp)?'None yet':'Roams (no home)'],['Energy',Math.round(o.e*100)+'%'],['Water',s.thirst?Math.round(o.w*100)+'%':'—'],['Doing',STATE[o.state]||o.state],['Children',o.kids],['Kills',o.kills+(s.tp==='human'?` · ${o.ky||0} of ${CL.huntQuota} this year`:'')],['Eats',s.diet==='herb'?(s.hab==='water'?'Algae':'Plants'):s.diet==='omni'?'Fruit, fish, small animals, plants':s.tp==='human'?'Almost any animal, from rabbits to mammoths':((L=>L.length>6?L.slice(0,6).join(', ')+` and ${L.length-6} more`:L.join(', '))((s.prey||[]).map(k=>SP[k].pl)))],['Comfort',`${tmin.toFixed(0)} to ${tmax.toFixed(0)} °C`],['Here',`${T.toFixed(0)} °C${o.outT>0?` · outside its zone: ${Math.round(o.outT/7)} of 60 weeks`:o.stress>1?' (stressed)':''}`]];
     for(const g of ['speed','size','sense'])R['g_'+g].textContent=o.genes[g].toFixed(2);R.g_fur.textContent=o.genes.fur.toFixed(1)}
   else rows=[['Age',(o.age/365).toFixed(0)+' years'],['Size',Math.round(o.size*100)+'%'],['Health',Math.round(o.hp*100)+'%'],['Fruit',TK[o.k].fruit?Math.round(o.fruit*100)+'%':'—'],['Here',`${meanT(i).toFixed(0)} °C average`],['Water',Math.round(wetAt(i)*100)+'%'+(dw[i]<=4?' (near water)':'')]];
   if(R.kv.children.length!==rows.length){R.kv.textContent='';for(const r of rows){const d=document.createElement('div');d.innerHTML='<span class="k"></span><span class="v"></span>';R.kv.appendChild(d)}}
@@ -1181,6 +1277,8 @@ function updateInspector(){const o=S.sel;if(!o||$('pane-insp').hidden)return;con
   // portrait
   const c=R.pic,d=Math.min(2,devicePixelRatio||1),w=c.clientWidth||300,hh=c.clientHeight||120;if(c.width!==w*d){c.width=w*d;c.height=hh*d}const p=c.getContext('2d');p.setTransform(d,0,0,d,0,0);
   const px=img.data,o4=i*4;p.fillStyle=`rgb(${px[o4]},${px[o4+1]},${px[o4+2]})`;p.fillRect(0,0,w,hh);
+  if(o.carc){p.font='54px system-ui';p.textAlign='center';p.textBaseline='middle';p.fillText(o.meat/o.m0>0.3?SP[o.sp].ic:'🦴',w/2,hh/2);p.textAlign='start';return}
+  if(o.hk){const old=gx;gx=p;try{drawHome(o,w/2,hh/2,4)}finally{gx=old}return}
   const old=gx;gx=p;try{if(o.k)drawTree(o,w/2,hh/2,5.5);else drawAnimal({...o,dir:-0.35},w/2,hh/2,1,o.sp==='mouse'?7:o.sp==='fish'?6:SP[o.sp].len>10?2.6:4)}finally{gx=old}}
 let GENEDIT=0;
 
@@ -1224,7 +1322,7 @@ const SCEN=[
 ];
 function loadScen(id,opts={}){const sc=SCEN.find(s=>s.id===id)||SCEN[0];RNG=seeded((sc.ter.seed*977+(opts.seed||0))>>>0);
   S.scen=sc.id;CL.tc=sc.tc??16;CL.latK=sc.latK??20;S.animals=[];S.trees=[];S.t=90;S.hist=[];S.lastHist=0;S.sel=null;S.follow=false;S.burning.clear();S.parts=[];S.maxGen={};S.born=S.died=S.kills=0;S.falling=null;S.flash=null;
-  CL.temp=0;CL.rain=1;CL.seaM=0;CL.dust=0;CL.seasons=true;CL.t0=sc.t0;PLACED={};WATERED=0;RAINED=0;
+  CL.temp=0;CL.rain=1;CL.seaM=0;CL.dust=0;CL.seasons=true;CL.t0=sc.t0;S.homes=[];S.villages=[];S.carcasses=[];S.oldAge=0;hbuckets=new Map();PLACED={};WATERED=0;RAINED=0;
   genTerrain(sc.ter);SEASON=seasonF();
   // grow the vegetation in for a while so the world starts lush
   if(!sc.bare){for(let i=0;i<N;i++)veg[i]=isWater(i)?0:capOf(meanT(i),rainAt(i))*rr(.5,.9);for(let k=0;k<8;k++)updateVeg(10)}else{veg.fill(0)}
@@ -1234,6 +1332,8 @@ function loadScen(id,opts={}){const sc=SCEN.find(s=>s.id===id)||SCEN[0];RNG=seed
   S.seen={};S.status={};S.statusReady=false;
   for(const [k,n] of Object.entries(sc.an).filter(([k])=>SP[k]).sort((x,y)=>(SP[x[0]].diet==='herb'?0:1)-(SP[y[0]].diet==='herb'?0:1))){let made=0;const s=SP[k];
     const grp=Math.max(s.herd?5:3,Math.ceil(n/18));for(let g=0;g<n+30&&made<n;g++){const pr=s.prey&&S.animals.filter(z=>s.prey.includes(z.sp));if(pr&&pr.length){const z=pr[Math.floor(rnd()*pr.length)];made+=spawnAt(k,z.x,z.y,Math.min(n-made,s.herd?4:2),true,0.92);continue}const p=randomCell(i=>habitatOK(k,i)&&(s.hab==='water'||s.hab==='air'||(meanT(i)>s.tmin-14&&meanT(i)<s.tmax+2))&&(s.hab!=='amph'||dw[i]<=1),400);if(!p)continue;made+=spawnAt(k,p[0],p[1],Math.min(n-made,grp),true)}}
+  // many adults already have a home when the world begins (humans start in villages)
+  S.quietBuild=true;rebuildTrees();for(const a of S.animals){const s=SP[a.sp];if(a.age>s.mature&&homeKind(a.sp)&&(s.tp==='human'||rnd()<0.55)){const h=buildHome(a,true);if(h)for(const b of S.animals)if(b!==a&&b.sp===a.sp&&!b.home&&Math.hypot(b.x-a.x,b.y-a.y)<2&&rnd()<0.5)b.home=h}}S.quietBuild=false;
   RNG=Math.random;rebuildHash();rebuildTrees();sampleHist();S.terrainDirty=true;syncClimateUI();select(null);if(!opts.keepCam){fitWorld();cam.z*=1.9}setView('normal');VIEWCH=0}
 function buildScen(){const g=$('scgrid');g.textContent='';for(const s of SCEN){const b=document.createElement('button');b.className='scb';b.innerHTML='<b></b><span></span>';b.children[0].textContent=s.n;b.children[1].textContent=s.d;b.onclick=()=>{loadScen(s.id);$('scen').hidden=true;toast(s.n)};g.appendChild(b)}}
 $('scenBtn').onclick=()=>{$('scen').hidden=!$('scen').hidden};$('scenClose').onclick=()=>$('scen').hidden=true;
@@ -1339,6 +1439,13 @@ CC(5.8,{t:'Mammoth hunters',g:'In the ice age, keep at least 5 human hunters and
 CC(4.2,{t:'Ocean giants',g:'In the ocean, keep 3 whales and 3 sharks alive for 5 years.',hint:'Whales eat plankton (algae): seed algae with the Algae brush if it runs low.',setup:scn('reef'),check:()=>{const w=cnt('x_whale'),s=cnt('x_shark'),p=hold('o',w>=3&&s>=3,5);return[p>=1,p,`${w} whales · ${s} sharks · ${holdTxt(p,5)}`]},fail:()=>!cnt('x_whale')?'The whales died out':!cnt('x_shark')?'The sharks died out':'',stars:byTime(45,120)});
 CC(4.7,{t:'Jurassic balance',g:'Keep a T. rex and at least 6 triceratops alive together for 5 years.',hint:'The T. rex eats a lot. Release more plant-eaters, or give the triceratops more room.',setup:scn('jurassic'),check:()=>{const t=cnt('x_t_rex'),r=cnt('x_triceratops'),p=hold('j',t>=1&&r>=6,5);return[p>=1,p,`${t} T. rex · ${r} triceratops · ${holdTxt(p,5)}`]},fail:()=>!cnt('x_t_rex')?'The T. rex died':!cnt('x_triceratops')?'The triceratops died out':'',stars:byTime(45,120)});
 CC(6.3,{t:'Nobody endangered',g:'In the African savanna, have no endangered or extinct species for 2 years in a row.',hint:'Watch the endangered list in the Life tab and help any species that drops below 15.',setup:scn('africa'),check:()=>{const st=S.status||{},bad=SPK.filter(k=>st[k]==='endangered'||st[k]==='extinct'),p=hold('n',!bad.length,2);return[p>=1,p,bad.length?`${bad.length} endangered or extinct: ${bad.slice(0,3).map(k=>SP[k].pl).join(', ')}`:holdTxt(p,2)]},stars:byTime(90,240)});
+CC(2.3,{t:'Circle of life',g:'Watch 40 animals be born and 10 die of old age.',hint:'Speed up time. Small animals like mice breed and age fastest.',setup:scn('meadow'),check:()=>{const b=evN('birth'),o=CH.events.filter(e=>e.k==='death'&&e.cause==='old age').length;return[b>=40&&o>=10,Math.min(1,b/40)*.5+Math.min(1,o/10)*.5,`${Math.min(b,40)} of 40 births · ${Math.min(o,10)} of 10 old-age deaths`]},stars:byTime(30,90)});
+CC(2.7,{t:'Home builders',g:'Have 60 more finished homes than at the start.',hint:'Animals build burrows, nests and dens once they are grown and well fed. Give them food and time.',setup:scn('meadow',()=>{CH.ref.h0=S.homes.filter(h=>h.prog>=1).length}),check:()=>{const n=S.homes.filter(h=>h.prog>=1).length-CH.ref.h0;return[n>=60,Math.max(0,n)/60,`${Math.max(0,n)} of 60 new homes`]},stars:byTime(40,100)});
+CC(3.9,{t:'Dam builders',g:'Release beavers (search: beaver) and have 4 beaver lodges built.',hint:'Beavers build lodges right at the water’s edge. Release them next to a lake.',setup:scn('meadow'),check:()=>{const n=S.homes.filter(h=>h.hk==='lodge'&&h.prog>=1).length;return[n>=4,n/4,`${n} of 4 lodges`]},stars:byTime(60,150)});
+CC(4.1,{t:'A growing village',g:'Grow one human village to 8 huts.',hint:'Hunters need plenty of prey to raise families. Release deer and rabbits near the village.',setup:scn('farm'),check:()=>{const m=Math.max(0,...S.villages.map(v=>v.huts));return[m>=8,m/8,`Biggest village: ${m} of 8 huts`]},stars:byTime(60,160)});
+CC(5.4,{t:'Sustainable hunting',g:'Keep at least 10 human hunters and 30 deer alive together for 5 years.',hint:'Use the Human hunting limit slider in the World tab so the hunters do not empty the woods.',setup:scn('farm'),check:()=>{const h=cnt('x_human_hunter'),d=cnt('deer'),p=hold('s',h>=10&&d>=30,5);return[p>=1,p,`${h} hunters · ${d} deer · ${holdTxt(p,5)}`]},fail:()=>!cnt('deer')?'The deer were hunted out':'',stars:byTime(60,150)});
+CC(3.6,{t:'Clean-up crew',g:'On the African savanna, have scavengers finish off 25 carcasses.',hint:'Vultures, hyenas and other hunters eat carcasses. Speed up time and keep the scavengers fed.',setup:scn('africa'),check:()=>{const n=evN('scavenged');return[n>=25,n/25,`${Math.min(n,25)} of 25 carcasses eaten`]},stars:byTime(40,100)});
+CC(4.8,{t:'Climate refugees',g:'The Arctic warms by 12 °C. Keep at least 6 wolves alive for 3 years.',hint:'Animals die after 60 weeks outside their climate zone. The wolves must find the coldest places: the north, the far south and the mountains. Keep their prey alive there too.',setup:scn('arctic',()=>{CL.temp=12;syncClimateUI()}),check:()=>{const n=cnt('wolf'),p=hold('r',n>=6,3);return[p>=1,p,`${n} wolves · ${holdTxt(p,3)}`]},fail:()=>cnt('wolf')?'':'The wolves died out',stars:byTime(45,120)});
 // biodiversity and rewilding
 [[8,4.8],[10,6.2],[13,8]].forEach(([n,d])=>CC(d,{t:`${n} species at once`,g:`Have ${n} different species alive at the same time for 2 years.`,hint:'Each species needs its own climate and food. Use different regions of the supercontinent.',setup:scn('pangaea'),check:()=>{const c=speciesAlive().length,p=hold('b',c>=n,2);return[p>=1,p*.8+Math.min(.2,c/n*.2),`${c} species · ${holdTxt(p,2)}`]},stars:byTime(40,120)}));
 [[3,3.6],[6,5.8]].forEach(([n,d])=>CC(d,{t:`Rewild with ${n} species`,g:`On the barren land, have ${n} species with at least 6 animals each, for 2 years.`,hint:'Grow plants first, then plant eaters, then hunters. Seed algae before releasing fish.',setup:scn('barren'),check:()=>{const c=SPK.filter(k=>cnt(k)>=6).length,p=hold('r',c>=n,2);return[p>=1,p*.8+Math.min(.2,c/n*.2),`${c} species with 6+ · ${holdTxt(p,2)}`]},stars:byTime(90,240)}));
@@ -1400,6 +1507,8 @@ const TSTEPS=[
  ['Find an animal','Type fox in the search bar and press Enter.',()=>S.sel&&S.sel.sp==='fox'],
  ['Its genes','The Inspect tab shows its energy, what it is doing and its genes. Drag one of the gene sliders.',r=>GENEDIT>r.g,r=>{r.g=GENEDIT}],
  ['Let go','Press Esc to stop following it.',()=>!S.sel],
+ ['Carcasses','When an animal dies it leaves a carcass that hunters and scavengers eat. Find one (a body or bones on the ground) and click it.',()=>S.sel&&!!S.sel.carc],
+ ['Homes','Animals build homes: burrows, nests, dens and huts. Zoom in and click one to see who lives there.',()=>S.sel&&!!S.sel.hk],
  ['Plant a tree','Pick Oak in the toolbar on the left and click on green land.',r=>(PLACED.oak||0)>r.n,r=>{r.n=PLACED.oak||0}],
  ['Release animals','Pick Rabbit and click on the land to release some.',r=>(PLACED.rabbit||0)>r.n,r=>{r.n=PLACED.rabbit||0}],
  ['Any animal at all','Type elephant (or any animal: tiger, penguin, shark…) in the search bar and press Enter to release some.',r=>NEWSP>r.n||Object.keys(PLACED).some(k=>k.startsWith('x_')&&k!=='x_human_hunter'&&PLACED[k]>(r.p[k]||0)),r=>{r.n=NEWSP;r.p={...PLACED}}],
