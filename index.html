@@ -6,7 +6,7 @@
 <meta name="description" content="Barycenter: a 3D gravity sandbox. Build star systems, add famous stars and black holes, collide worlds and run time up to 100 years per second.">
 <style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html,body{height:100%}body{margin:0;font:14px system-ui,-apple-system,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>
 <title>Barycenter Sandbox</title>
-
+<title>Barycenter Sandbox</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -503,7 +503,7 @@ body.mDemo .rail,body.mDemo .campad,body.mDemo .hint,body.mDemo .insp,body.mDemo
 </div>
 <div id="home" class="home" role="dialog" aria-label="Home">
   <div class="hcard">
-    <div class="hhead"><h1 class="htitle">Bary<b>center</b></h1><p class="htag">A 3D sandbox for gravity, worlds and stars</p><div class="hacct"><button class="chip" id="hAcctBtn" title="Accounts: save progress on this device">👤 <span id="hAcctName">Guest</span></button><button class="chip" id="hPlays" title="Your plays and stats">▶ <b id="hPlaysN">0</b> plays</button></div></div>
+    <div class="hhead"><h1 class="htitle">Bary<b>center</b></h1><p class="htag">A 3D sandbox for gravity, worlds and stars</p><div class="hacct"><button class="chip" id="hAcctBtn" title="Accounts: save progress on this device">👤 <span id="hAcctName">Guest</span></button><button class="chip" id="hPlays" title="Total plays by everyone, and your stats">▶ <b id="hPlaysN">0</b> <span id="hPlaysL">plays</span></button></div></div>
     <div id="hMain" class="hview">
       <button class="hb" id="hChal"><span class="ht">Challenges</span><span class="hd" id="hChalSub">Goals from easy to fiendish</span></button>
       <button class="hb" id="hDemo"><span class="ht">Demo &amp; tutorial</span><span class="hd">Watch the highlights, or learn the controls step by step</span></button>
@@ -541,9 +541,9 @@ body.mDemo .rail,body.mDemo .campad,body.mDemo .hint,body.mDemo .insp,body.mDemo
 <div id="playsBox" class="ovl" hidden role="dialog" aria-label="Plays">
   <div class="obox panel">
     <div class="hbar"><h2 id="pWho">Plays</h2><button class="btn" id="playsClose" aria-label="Close">×</button></div>
-    <div><div class="pbig" id="pN">0</div><div class="hfoot">plays on this account · <span id="pDev"></span></div></div>
+    <div><div class="pbig" id="pN">0</div><div class="hfoot" id="pNL">plays by everyone</div></div>
     <div class="pgrid" id="pGrid"></div>
-    <p class="hfoot">A play is each time you start free play, a challenge, the demo or the tutorial. Counted on this device only.</p>
+    <p class="hfoot">A play is each time anyone starts free play, a challenge, the demo or the tutorial. The total counts every player; the boxes above are yours, on this device. Only the number is sent, nothing about you.</p>
   </div>
 </div>
 <div id="chDone" class="home donebg" hidden role="dialog" aria-label="Challenge result">
@@ -2961,7 +2961,11 @@ function saveAcc(){lsSet(ACC_KEY,ACC)}
 const curAcc=()=>ACC.list.find(a=>a.id===ACC.cur);
 const accName=()=>(curAcc()||{name:'Guest'}).name;
 const pinHash=p=>{let h=5381;for(const c of 'bary:'+p)h=((h*33)^c.charCodeAt(0))>>>0;return h.toString(36)};
-function countPlay(kind){PROG.plays++;PROG.by[kind]=(PROG.by[kind]||0)+1;ACC.devicePlays=(ACC.devicePlays||0)+1;saveProg();saveAcc();updateAcctUI()}
+// total plays by everyone: a public counter (abacus.jasoncameron.dev) holds one number; nothing else is sent
+const GCOUNT='https://abacus.jasoncameron.dev',GPATH='barycenter-sandbox/plays';let GLOBAL=null;
+function gCount(op){try{const ctl=new AbortController();setTimeout(()=>ctl.abort(),6000);
+  fetch(`${GCOUNT}/${op}/${GPATH}`,{signal:ctl.signal,cache:'no-store'}).then(r=>r.ok?r.json():null).then(j=>{if(j&&Number.isFinite(+j.value)){GLOBAL=Math.max(GLOBAL||0,+j.value);updateAcctUI();if(!$('playsBox').hidden)openPlays()}}).catch(()=>{})}catch(e){}}
+function countPlay(kind){PROG.plays++;PROG.by[kind]=(PROG.by[kind]||0)+1;ACC.devicePlays=(ACC.devicePlays||0)+1;saveProg();saveAcc();if(GLOBAL!=null)GLOBAL++;updateAcctUI();gCount('hit')}
 function chEv(k,d){if(CH.active&&!CH.done&&!CH.loading)CH.events.push({k,...(d||{}),t:S.t})}
 const BN=n=>S.bodies.find(b=>b.name===n);
 const mine=()=>S.bodies.filter(b=>b.id>CH.base);
@@ -3154,7 +3158,7 @@ $('chExit').addEventListener('click',e=>{if(TUT.on){e.stopImmediatePropagation()
 const fmtPlay=s=>s<60?`${Math.round(s)} s`:s<3600?`${Math.floor(s/60)} min`:`${Math.floor(s/3600)} h ${Math.floor(s%3600/60)} min`;
 function progOf(id){if(id===ACC.cur)return PROG;const v=lsGet(progKey(id))||{};return{stars:v.stars||{},plays:v.plays||0}}
 const starSum=st=>Object.values(st||{}).reduce((a,b)=>a+(+b||0),0);
-function updateAcctUI(){const n=accName();$('hAcctName').textContent=curAcc()?n:'Guest · make an account';$('hPlaysN').textContent=PROG.plays;$('acctBtn').title=`Account: ${n} (saved on this device)`}
+function updateAcctUI(){const n=accName();$('hAcctName').textContent=curAcc()?n:'Guest · make an account';$('hPlaysN').textContent=(GLOBAL!=null?GLOBAL:PROG.plays).toLocaleString();$('hPlaysL').textContent=GLOBAL!=null?'plays by everyone':'plays';$('acctBtn').title=`Account: ${n} (saved on this device)`}
 function switchAcc(id,quiet){if(id===ACC.cur)return;saveProg();ACC.cur=id;saveAcc();loadProg();ACCN++;updateAcctUI();
   if(!$('home').hidden){if(!$('hChalView').hidden)renderGrid();homeView($('hChalView').hidden?($('hDemoView').hidden?'hMain':'hDemoView'):'hChalView')}
   if(!quiet)toast(`Signed in as ${accName()} · progress saves on this device`);renderAcct()}
@@ -3181,16 +3185,16 @@ $('acctForm').addEventListener('submit',e=>{e.preventDefault();const name=$('acc
   if(fromGuest){lsSet(progKey(a.id),PROG);lsSet(PROG_KEY,blankProg())}
   ACC.list.push(a);saveAcc();$('acctNew').value='';$('acctPin').value='';switchAcc(a.id,true);toast(`Account ${name} created · progress saves on this device`);
   renderAcct(fromGuest?'Your guest progress moved into this account.':'')});
-function openPlays(){$('acct').hidden=true;const p=PROG;$('pWho').textContent=`${accName()}'s plays`;$('pN').textContent=p.plays;$('pDev').textContent=`${ACC.devicePlays||0} on this device in total`;
-  const g=$('pGrid');g.textContent='';for(const [k,v] of [['Free play',p.by.free],['Challenges started',p.by.chal],['Challenges complete',`${doneCount()} / ${NCH}`],['Stars',`${totalStars()} / ${NCH*3}`],['Tutorials',p.by.tut],['Demos watched',p.by.demo],["Time played",fmtPlay(p.secs||0)],['Accounts here',ACC.list.length+1]]){const d=document.createElement('div');d.innerHTML='<span class="k"></span><span class="v"></span>';d.children[0].textContent=k;d.children[1].textContent=v;g.appendChild(d)}
+function openPlays(){$('acct').hidden=true;const p=PROG;$('pWho').textContent='Plays';$('pN').textContent=(GLOBAL!=null?GLOBAL:p.plays).toLocaleString();$('pNL').textContent=GLOBAL!=null?'plays by everyone, worldwide':'plays on this account (the worldwide total could not be loaded)';
+  const g=$('pGrid');g.textContent='';for(const [k,v] of [['Your plays',p.plays],['Plays on this device',ACC.devicePlays||0],['Free play',p.by.free],['Challenges started',p.by.chal],['Challenges complete',`${doneCount()} / ${NCH}`],['Stars',`${totalStars()} / ${NCH*3}`],['Tutorials',p.by.tut],['Demos watched',p.by.demo],["Time played",fmtPlay(p.secs||0)],['Accounts here',ACC.list.length+1]]){const d=document.createElement('div');d.innerHTML='<span class="k"></span><span class="v"></span>';d.children[0].textContent=k;d.children[1].textContent=v;g.appendChild(d)}
   $('playsBox').hidden=false}
-$('hAcctBtn').addEventListener('click',openAcct);$('acctBtn').addEventListener('click',openAcct);$('hPlays').addEventListener('click',openPlays);
+$('hAcctBtn').addEventListener('click',openAcct);$('acctBtn').addEventListener('click',openAcct);$('hPlays').addEventListener('click',()=>{openPlays();gCount('get')});
 $('acctClose').addEventListener('click',()=>$('acct').hidden=true);$('playsClose').addEventListener('click',()=>$('playsBox').hidden=true);
 for(const id of ['acct','playsBox'])$(id).addEventListener('click',e=>{if(e.target.id===id)$(id).hidden=true});
 // time played: counted while a game is running and the tab is visible
 setInterval(()=>{if(document.hidden||!$('home').hidden)return;PROG.secs=(PROG.secs||0)+5;if(Math.round(PROG.secs)%30===0)saveProg()},5000);
 addEventListener('pagehide',saveProg);
-updateAcctUI();
+updateAcctUI();gCount('get');
 
 /* demo: an automatic tour of highlights */
 const DEMO=[
