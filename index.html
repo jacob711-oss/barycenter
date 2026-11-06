@@ -213,6 +213,8 @@ body.mDemo .rail,body.mDemo .campad,body.mDemo .hint,body.mDemo .insp,body.mDemo
 .toast{font-family:var(--f-mono);font-size:12px;padding:7px 14px;border-radius:99px;background:rgba(30,20,10,.85);border:1px solid rgba(255,180,84,.45);color:#ffe1b8;transition:opacity .4s,transform .4s}
 .toast.out{opacity:0;transform:translateY(-6px)}
 
+@media (min-width:761px) and (max-width:1700px){.right .stat{display:none}.right{gap:8px;padding:8px}.find{width:200px}}
+@media (min-width:761px) and (max-width:1300px){.brand .sub{display:none}#speed{width:110px}#homeBtn{font-size:0;padding:7px 10px}#homeBtn::before{content:'⌂';font-size:14px}.find{width:170px}}
 @media (max-width:1000px){ .brand .sub{display:none} #speed{width:110px} }
 @media (max-width:760px){
   .spds{gap:2px}.spd{padding:2px 4px;font-size:9.5px}
@@ -228,7 +230,7 @@ body.mDemo .rail,body.mDemo .campad,body.mDemo .hint,body.mDemo .insp,body.mDemo
   .right{margin-left:0;flex:1 1 100%;justify-content:space-between;padding:6px 8px 6px 12px}
   .stat.g{display:none}
   .find{width:100%}
-  .findwrap{flex:1 1 100%;order:5}
+  .findwrap{flex:1 1 100%;order:-1}
   .right{flex-wrap:wrap;row-gap:8px}
   .findlist{left:0;right:auto;width:100%}
   .rail{top:auto;max-height:none;overflow-y:visible;display:flex;transform:none;bottom:var(--bot);left:var(--gut);right:var(--gutR);flex-direction:row;overflow-x:auto;padding:4px}
@@ -272,7 +274,7 @@ body.mDemo .rail,body.mDemo .campad,body.mDemo .hint,body.mDemo .insp,body.mDemo
     <div class="stat"><span class="k">Bodies</span><span id="nBodies" class="v">0</span></div>
     <div class="stat"><span class="k">Particles</span><span id="nParts" class="v">0</span></div>
     <div class="stat g"><span class="k">Grid cell</span><span id="gridStep" class="v">1 AU</span></div>
-    <div class="findwrap"><input id="find" class="find" placeholder="Search or add: Antares, TON 618…" aria-label="Search for an object to fly to or add" autocomplete="off" spellcheck="false" role="combobox" aria-expanded="false" aria-controls="findList"><div id="findList" class="findlist panel" role="listbox" hidden></div></div>
+    <div class="findwrap"><input id="find" class="find" placeholder="Search or add…" title="Search the scene, or add a famous object: Antares, TON 618, Titan…" aria-label="Search for an object to fly to or add" autocomplete="off" spellcheck="false" role="combobox" aria-expanded="false" aria-controls="findList"><div id="findList" class="findlist panel" role="listbox" hidden></div></div>
     <button id="homeBtn" class="btn" title="Back to the home page">⌂ Home</button>
     <button id="createBtn" class="btn" aria-expanded="false" aria-controls="create">Create</button>
     <button id="scenBtn" class="btn" aria-expanded="false" aria-controls="scen">Scenarios</button>
@@ -3100,7 +3102,7 @@ const DEMO=[
 let demoI=-1,demoTimer=0;
 function startDemo(){leaveHome();setMode('demo');$('demoCap').hidden=false;demoI=-1;nextDemo()}
 function nextDemo(){clearTimeout(demoTimer);demoI=(demoI+1)%DEMO.length;const [id,t,x,f]=DEMO[demoI];CH.loading=true;load(SCEN.find(s=>s.id===id));CH.loading=false;f();setTog('spin','tSpin',true);setTog('labels','tLabels',false);setTog('zones','tZones',false);
-  $('demoStep').textContent=`Demo · ${demoI+1} of ${DEMO.length}`;$('demoTitle').textContent=t;$('demoText').textContent=x;demoTimer=setTimeout(nextDemo,14000)}
+  $('demoStep').textContent=`Demo · ${demoI+1} of ${DEMO.length}`;$('demoTitle').textContent=t;$('demoText').textContent=x;demoTimer=setTimeout(nextDemo,13000)}
 function stopDemo(quiet){clearTimeout(demoTimer);if(demoI<0&&quiet)return;demoI=-1;$('demoCap').hidden=true;setMode('');if(!quiet)showHome()}
 $('hWatch').addEventListener('click',startDemo);$('demoExit').addEventListener('click',()=>stopDemo());
 
