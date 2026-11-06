@@ -149,6 +149,10 @@ body.mDemo .rail,body.mDemo .dock,body.mDemo .placeopts,body.mDemo .hint,body.mD
 .arow .an{flex:1;min-width:0}.arow .as{font-family:var(--f-mono);font-size:11px;color:var(--dim)}
 .arow input,.aform input{font:inherit;font-size:13px;padding:7px 9px;border-radius:7px;border:1px solid var(--line-strong);background:rgba(0,0,0,.35);color:var(--ink);min-width:0}
 .arow input{width:80px}.aform{display:flex;gap:6px;flex-wrap:wrap}.aform input{flex:1 1 120px}
+.endbox{border:1px solid rgba(255,107,90,.45);background:rgba(60,16,12,.35);border-radius:8px;padding:8px 10px;display:flex;flex-direction:column;gap:4px}.endbox .k{color:#ffb1a6}.endrow{display:flex;justify-content:space-between;font-size:12.5px;text-align:left;padding:2px 0}.endrow b{font-family:var(--f-mono);font-weight:500;color:#ffb1a6}.endrow.ext{opacity:.6;text-decoration:line-through}
+.endbadge{position:fixed;right:calc(var(--gutR) + 342px);top:calc(var(--top) + 86px);z-index:4;padding:7px 12px;border-color:rgba(255,107,90,.55);color:#ffc0b6;font-family:var(--f-mono);font-size:12px}
+@media (max-width:760px){.endbadge{right:var(--gutR);top:auto;bottom:calc(var(--bot) + 230px)}}
+body.mHome .endbadge,body.mDemo .endbadge{display:none!important}
 .pbig{font-family:var(--f-display);font-size:54px;line-height:1;color:var(--flare)}
 
 @media (max-width:1300px){.right .stat{display:none}.brand .sub{display:none}.find{width:170px}}
@@ -187,7 +191,7 @@ body.mDemo .rail,body.mDemo .dock,body.mDemo .placeopts,body.mDemo .hint,body.mD
     <div class="stat"><span class="k">Animals</span><span id="nAnimals" class="v">0</span></div>
     <div class="stat"><span class="k">Trees</span><span id="nTrees" class="v">0</span></div>
     <div class="stat"><span class="k">Species</span><span id="nSpecies" class="v">0</span></div>
-    <div class="findwrap"><input id="find" class="find" placeholder="Find or add a species…" aria-label="Find or add a species" autocomplete="off" spellcheck="false"><div id="findList" class="findlist panel" hidden></div></div>
+    <div class="findwrap"><input id="find" class="find" placeholder="Find or add any animal…" aria-label="Find or add any animal" autocomplete="off" spellcheck="false"><div id="findList" class="findlist panel" hidden></div></div>
     <button id="homeBtn" class="btn" title="Back to the home page">⌂ Home</button>
     <button id="acctBtn" class="btn" title="Account: save your progress on this device">👤</button>
     <button id="scenBtn" class="btn">Worlds</button>
@@ -221,6 +225,7 @@ body.mDemo .rail,body.mDemo .dock,body.mDemo .placeopts,body.mDemo .hint,body.mD
     <p class="note">Plants grow where it is warm and wet enough. Animals need food, water and a bearable temperature. Every baby inherits its parents' genes with small random changes, so species slowly adapt: that is evolution.</p>
   </div>
   <div class="pane" id="pane-life" hidden>
+    <div id="endBox" class="endbox" hidden></div>
     <span class="k">Population over time</span>
     <canvas id="graph"></canvas>
     <div class="splist" id="splist"></div>
@@ -234,6 +239,7 @@ body.mDemo .rail,body.mDemo .dock,body.mDemo .placeopts,body.mDemo .hint,body.mD
 <div class="zoomb panel"><button id="zIn" title="Zoom in">+</button><button id="zOut" title="Zoom out">−</button><button id="zFit" title="Show the whole world">⤢</button></div>
 <div class="hint" id="hint">Drag to look around · scroll to zoom · click an animal to inspect it</div>
 <div class="toasts" id="toasts" aria-live="polite"></div>
+<button id="endBadge" class="endbadge panel" hidden title="Species with fewer than 15 alive"></button>
 
 <div class="scen panel" id="scen" hidden>
   <div class="row"><span class="k">Choose a world</span><button class="btn ghost" id="scenClose">×</button></div>
@@ -372,7 +378,7 @@ const VEG_PARTS=4,vegAcc=new Float32Array(VEG_PARTS);let vegTurn=0;
 function updateVegSliced(dt){for(let k=0;k<VEG_PARTS;k++)vegAcc[k]+=dt;const k=vegTurn++%VEG_PARTS,d=vegAcc[k];vegAcc[k]=0;if(d>0)updateVeg(d,Math.floor(N*k/VEG_PARTS),Math.floor(N*(k+1)/VEG_PARTS))}
 function updateVeg(dt,i0=0,i1=N){const s=sea();
   for(let i=i0;i<i1;i++){
-    if(hgt[i]<s){veg[i]=0;const T=cellT(i),cap=T<1?0.05:T<30?Math.min(1,(s-hgt[i])<0.06?1:0.45):0.5;let a=alg[i];
+    if(hgt[i]<s){veg[i]=0;const T=Math.max(3,cellT(i)),cap=T<1?0.05:T<30?Math.min(1,(s-hgt[i])<0.06?1:0.45):0.5;let a=alg[i];
       if(a<0.01){a=0.01}a=a<cap?cap/(1+(cap-a)/a*Math.exp(-0.035*dt)):a+(cap-a)*Math.min(1,0.03*dt);alg[i]=a;continue}
     alg[i]=0;const T=cellT(i),R=wetAt(i),cap=capOf(T,R);let v=veg[i];
     if(v<0.003){if(cap>0.05){const x=i%GW;const nb=(x>0?veg[i-1]:0)+(x<GW-1?veg[i+1]:0)+(i>=GW?veg[i-GW]:0)+(i<N-GW?veg[i+GW]:0);if(nb>0.25&&rnd()<0.08*dt)v=0.03}}
@@ -397,7 +403,7 @@ function nearTrees(x,y,r,fn){const x0=Math.max(0,((x-r)/TB)|0),x1=Math.min(TBW-1
 
 /* ---------- animals ---------- */
 const MAXA=3200,MAXT=2400,SPCAP={fish:600,mouse:350,rabbit:420,fox:45,hawk:30,wolf:30,lion:30,otter:40,bear:16};let SPN={};
-function habitatOK(sp,i){if(i<0)return false;const h=SP[sp].hab;if(h==='air')return true;const w=isWater(i);if(h==='water')return w;if(h==='amph')return true;return !w}
+function habitatOK(sp,i){if(i<0)return false;const h=SP[sp].hab;if(h==='air')return true;const w=isWater(i);if(h==='water')return w;if(h==='amph')return SP[sp].diet==='herb'?(!w||dwLand(i)<=2):true;return !w}
 function dwLand(i){// how far a water cell is from land (approx: check neighbours)
   const x=i%GW,y=(i/GW)|0;for(let r=1;r<5;r++)for(const [dx,dy] of [[r,0],[-r,0],[0,r],[0,-r]]){const j=idx(x+dx,y+dy);if(j>=0&&!isWater(j))return r}return 9}
 function furTint(col,fur){const c=parseInt(col.slice(1),16);let r=c>>16,g=c>>8&255,b=c&255;const t=clamp(fur/30,0,.75);r=lerp(r,236,t);g=lerp(g,236,t);b=lerp(b,232,t);return `rgb(${r|0},${g|0},${b|0})`}
@@ -485,12 +491,13 @@ function feed(a,s,g,i,sense,dt){
     const ps=SP[prey.sp].spd*prey.genes.speed*(prey.age<SP[prey.sp].mature?0.7:1),hs=s.spd*g.speed;
     let p=clamp(0.6+0.6*(hs-ps)/ps+0.15*(g.size-prey.genes.size)+(prey.sick?0.25:0)-(SP[prey.sp].herd&&prey.state!=='flee'?0.05:0),0.08,0.92);
     if(prey.state!=='flee')p=Math.min(0.95,p+0.2);
+    if(s.tp==='human')p=Math.max(p,0.55);// spears and teamwork
     {const pi=idx(prey.x,prey.y);if(SP[prey.sp].mass<0.5&&pi>=0&&veg[pi]>0.6)p*=0.7;if((SPN[prey.sp]||0)<20)p*=0.5}// small prey hide in thick grass
     if(rnd()<p){kill(prey,'eaten');a.kills++;S.kills++;chEv('kill',{pred:a.sp,prey:prey.sp});a.e=Math.min(1,a.e+SP[prey.sp].mass/s.mass*1.3);a.hc=0.5;return 'eat'}
     a.hc=0.6;prey.dir=Math.atan2(prey.y-a.y,prey.x-a.x);return 'hunt'}
   return 'hunt'}
 // bears only take young deer; land and air hunters only catch fish near the shore
-function canCatch(a,b){if(b===a)return false;if(a.sp==='bear'&&b.sp==='deer'&&b.age>SP.deer.mature)return false;if(b.sp==='fish'&&a.sp!=='otter'){const j=idx(b.x,b.y);if(j<0||dwLand(j)>2)return false}return true}
+function canCatch(a,b){if(b===a)return false;const A=SP[a.sp],B=SP[b.sp];if(a.sp==='bear'&&b.sp==='deer'&&b.age>SP.deer.mature)return false;if(B.hab==='water'&&A.hab==='land'){const j=idx(b.x,b.y);if(j<0||dwLand(j)>2)return false}return true}
 function mate(a,s,sense){if(a.sex==='m'){let f=null,fd=1e9;nearSp([a.sp],a.x,a.y,sense,(b,d2)=>{if(b.sex==='f'&&!b.preg&&b.age>s.mature&&b.cd<=0&&b.e>s.repE&&d2<fd){fd=d2;f=b}});
     if(!f&&((a.id+(S.t|0))%4)===0)nearSp([a.sp],a.x,a.y,45,(b,d2)=>{if(b.sex==='f'&&b.age>s.mature&&d2<fd){fd=d2;f=b}});if(!f)return 'wander';a.dir=Math.atan2(f.y-a.y,f.x-a.x);if(fd>sense*sense)return 'mate';if(fd<2.2){f.preg=s.gest*rr(.9,1.1);f.pg=a.genes;f.pgen=a.gen;f.pdad=a.id;a.cd=s.gest*0.2+5;f.cd=s.gest+10;chEv('mate',{sp:a.sp})}return 'mate'}
   let m=null,md=1e9;nearSp([a.sp],a.x,a.y,sense,(b,d2)=>{if(b.sex==='m'&&b.age>s.mature&&b.cd<=0&&d2<md){md=d2;m=b}});if(!m)return 'wander';a.dir=Math.atan2(m.y-a.y,m.x-a.x);return 'mate'}
@@ -542,6 +549,340 @@ function sampleHist(){const c=counts();c.trees=S.trees.length;c.t=S.t;let v=0,n=
 function vegCover(){let v=0,n=0;for(let i=0;i<N;i+=3)if(!isWater(i)){n++;if(veg[i]>0.25)v++}return n?v/n:0}
 function avgGene(sp,k){let s=0,n=0;for(const a of S.animals)if(!a.dead&&a.sp===sp){s+=a.genes[k];n++}return n?s/n:NaN}
 function speciesAlive(){return SPK.filter(k=>S.animals.some(a=>!a.dead&&a.sp===k))}
+
+/* ================= every animal: a searchable catalogue ================= */
+// Name[/Plural] | emoji | template | body mass (rabbit 0.35, deer 1.4, bison 2.5) | climate | colour | speed multiplier
+const CATA_SRC=`Squirrel|🐿️|rod|.25|T|8a5a3a
+Chipmunk|🐿️|rod|.12|T|a0703c
+Hamster|🐹|rod|.1|T|d9a066
+Guinea pig|🐹|rod|.15|W|c8884a
+Rat|🐀|rod|.15|A|6b6258
+Hedgehog|🦔|rod|.15|T|8a7a66
+Porcupine|🦔|rod|.5|T|5c5248
+Hare|🐇|rod|.4|T|a08866|1.3
+Arctic hare|🐇|rod|.4|P|ecebe6|1.2
+Marmot|🐿️|rod|.4|C|7a5c3e
+Prairie dog|🐿️|rod|.2|T|b08a5a
+Lemming|🐁|rod|.08|P|8a6a4a
+Gerbil|🐁|rod|.08|D|c9a06a
+Chinchilla|🐭|rod|.12|C|a8a8a8
+Mole|🐁|rod|.1|T|3a3430
+Shrew|🐁|rod|.03|T|5a4a40
+Vole|🐁|rod|.05|T|6a5440
+Pika|🐭|rod|.1|C|9a8068
+Kangaroo rat|🐀|rod|.06|D|c8a070
+Horse|🐎|graz|2|T|8a5a36|1.2
+Pony|🐎|graz|1.2|T|a07048
+Zebu|🐂|graz|2.4|W|cfc6b8
+Donkey|🫏|graz|1.4|W|8a8078
+Cow|🐄|graz|2.5|T|e6e1d8
+Bull|🐂|graz|2.8|T|3a2a20
+Sheep/Sheep|🐑|graz|1|T|eeeadf
+Goat|🐐|graz|.9|T|d8d0c0
+Mountain goat|🐐|graz|1|C|f0f0ea
+Antelope|🦌|graz|1.2|W|c08a50|1.2
+Gazelle|🦌|graz|1|W|c9a06a|1.4
+Impala/Impala|🦌|graz|1.1|W|b8743c|1.3
+Springbok|🦌|graz|.9|D|c8945a|1.3
+Wildebeest/Wildebeest|🐃|graz|2|W|5a5048
+Moose/Moose|🫎|graz|3|C|4a3a2c
+Elk/Elk|🦌|graz|2.4|C|8a6440
+Reindeer/Reindeer|🦌|graz|1.6|P|8a7a6a
+Caribou/Caribou|🦌|graz|1.6|P|8a7a6a
+Llama|🦙|graz|1.6|C|e0d8c8
+Alpaca|🦙|graz|1.1|C|d8c8b0
+Yak|🐂|graz|2.6|P|3a302a
+Ox/Oxen|🐂|graz|2.8|T|6a4a30
+Water buffalo/Water buffalo|🐃|graz|3|H|3a3632
+Buffalo/Buffalo|🐃|graz|3|W|3a3230
+Kangaroo|🦘|graz|1.2|W|b08060|1.3
+Wallaby|🦘|graz|.7|W|8a7058
+Koala|🐨|graz|.4|W|9a9a98|.4
+Sloth|🦥|graz|.3|H|8a7a60|.15
+Okapi|🦒|graz|1.8|H|5a3a2a
+Tapir|🐖|graz|1.8|H|3a3a3a
+Musk ox/Musk oxen|🐂|graz|2.8|P|3a2e26
+Bighorn sheep/Bighorn sheep|🐏|graz|1.2|C|8a7058
+Ram|🐏|graz|1.1|T|e0dbcf
+Ibex/Ibex|🐐|graz|1|C|8a7058
+Giant panda|🐼|graz|1.4|T|f2f2f2|.5
+Red panda|🐼|graz|.3|T|b0482a|.7
+Ostrich/Ostriches|🦤|graz|1.3|D|3a3632|1.5
+Emu|🦤|graz|1|W|5a4a3a|1.3
+Rhea|🦤|graz|.8|T|8a8070|1.3
+Camel|🐪|graz|2.4|D|c9a46a
+Dromedary|🐪|graz|2.4|D|c9a46a
+Vicuna|🦙|graz|.8|C|c8945a
+Elephant|🐘|giant|7|H|8a8580
+African elephant|🐘|giant|7.5|H|8a8580
+Asian elephant|🐘|giant|6|H|7a7570
+Rhinoceros/Rhinoceroses|🦏|giant|5|H|8a8480
+Rhino|🦏|giant|5|H|8a8480
+Giraffe|🦒|giant|4|H|d8a050
+Mammoth|🦣|giant|7|P|6a4a30
+Mastodon|🦣|giant|6|C|5a3e28
+Hippopotamus/Hippopotamuses|🦛|ahrb|5|H|7a6a6a
+Hippo|🦛|ahrb|5|H|7a6a6a
+Capybara|🦫|ahrb|.9|H|8c6a46
+Beaver|🦫|ahrb|.6|C|6b4a2e
+Muskrat|🦫|ahrb|.2|T|5a4030
+Nutria|🦫|ahrb|.4|T|6a5040
+Cat|🐈|scarn|.5|A|c88a4a
+Black cat|🐈‍⬛|scarn|.5|A|222222
+Wildcat|🐈|scarn|.5|T|8a7a60
+Lynx/Lynxes|🐈|scarn|.9|C|b8a080
+Bobcat|🐈|scarn|.8|T|a08868
+Weasel|🦡|scarn|.2|T|8a5a30
+Stoat|🦡|scarn|.2|C|8a5a30
+Ermine|🦡|scarn|.2|P|f2f2ee
+Ferret|🦡|scarn|.25|T|c8b090
+Mink|🦦|scarn|.3|C|3a2a20
+Mongoose/Mongooses|🦡|scarn|.3|W|8a7a60
+Meerkat|🦡|scarn|.2|D|c9a878
+Jackal|🐕|scarn|.7|W|b08a5a
+Coyote|🐺|scarn|.9|T|a08060
+Arctic fox/Arctic foxes|🦊|scarn|.5|P|f2f2f2
+Fennec fox/Fennec foxes|🦊|scarn|.3|D|e8c890
+Red fox/Red foxes|🦊|scarn|.6|T|c8642a
+Dingo/Dingoes|🐕|scarn|.9|W|c89050
+Dog|🐕|scarn|.9|A|b08050
+Wolf dog|🐕‍🦺|scarn|1|C|7a7068
+Wolverine|🦡|scarn|.8|C|4a3426
+Ocelot|🐆|scarn|.6|H|c8964a
+Serval|🐆|scarn|.7|W|d8a858
+Caracal|🐈|scarn|.7|D|c88a50
+Fossa|🐈|scarn|.6|H|8a5a30
+Tasmanian devil|🦡|scarn|.5|T|2a2a2a
+Honey badger|🦡|scarn|.6|W|3a3a3a
+Tiger|🐅|bcarn|2|H|e08a30
+Bengal tiger|🐅|bcarn|2|H|e08a30
+Siberian tiger|🐅|bcarn|2.4|C|d8903a
+Leopard|🐆|bcarn|1.4|H|d8a050
+Jaguar|🐆|bcarn|1.6|H|c8903a
+Cheetah|🐆|bcarn|1.2|W|e0b060|1.45
+Cougar|🐈|bcarn|1.4|T|b08a60
+Puma|🐈|bcarn|1.4|T|b08a60
+Mountain lion|🦁|bcarn|1.4|T|b08a60
+Snow leopard|🐆|bcarn|1|P|d8d8d0
+Black panther|🐈‍⬛|bcarn|1.5|H|1e1e1e
+Hyena|🐕|bcarn|1.4|W|a08a60
+African wild dog|🐕|bcarn|.9|W|8a6a40
+Gray wolf/Gray wolves|🐺|bcarn|1.2|C|8a8680
+Arctic wolf/Arctic wolves|🐺|bcarn|1.2|P|f0f0ea
+Dire wolf/Dire wolves|🐺|bcarn|1.5|C|6a625a
+Sabre-toothed cat|🐅|bcarn|2.2|C|b08850
+Komodo dragon|🦎|bcarn|1.2|H|5a5a40|.7
+Polar bear|🐻‍❄️|bcarn|3|P|f0f0ea|.9
+Pig|🐖|omni|1.2|T|e8b0a8
+Wild boar|🐗|omni|1.2|T|4a3a30
+Warthog|🐗|omni|1|W|6a5a50
+Grizzly bear|🐻|omni|2.6|C|6a4a30
+Brown bear|🐻|omni|2.4|C|5b3e29
+Black bear|🐻|omni|2|T|1e1e1e
+Panda bear|🐼|omni|1.4|T|f2f2f2
+Raccoon|🦝|omni|.5|T|7a7470
+Skunk|🦨|omni|.4|T|222222
+Badger|🦡|omni|.7|T|6a6460
+Opossum|🐀|omni|.2|T|c8c8c0
+Armadillo|🦔|omni|.2|W|8a7a6a
+Anteater|🐜|omni|.6|H|6a5a48
+Aardvark|🐖|omni|.7|W|a08870
+Monkey|🐒|omni|.4|H|8a6040
+Gorilla|🦍|omni|2|H|2a2a2a
+Chimpanzee|🐒|omni|.8|H|3a3030
+Orangutan|🦧|omni|1|H|b05a20
+Baboon|🐒|omni|.5|W|8a7a60
+Lemur|🐒|omni|.2|H|9a9a9a
+Gibbon|🐒|omni|.3|H|3a3028
+Platypus/Platypuses|🦫|omni|.2|T|6a4a30
+Pigeon|🕊️|bird|.05|A|8a8a98
+Dove|🕊️|bird|.04|A|e8e4e0
+Sparrow|🐦|bird|.02|T|8a6a4a
+Robin|🐦|bird|.03|T|b06040
+Bluebird|🐦|bird|.03|T|3a6ab0
+Parrot|🦜|bird|.06|H|3ab040
+Macaw|🦜|bird|.1|H|d03030
+Cockatoo|🦜|bird|.08|W|f0f0e8
+Toucan|🐦|bird|.08|H|1e1e1e
+Crow|🐦‍⬛|bird|.08|A|222222
+Raven|🐦‍⬛|bird|.1|C|111111
+Magpie|🐦‍⬛|bird|.06|T|202020
+Hummingbird|🐦|bird|.005|H|3ab07a
+Woodpecker|🐦|bird|.05|T|b02a2a
+Bat|🦇|bird|.03|A|3a3030
+Duck|🦆|bird|.1|T|6a7a3a
+Goose/Geese|🪿|bird|.2|C|8a8a80
+Swan|🦢|bird|.4|T|f4f4f0
+Flamingo|🦩|bird|.3|W|f090a0
+Canary/Canaries|🐦|bird|.02|W|f0d040
+Chicken|🐔|gbird|.2|A|e8e0d0
+Rooster|🐓|gbird|.25|A|b04020
+Turkey|🦃|gbird|.4|T|5a3a2a
+Peacock|🦚|gbird|.3|H|2a6ab0
+Dodo|🦤|gbird|.4|W|8a8070
+Quail|🐦|gbird|.03|T|8a6a48
+Pheasant|🐦|gbird|.1|T|a05a30
+Eagle|🦅|rapt|.5|A|4a3420
+Bald eagle|🦅|rapt|.5|C|3a2818
+Golden eagle|🦅|rapt|.5|C|7a5428
+Falcon|🦅|rapt|.15|A|6a5a4a|1.3
+Peregrine falcon|🦅|rapt|.15|A|5a5a5a|1.4
+Owl|🦉|rapt|.15|T|8a7050
+Snowy owl|🦉|rapt|.2|P|f0f0ea
+Vulture|🦅|rapt|.5|W|3a3028
+Condor|🦅|rapt|.6|C|1e1e1e
+Kite|🦅|rapt|.2|T|8a5a30
+Buzzard|🦅|rapt|.3|T|6a4a30
+Osprey|🦅|sbird|.3|A|6a5a4a
+Pelican|🐦|sbird|.5|W|f0f0ea
+Seagull|🐦|sbird|.1|A|e8e8e8
+Gull|🐦|sbird|.1|A|e8e8e8
+Puffin|🐦|sbird|.05|P|1e1e1e
+Kingfisher|🐦|sbird|.03|T|2a7ab0
+Heron|🐦|sbird|.2|T|9a9aa0
+Stork|🐦|sbird|.3|T|f0f0ea
+Albatross/Albatrosses|🐦|sbird|.5|C|f0f0ea
+Cormorant|🐦‍⬛|sbird|.2|T|1e1e1e
+Seal|🦭|marine|1.2|P|6a6a70
+Sea lion|🦭|marine|1.5|C|7a5a40
+Walrus/Walruses|🦭|marine|3|P|8a6a5a
+Penguin|🐧|marine|.3|P|222222
+Emperor penguin|🐧|marine|.5|P|222222
+Sea otter|🦦|marine|.4|C|5a4030
+River otter|🦦|marine|.35|T|4f3a2a
+Crocodile|🐊|croc|2|H|4a5a30
+Alligator|🐊|croc|2|W|3a4a2a
+Caiman|🐊|croc|1|H|5a6040
+Goldfish/Goldfish|🐠|fish|.05|W|f08a20
+Clownfish/Clownfish|🐠|fish|.03|H|f07020
+Salmon/Salmon|🐟|fish|.2|C|c87a70
+Trout/Trout|🐟|fish|.15|C|9a8a70
+Carp/Carp|🐟|fish|.2|T|b09050
+Cod/Cod|🐟|fish|.3|C|8a8a70
+Sardine|🐟|fish|.02|A|a8b8c8
+Herring/Herring|🐟|fish|.03|C|a8b8c8
+Catfish/Catfish|🐟|fish|.2|W|6a6050
+Pufferfish/Pufferfish|🐡|fish|.05|H|d8c070
+Seahorse|🐠|fish|.01|H|e0a040
+Angelfish/Angelfish|🐠|fish|.04|H|f0d040
+Tuna/Tuna|🐟|fish|.8|T|3a4a6a|1.3
+Jellyfish/Jellyfish|🪼|fish|.05|A|c8a0e0|.4
+Shrimp/Shrimp|🦐|fish|.01|A|f0a080
+Lobster|🦞|fish|.1|C|c03020|.5
+Crab|🦀|herp|.05|A|d04020
+Starfish/Starfish|⭐|fish|.03|W|f08040|.1
+Manta ray|🐟|fish|.8|H|2a2a30
+Stingray|🐟|fish|.4|H|6a6050
+Sea turtle|🐢|fish|.8|H|5a6a3a|.7
+Manatee|🐋|whale|3|H|7a7a78|.5
+Dugong|🐋|whale|3|H|8a8070|.5
+Blue whale|🐋|whale|30|C|5a6a80
+Humpback whale|🐋|whale|15|C|3a4048
+Whale|🐳|whale|15|C|4a5a70
+Sperm whale|🐋|dolph|14|T|4a4a50
+Orca|🐋|dolph|6|P|1e1e1e
+Killer whale|🐋|dolph|6|P|1e1e1e
+Dolphin|🐬|dolph|1.5|T|7a8a9a
+Porpoise|🐬|dolph|1|C|6a7480
+Narwhal|🐋|dolph|1.6|P|9a9a98
+Beluga|🐋|dolph|1.5|P|f0f0ea
+Shark|🦈|pfish|3|W|6a7a8a
+Great white shark|🦈|pfish|4|T|7a8a98
+Hammerhead shark|🦈|pfish|2.5|H|6a7a8a
+Tiger shark|🦈|pfish|3|H|7a7a70
+Pike|🐟|pfish|.4|C|6a7a40
+Barracuda|🐟|pfish|.5|H|9aa0a8
+Piranha|🐟|pfish|.05|H|c04030
+Swordfish/Swordfish|🐟|pfish|1.2|T|4a5a7a|1.3
+Eel|🐍|pfish|.2|T|3a3a28
+Octopus/Octopuses|🐙|pfish|.3|T|c05a40
+Squid/Squid|🦑|pfish|.3|C|e0a090
+Snake|🐍|snake|.2|W|5a7a3a
+Python|🐍|snake|.8|H|8a7040
+Cobra|🐍|snake|.3|H|5a4a30
+Rattlesnake|🐍|snake|.2|D|b09060
+Anaconda|🐍|snake|1.2|H|4a5a30
+Viper|🐍|snake|.15|W|6a5a30
+Lizard|🦎|rept|.05|W|6a8a3a
+Gecko|🦎|rept|.02|H|8ab040
+Chameleon|🦎|rept|.03|H|5ab040|.5
+Iguana|🦎|tort|.3|H|5a8a3a
+Tortoise/Tortoises|🐢|tort|.5|D|7a6a4a
+Turtle|🐢|herp|.3|T|5a6a3a
+Frog|🐸|herp|.03|T|4a9a3a
+Toad|🐸|herp|.04|T|7a6a40
+Salamander|🦎|herp|.02|T|c06020
+Newt|🦎|herp|.01|T|b06030
+Axolotl|🦎|herp|.02|T|f0b0b0
+Butterfly/Butterflies|🦋|insect|.002|W|f08a20
+Moth|🦋|insect|.002|T|c8b8a0
+Bee|🐝|insect|.001|T|e0b020
+Wasp|🐝|insect|.001|T|e0c020
+Dragonfly/Dragonflies|🪰|insect|.002|T|3a8ab0
+Fly/Flies|🪰|insect|.001|A|3a3a3a
+Mosquito/Mosquitoes|🦟|insect|.001|W|5a5a5a
+Ladybug|🐞|bug|.001|T|d02020
+Ant|🐜|bug|.001|A|3a2a20
+Beetle|🪲|bug|.002|T|2a3a4a
+Grasshopper|🦗|bug|.003|W|6aa03a
+Cricket|🦗|bug|.002|T|5a4a30
+Caterpillar|🐛|bug|.002|T|6ab040
+Snail|🐌|bug|.003|T|a08a60|.2
+Worm|🪱|bug|.002|T|c08070|.2
+Spider|🕷️|rept|.005|A|2a2a2a
+Tarantula|🕷️|rept|.02|H|4a3a30
+Scorpion|🦂|rept|.01|D|8a6a30
+T-rex/T-rexes|🦖|bcarn|8|W|6a6a40
+Tyrannosaurus/Tyrannosauruses|🦖|bcarn|8|W|6a6a40
+Velociraptor|🦖|scarn|.5|W|8a7050|1.3
+Spinosaurus/Spinosauruses|🦖|croc|7|H|6a5a40
+Brachiosaurus/Brachiosauruses|🦕|giant|20|W|7a8070
+Diplodocus/Diplodocuses|🦕|giant|15|W|6a7a68
+Triceratops/Triceratopses|🦕|giant|8|W|8a7050
+Stegosaurus/Stegosauruses|🦕|giant|5|W|7a7a50
+Dinosaur|🦕|giant|10|W|6a7a68
+Dragon|🐉|bcarn|6|A|3a7a3a|1.2
+Unicorn|🦄|graz|2|T|f4f0f8|1.3`;
+const ATPL={rod:{diet:'herb',hab:'land',spd:1},graz:{diet:'herb',hab:'land',herd:1,spd:1.8},giant:{diet:'herb',hab:'land',herd:1,spd:1.1,browse:1},
+ scarn:{diet:'carn',hab:'land',spd:1.85},bcarn:{diet:'carn',hab:'land',spd:2.1,big:1},omni:{diet:'omni',hab:'land',spd:1.3},
+ bird:{diet:'herb',hab:'air',spd:2.6},gbird:{diet:'herb',hab:'land',spd:1.5},rapt:{diet:'carn',hab:'air',spd:3},sbird:{diet:'carn',hab:'air',spd:2.6,fishy:1},
+ marine:{diet:'carn',hab:'amph',spd:1.6,fishy:1},croc:{diet:'carn',hab:'amph',spd:1.4,big:1},fish:{diet:'herb',hab:'water',herd:1,spd:1.4,shape:'fish'},
+ pfish:{diet:'carn',hab:'water',spd:1.9,shape:'fish'},whale:{diet:'herb',hab:'water',spd:1.2,shape:'fish'},dolph:{diet:'carn',hab:'water',spd:2.2,shape:'fish',herd:1,big:1},
+ rept:{diet:'carn',hab:'land',spd:1.1},snake:{diet:'carn',hab:'land',spd:1.1,shape:'snake'},herp:{diet:'herb',hab:'amph',spd:.7},tort:{diet:'herb',hab:'land',spd:.35},
+ insect:{diet:'herb',hab:'air',spd:1.6},bug:{diet:'herb',hab:'land',spd:.4},ahrb:{diet:'herb',hab:'amph',herd:1,spd:1}};
+const CLIMS={P:[-45,15],C:[-30,26],T:[-12,34],W:[0,42],H:[10,44],D:[3,52],A:[-22,40]};
+function pluralOf(n){if(/(s|x|z|ch|sh)$/i.test(n))return n+'es';if(/[^aeiou]y$/i.test(n))return n.slice(0,-1)+'ies';if(/(wolf)$/i.test(n))return n.slice(0,-1)+'ves';if(/mouse$/i.test(n))return n.replace(/mouse$/i,'mice');return n+'s'}
+const CATA=CATA_SRC.split('\n').map(l=>{const [nm,ic,tp,m,cl,col,sm]=l.split('|');const [n,pl]=nm.split('/');return{n,pl:pl||pluralOf(n),ic,tp,mass:+m,cl,col:'#'+col,sm:sm?+sm:1,key:'x_'+n.toLowerCase().replace(/[^a-z0-9]+/g,'_')}}).filter(c=>!SPK.some(k=>SP[k].n.toLowerCase()===c.n.toLowerCase()));
+// base species keep their hand-tuned values; give them a template too so new animals can fit into their food chains
+const BASE_TPL={rabbit:'rod',mouse:'rod',deer:'graz',bison:'graz',zebra:'graz',camel:'graz',fox:'scarn',wolf:'bcarn',lion:'bcarn',bear:'omni',hawk:'rapt',fish:'fish',otter:'marine'};
+for(const k of SPK){SP[k].tp=BASE_TPL[k];if(SP[k].hab==='water')SP[k].shape='fish'}
+// can predator p eat species q? (by size and where they live)
+function fitsPrey(p,q){const P=SP[p],Q=SP[q];if(p===q||P.diet==='herb'||!Q)return false;const T=ATPL[P.tp]||{},m=P.mass,qm=Q.mass;
+  if(T.hunter)return Q.tp!=='human'&&(Q.hab==='land'||Q.hab==='amph'||Q.hab==='water'&&qm>=0.1)&&qm>=0.1&&qm<=10;
+  if(Q.tp==='human'&&m<3)return false;// only the very largest predators take people
+  const hi=m*(T.big?1.4:P.diet==='omni'?0.5:0.9),lo=m*0.02;if(qm>hi||qm<lo)return false;
+  if(P.hab==='land')return Q.hab==='land'||Q.hab==='amph';
+  if(P.hab==='water')return Q.hab==='water'||Q.hab==='amph';
+  if(P.hab==='amph')return T.fishy?(Q.hab==='water'):(Q.hab!=='air');
+  if(P.hab==='air')return T.fishy?Q.hab==='water':(qm<=0.6&&Q.hab!=='air');return false}
+function addSpecies(c,quiet){if(SP[c.key])return c.key;const T=ATPL[c.tp],m=c.mass,[tmin,tmax]=CLIMS[c.cl]||CLIMS.T,herb=T.diet==='herb';
+  const life=clamp(1800*Math.pow(m,0.28),250,40000),s={n:c.n,pl:c.pl,ic:c.ic,col:c.col,diet:T.diet,hab:T.hab,tp:c.tp,shape:T.shape,herd:T.herd,browse:T.browse,cat:1,
+    len:clamp(8.5*Math.pow(m,0.36),2.2,28)*(T.shape==='snake'?1.5:1),wid:T.shape==='snake'?.13:T.shape==='fish'?.36:T.hab==='air'?.35:.45,
+    spd:T.spd*c.sm*clamp(Math.pow(m,0.08),0.7,1.3),sense:(6+4*Math.pow(m,0.3))*(c.tp==='rapt'?1.6:1),
+    meta:clamp((herb?0.045:0.024)*Math.pow(m,-0.12),0.012,0.08)*(c.tp==='whale'?0.5:1),thirst:T.hab==='water'||T.hab==='amph'?0:c.cl==='D'?0.015:T.hab==='air'?0.03:0.06,
+    life,mature:clamp(life*0.13,25,5000),gest:clamp(45*Math.pow(m,0.35),12,650),litter:m<0.1?[3,7]:m<0.5?[2,4]:m<2?[1,2]:[1,1],repE:.7,
+    eat:herb||T.diet==='omni'?clamp(0.08*Math.pow(m,0.35),0.02,1.2):undefined,conv:herb||T.diet==='omni'?clamp(6*Math.pow(m,-0.25),1.5,9):undefined,sparse:c.cl==='D'?1:undefined,
+    tmin,tmax,mass:m,prey:T.diet==='herb'?undefined:[]};
+  SP[c.key]=s;SPK.push(c.key);SPCAP[c.key]=m>=4?60:m>=1.5?150:300;
+  if(s.prey)s.prey=SPK.filter(q=>fitsPrey(c.key,q));
+  for(const k of SPK)if(k!==c.key&&SP[k].prey&&fitsPrey(k,c.key))SP[k].prey.push(c.key);
+  for(const k of SPK)PREDS[k]=SPK.filter(p=>(SP[p].prey||[]).includes(k));
+  try{SPCOL[c.key]=c.col}catch(e){}if(!quiet){chEv('newsp',{sp:c.key});NEWSP++;addRailTool(c.key)}return c.key}
+let NEWSP=0;
+// human hunters: smart, patient and armed, so they can bring down animals far bigger than themselves
+ATPL.human={diet:'carn',hab:'land',spd:1.4,hunter:1};
+const HUMAN={n:'Human hunter',pl:'Human hunters',ic:'🏹',tp:'human',mass:1,cl:'A',col:'#c89a70',sm:1,key:'x_human_hunter'};
+function setupHuman(){const k=addSpecies(HUMAN,true),s=SP[k];Object.assign(s,{sense:18,meta:.014,life:20000,mature:900,gest:270,litter:[1,2],thirst:.05,shape:'human',herd:1,tmin:-25,tmax:42});SPCAP[k]=80}
 
 /* ================= rendering ================= */
 const cv=$('world'),ctx=cv.getContext('2d');let gx=ctx;let W=0,H=0,DPR=1;
@@ -635,7 +976,9 @@ function drawAnimal(a,X,Y,z,big){const s=SP[a.sp],k=(a.age<s.mature?0.55+0.45*a.
   if(s.hab==='air'){const sh=L*0.9;gx.fillStyle='rgba(0,0,0,.2)';gx.save();gx.translate(sh,sh);hawkShape(L);gx.fill();gx.restore();gx.fillStyle=a.col;hawkShape(L);gx.fill();gx.fillStyle='#e8e0d0';gx.beginPath();gx.arc(L*.42,0,L*.1,0,TAU);gx.fill();gx.restore();return}
   if(s.hab!=='water'){gx.fillStyle='rgba(0,0,0,.25)';gx.beginPath();gx.ellipse(L*.08,L*.12,L*.55,Wd*.6,0,0,TAU);gx.fill()}
   gx.fillStyle=a.col;
-  if(a.sp==='fish'){gx.globalAlpha=.9;gx.beginPath();gx.ellipse(0,0,L/2,Wd/2,0,0,TAU);gx.fill();gx.beginPath();gx.moveTo(-L*.4,0);gx.lineTo(-L*.75,-Wd*.6);gx.lineTo(-L*.75,Wd*.6);gx.fill();gx.globalAlpha=1;gx.restore();return}
+  if(s.shape==='human'){gx.strokeStyle='#5a4028';gx.lineWidth=Math.max(1,L*.07);gx.beginPath();gx.moveTo(-L*.5,Wd*.55);gx.lineTo(L*.75,Wd*.55);gx.stroke();gx.fillStyle='#8a6a48';gx.beginPath();gx.ellipse(0,0,L*.22,Wd*.75,0,0,TAU);gx.fill();gx.strokeStyle='rgba(0,0,0,.55)';gx.lineWidth=Math.max(.8,L*.05);gx.stroke();gx.fillStyle=a.col;gx.beginPath();gx.arc(L*.05,0,Wd*.42,0,TAU);gx.fill();gx.stroke();gx.restore();return}
+  if(s.shape==='snake'){gx.strokeStyle=a.col;gx.lineCap='round';gx.lineWidth=Math.max(1.2,Wd);gx.beginPath();for(let q=0;q<=8;q++){const t=q/8,xx=L*(0.5-t),yy=Math.sin(t*9+S.t*4+a.id)*L*.08;q?gx.lineTo(xx,yy):gx.moveTo(xx,yy)}gx.stroke();gx.restore();return}
+  if(s.shape==='fish'){gx.globalAlpha=.9;gx.beginPath();gx.ellipse(0,0,L/2,Wd/2,0,0,TAU);gx.fill();gx.beginPath();gx.moveTo(-L*.4,0);gx.lineTo(-L*.75,-Wd*.6);gx.lineTo(-L*.75,Wd*.6);gx.fill();gx.globalAlpha=1;gx.restore();return}
   // tail
   if(a.sp==='fox'||a.sp==='wolf'||a.sp==='lion'||a.sp==='otter'){gx.strokeStyle=a.col;gx.lineWidth=Math.max(1,Wd*(a.sp==='fox'?.45:.25));gx.lineCap='round';gx.beginPath();gx.moveTo(-L*.4,0);gx.quadraticCurveTo(-L*.65,Wd*.3*Math.sin(S.t*3+a.id),-L*(a.sp==='fox'?.85:.75),0);gx.stroke()}
   gx.beginPath();gx.ellipse(0,0,L/2,Wd/2,0,0,TAU);gx.fill();gx.strokeStyle='rgba(0,0,0,.55)';gx.lineWidth=Math.max(.8,L*.05);gx.stroke();
@@ -675,12 +1018,15 @@ function render(now){ctx.fillStyle='#08100c';ctx.fillRect(0,0,W,H);
   if(ptr.in&&BRUSH_TOOLS.has(S.tool)){ctx.strokeStyle='rgba(255,255,255,.5)';ctx.setLineDash([4,4]);ctx.beginPath();ctx.arc(ptr.x,ptr.y,S.brush*CELL*z,0,TAU);ctx.stroke();ctx.setLineDash([])}}
 
 /* ================= input ================= */
+setupHuman();
 const TOOLS=[['select','Select','🖐','Tools'],
  ['grass','Grass','🌱','Plants'],['oak','Oak','🌳'],['pine','Pine','🌲'],['palm','Palm','🌴'],['cactus','Cactus','🌵'],['bush','Berries','🫐'],['algae','Algae','🌿'],
  ...SPK.map((k,j)=>[k,SP[k].n,SP[k].ic,j===0?'Animals':0]),
  ['raise','Raise','⛰','Land'],['lower','Lower','🕳'],['water','Water','💧'],['rain','Rain','🌧'],['fire','Fire','🔥'],['meteor','Meteor','☄'],['plague','Disease','🦠'],['remove','Remove','✖']];
 const BRUSH_TOOLS=new Set(['grass','algae','raise','lower','water','rain','fire','plague','remove']);
-function buildRail(){const r=$('rail');r.textContent='';for(const [id,label,ic,grp] of TOOLS){if(grp){const h=document.createElement('h3');h.textContent=grp;r.appendChild(h)}
+let railAdded=false;
+function addRailTool(k){const r=$('rail');if(!railAdded){const h=document.createElement('h3');h.textContent='Added';h.id='railAdded';r.appendChild(h);railAdded=true}const b=document.createElement('button');b.className='tool';b.dataset.tool=k;b.setAttribute('aria-pressed','false');b.title=toolTip(k);b.innerHTML='<span class="ico"></span><span></span>';b.children[0].textContent=SP[k].ic;b.children[1].textContent=SP[k].n;b.onclick=()=>setTool(k);r.appendChild(b)}
+function buildRail(){railAdded=false;const r=$('rail');r.textContent='';for(const [id,label,ic,grp] of TOOLS){if(grp){const h=document.createElement('h3');h.textContent=grp;r.appendChild(h)}
   const b=document.createElement('button');b.className='tool';b.dataset.tool=id;b.setAttribute('aria-pressed','false');b.title=toolTip(id);b.innerHTML='<span class="ico"></span><span></span>';b.children[0].textContent=ic;b.children[1].textContent=label;b.onclick=()=>setTool(id);r.appendChild(b)}}
 function toolTip(id){if(SP[id])return`${SP[id].n}: click to release ${SP[id].pl.toLowerCase()} (${SP[id].diet==='herb'?'plant eater':SP[id].diet==='carn'?'hunter':'eats anything'})`;if(TK[id])return`${TK[id].n}: click to plant (grows where the climate suits it)`;
   return{select:'Select, inspect and look around (1)',grass:'Paint grass seeds',algae:'Seed algae in water (fish food)',raise:'Raise the land (makes hills and mountains)',lower:'Lower the land',water:'Flood an area to make lakes',rain:'Make an area wetter',fire:'Start a fire',meteor:'Drop a meteor',plague:'Spread a disease',remove:'Remove life in an area'}[id]||id}
@@ -786,10 +1132,10 @@ document.querySelectorAll('#cntSeg button').forEach(b=>b.onclick=()=>{S.count=+b
 $('dockBtn').onclick=()=>document.body.classList.toggle('dockOpen');
 
 /* species list and graph */
-const SPCOL={rabbit:'#d8b48a',mouse:'#a99886',deer:'#c98a52',bison:'#8a6346',zebra:'#e9e5dc',camel:'#e0bd7a',fox:'#ff8a3d',wolf:'#a9a6a2',lion:'#f0c36a',bear:'#9c6a44',hawk:'#c9a070',fish:'#8fd0ff',otter:'#7ea0b8',trees:'#5fbf5f'};
-function renderLife(){const c=counts(),L=$('splist');if(!L.children.length){for(const k of [...SPK,'trees']){const r=document.createElement('button');r.className='sprow';r.dataset.k=k;r.innerHTML='<i></i><span></span><b></b>';r.children[0].style.background=SPCOL[k];r.onclick=()=>k==='trees'?flyTree():flyTo(k);L.appendChild(r)}}
+const SPCOL={rabbit:'#d8b48a',mouse:'#a99886',deer:'#c98a52',bison:'#8a6346',zebra:'#e9e5dc',camel:'#e0bd7a',fox:'#ff8a3d',wolf:'#a9a6a2',lion:'#f0c36a',bear:'#9c6a44',hawk:'#c9a070',fish:'#8fd0ff',otter:'#7ea0b8',trees:'#5fbf5f',x_human_hunter:'#e0b080'};
+function renderLife(){const c=counts(),L=$('splist');if(L.dataset.n!=SPK.length){L.textContent='';L.dataset.n=SPK.length}renderEndangered(c);if(!L.children.length){for(const k of [...SPK,'trees']){const r=document.createElement('button');r.className='sprow';r.dataset.k=k;r.innerHTML='<i></i><span></span><b></b>';r.children[0].style.background=SPCOL[k];r.onclick=()=>k==='trees'?flyTree():flyTo(k);L.appendChild(r)}}
   for(const r of L.children){const k=r.dataset.k;const n=k==='trees'?S.trees.length:c[k];r.classList.toggle('zero',!n);
-    r.children[1].textContent=k==='trees'?'🌳 Trees':`${SP[k].ic} ${SP[k].pl}`+(n?` · speed ${avgGene(k,'speed').toFixed(2)} · fur ${avgGene(k,'fur').toFixed(0)}°`:'');r.children[2].textContent=n}
+    r.style.display=k!=='trees'&&!n&&!(S.seen||{})[k]?'none':'';r.children[1].textContent=k==='trees'?'🌳 Trees':`${SP[k].ic} ${SP[k].pl}`+(n?` · speed ${avgGene(k,'speed').toFixed(2)} · fur ${avgGene(k,'fur').toFixed(0)}°`:'');r.children[2].textContent=n}
   drawGraph()}
 function drawGraph(){const g=$('graph'),r=g.getBoundingClientRect();if(!r.width)return;const d=Math.min(2,devicePixelRatio||1);if(g.width!==Math.round(r.width*d)){g.width=r.width*d;g.height=r.height*d}const c=g.getContext('2d');c.setTransform(d,0,0,d,0,0);c.clearRect(0,0,r.width,r.height);
   const Hh=S.hist;if(Hh.length<2)return;const keys=[...SPK,'trees'].filter(k=>Hh.some(h=>h[k]>0));let mx=1;for(const h of Hh)for(const k of keys)mx=Math.max(mx,h[k]);
@@ -827,7 +1173,7 @@ function updateInspector(){const o=S.sel;if(!o||$('pane-insp').hidden)return;con
   const i=idx(o.x,o.y),T=cellT(i);let rows;
   if(!o.k){const s=SP[o.sp];R.sub.textContent=`${s.n}, ${o.sex==='f'?'female':'male'} · ${(o.age/365).toFixed(1)} years · generation ${o.gen}${o.preg>0?' · pregnant':''}${o.sick>0?' · sick':''}`;
     const tmin=s.tmin-o.genes.fur-(o.genes.size-1)*4,tmax=s.tmax-o.genes.fur*0.5;
-    rows=[['Energy',Math.round(o.e*100)+'%'],['Water',s.thirst?Math.round(o.w*100)+'%':'—'],['Doing',STATE[o.state]||o.state],['Children',o.kids],['Kills',o.kills],['Eats',s.diet==='herb'?(s.hab==='water'?'Algae':'Plants'):s.diet==='omni'?'Fruit, fish, small animals, plants':(s.prey||[]).map(k=>SP[k].pl).join(', ')],['Comfort',`${tmin.toFixed(0)} to ${tmax.toFixed(0)} °C`],['Here',`${T.toFixed(0)} °C${o.stress>1?' (stressed)':''}`]];
+    rows=[['Energy',Math.round(o.e*100)+'%'],['Water',s.thirst?Math.round(o.w*100)+'%':'—'],['Doing',STATE[o.state]||o.state],['Children',o.kids],['Kills',o.kills],['Eats',s.diet==='herb'?(s.hab==='water'?'Algae':'Plants'):s.diet==='omni'?'Fruit, fish, small animals, plants':s.tp==='human'?'Almost any animal, from rabbits to mammoths':((L=>L.length>6?L.slice(0,6).join(', ')+` and ${L.length-6} more`:L.join(', '))((s.prey||[]).map(k=>SP[k].pl)))],['Comfort',`${tmin.toFixed(0)} to ${tmax.toFixed(0)} °C`],['Here',`${T.toFixed(0)} °C${o.stress>1?' (stressed)':''}`]];
     for(const g of ['speed','size','sense'])R['g_'+g].textContent=o.genes[g].toFixed(2);R.g_fur.textContent=o.genes.fur.toFixed(1)}
   else rows=[['Age',(o.age/365).toFixed(0)+' years'],['Size',Math.round(o.size*100)+'%'],['Health',Math.round(o.hp*100)+'%'],['Fruit',TK[o.k].fruit?Math.round(o.fruit*100)+'%':'—'],['Here',`${meanT(i).toFixed(0)} °C average`],['Water',Math.round(wetAt(i)*100)+'%'+(dw[i]<=4?' (near water)':'')]];
   if(R.kv.children.length!==rows.length){R.kv.textContent='';for(const r of rows){const d=document.createElement('div');d.innerHTML='<span class="k"></span><span class="v"></span>';R.kv.appendChild(d)}}
@@ -842,13 +1188,14 @@ let GENEDIT=0;
 let findItems=[],findSel=0;
 const lev=(a,b)=>{const m=a.length,n=b.length,d=Array.from({length:m+1},(_,i)=>[i]);for(let j=1;j<=n;j++)d[0][j]=j;for(let i=1;i<=m;i++)for(let j=1;j<=n;j++)d[i][j]=Math.min(d[i-1][j]+1,d[i][j-1]+1,d[i-1][j-1]+(a[i-1]===b[j-1]?0:1));return d[m][n]};
 function findMatches(q){q=q.toLowerCase().trim();if(!q)return[];const out=[];
-  const all=[...SPK.map(k=>({k,t:'sp',names:[SP[k].n,SP[k].pl]})),...Object.keys(TK).map(k=>({k,t:'tree',names:[TK[k].n]})),...SCEN.map(s=>({k:s.id,t:'world',names:[s.n]}))];
+  const all=[...SPK.map(k=>({k,t:'sp',names:[SP[k].n,SP[k].pl]})),...CATA.filter(c=>!SP[c.key]).map(c=>({k:c.key,t:'cat',c,names:[c.n,c.pl]})),...Object.keys(TK).map(k=>({k,t:'tree',names:[TK[k].n]})),...SCEN.map(s=>({k:s.id,t:'world',names:[s.n]}))];
   for(const it of all){let best=9;for(const n of it.names){const nl=n.toLowerCase();if(nl.startsWith(q))best=0;else if(nl.includes(q))best=Math.min(best,1);else best=Math.min(best,lev(q,nl.slice(0,Math.max(q.length,3)))+1)}if(best<=2)out.push({...it,score:best})}
-  return out.sort((a,b)=>a.score-b.score).slice(0,6)}
+  return out.sort((a,b)=>a.score-b.score||(a.t==='sp'?-1:1)).slice(0,7)}
 function renderFind(){const q=$('find').value,L=$('findList');L.textContent='';findItems=[];findSel=0;const ms=findMatches(q);
-  for(const m of ms){if(m.t==='sp'){const n=S.animals.filter(a=>!a.dead&&a.sp===m.k).length;if(n)findItems.push({label:`${SP[m.k].ic} Find a ${SP[m.k].n.toLowerCase()}`,sm:`${n} alive`,go:()=>flyTo(m.k)});findItems.push({label:`${SP[m.k].ic} Release ${SP[m.k].pl.toLowerCase()} here`,sm:'6 at the centre of the view',go:()=>{const c=nearestHab(m.k);if(c){spawnAt(m.k,c[0],c[1],6,true);PLACED[m.k]=(PLACED[m.k]||0)+6;toast(`Released ${SP[m.k].pl.toLowerCase()}`)}else toast('No suitable place in view')}})}
+  for(const m of ms){if(m.t==='cat'){const c=m.c;findItems.push({label:`${c.ic} Release ${c.pl.toLowerCase()} here`,sm:'new species · 6 at the centre of the view',go:()=>{const k=addSpecies(c);const p=nearestHab(k);if(p){const n=spawnAt(k,p[0],p[1],6,true);PLACED[k]=(PLACED[k]||0)+n;toast(`${c.ic} Released ${c.pl.toLowerCase()} · find them under Added in the toolbar`)}else toast(SP[k].hab==='water'?`${c.pl} need water: move the view over a lake or the sea`:'No suitable place in view')}});continue}
+    if(m.t==='sp'){const n=S.animals.filter(a=>!a.dead&&a.sp===m.k).length;if(n)findItems.push({label:`${SP[m.k].ic} Find a ${SP[m.k].n.toLowerCase()}`,sm:`${n} alive`,go:()=>flyTo(m.k)});findItems.push({label:`${SP[m.k].ic} Release ${SP[m.k].pl.toLowerCase()} here`,sm:'6 at the centre of the view',go:()=>{const c=nearestHab(m.k);if(c){spawnAt(m.k,c[0],c[1],6,true);PLACED[m.k]=(PLACED[m.k]||0)+6;toast(`Released ${SP[m.k].pl.toLowerCase()}`)}else toast('No suitable place in view')}})}
     else if(m.t==='tree')findItems.push({label:`${TK[m.k].ic} Plant ${TK[m.k].n.toLowerCase()}s`,sm:'pick the tool',go:()=>setTool(m.k)});else findItems.push({label:`🌍 World: ${SCEN.find(s=>s.id===m.k).n}`,sm:'load it',go:()=>loadScen(m.k)})}
-  if(q&&!findItems.length){const e=document.createElement('div');e.className='note';e.style.padding='6px 8px';e.textContent='No match. Try rabbit, wolf, oak…';L.appendChild(e)}
+  if(q&&!findItems.length){const e=document.createElement('div');e.className='note';e.style.padding='6px 8px';e.textContent='No match. Try elephant, tiger, penguin, shark, oak…';L.appendChild(e)}
   findItems.forEach((it,j)=>{const b=document.createElement('button');b.textContent=it.label;const s=document.createElement('small');s.textContent=it.sm;b.appendChild(s);b.className=j===0?'on':'';b.onmousedown=e=>{e.preventDefault();pickFind(j)};L.appendChild(b)});
   L.hidden=!q}
 function nearestHab(sp){const cx=wxOf(W/2),cy=wyOf(H/2);for(let r=0;r<60;r+=2)for(let k=0;k<12;k++){const a=k/12*TAU,x=cx+Math.cos(a)*r,y=cy+Math.sin(a)*r;if(habitatOK(sp,idx(x,y)))return[x,y]}return null}
@@ -865,6 +1212,14 @@ const SCEN=[
  {id:'desert',n:'Desert',d:'Scorching dunes, cactus and rare oases. Camels go weeks without water.',ter:{seed:53,freq:2.4,land:.86,mount:.5,edge:3,center:.1,moist:.12,lakes:[[.3,.4,4],[.7,.6,4],[.5,.7,3]]},t0:12,trees:{cactus:160,palm:24},an:{camel:30,mouse:150,fox:5,hawk:3,rabbit:50,fish:60}},
  {id:'islands',n:'Archipelago',d:'Dozens of islands in a warm sea, full of fish and otters.',ter:{seed:67,freq:5.2,land:.36,mount:.5,edge:2,center:0,moist:.72},t0:8,trees:{palm:100,oak:40,bush:50},an:{fish:400,otter:10,rabbit:120,deer:25,hawk:5,mouse:100}},
  {id:'pangaea',n:'Supercontinent',d:'One huge continent from the frozen north to the hot south: every species finds its place.',ter:{seed:79,freq:2.2,land:.7,mount:1,edge:3,center:.35,moist:.6,lakes:[[.5,.5,5]]},t0:0,tc:27,latK:40,trees:{oak:160,pine:120,palm:100,cactus:40,bush:80},an:{rabbit:200,mouse:180,deer:70,bison:40,zebra:50,camel:15,fox:7,wolf:3,lion:3,bear:3,hawk:5,fish:300,otter:5},adapt:1},
+ {id:'africa',n:'African savanna',d:'Elephants, giraffes, wildebeest and gazelles; lions, hyenas and cheetahs; hippos and crocodiles at the waterholes.',ter:{seed:101,freq:2.6,land:.74,mount:.35,edge:3,center:.25,moist:.45,lakes:[[.35,.45,6],[.62,.55,6],[.5,.3,5],[.25,.65,5],[.75,.35,5],[.5,.72,5]]},t0:9,trees:{palm:70,bush:40,cactus:15,oak:25},an:{x_elephant:16,x_giraffe:18,x_gazelle:90,x_wildebeest:80,zebra:60,x_warthog:30,mouse:80,x_ostrich:14,fish:150,x_hippopotamus:8,lion:5,x_hyena:4,x_cheetah:4,x_crocodile:3,x_vulture:3}},
+ {id:'outback',n:'Australian outback',d:'Red dust and gum trees: kangaroos, wallabies, emus and koalas, with dingoes and snakes.',ter:{seed:113,freq:2.4,land:.8,mount:.4,edge:3,center:.15,moist:.3,lakes:[[.3,.4,5],[.7,.6,5],[.5,.5,4]]},t0:10,trees:{oak:40,palm:20,cactus:30,bush:30},an:{x_kangaroo:70,x_wallaby:40,x_emu:20,x_koala:12,rabbit:40,x_cockatoo:20,x_lizard:30,fish:60,x_dingo:6,x_snake:8}},
+ {id:'amazon',n:'Amazon rainforest',d:'Jaguars, capybaras, tapirs, monkeys and sloths; piranhas and caimans in the rivers.',ter:{seed:127,freq:3.6,land:.6,mount:.4,edge:3,center:.2,moist:1},t0:11,trees:{palm:320,oak:80,bush:120},an:{x_capybara:60,x_tapir:30,x_monkey:50,x_sloth:30,x_parrot:30,x_toucan:20,x_frog:80,fish:250,x_jaguar:3,x_anaconda:3,x_piranha:40,x_caiman:3}},
+ {id:'polar',n:'Polar coast',d:'Ice and ocean: polar bears hunt seals, penguins crowd the shore, reindeer and arctic foxes roam the tundra.',ter:{seed:139,freq:4,land:.42,mount:.6,edge:2,center:.1,moist:.55},t0:-5,trees:{pine:80},an:{x_lemming:150,x_arctic_hare:80,x_reindeer:60,fish:450,x_seal:14,x_walrus:6,x_penguin:24,x_polar_bear:2,x_arctic_fox:4,x_arctic_wolf:3,x_snowy_owl:3,x_orca:2},adapt:1},
+ {id:'reef',n:'Ocean and reef',d:'A warm sea dotted with islands: reef fish, sea turtles, dolphins, sharks and whales.',ter:{seed:151,freq:5,land:.22,mount:.4,edge:1,center:0,moist:.75},t0:10,trees:{palm:90,bush:20},an:{fish:450,x_clownfish:120,x_sea_turtle:20,x_jellyfish:60,x_crab:30,x_whale:3,x_dolphin:5,x_shark:3,x_octopus:5,x_seagull:6,x_pelican:4}},
+ {id:'jurassic',n:'Jurassic world',d:'Long-necked giants, triceratops and stegosaurus, hunted by velociraptors and a T. rex.',ter:{seed:163,freq:3,land:.66,mount:.6,edge:3,center:.2,moist:.8,lakes:[[.4,.5,6],[.65,.4,5]]},t0:10,trees:{palm:200,oak:80,bush:60},an:{x_triceratops:16,x_stegosaurus:16,x_brachiosaurus:10,x_dragonfly:20,fish:150,x_frog:60,x_velociraptor:5,x_t_rex:2,x_crocodile:3}},
+ {id:'farm',n:'Farmland and hunters',d:'Cows, sheep, pigs and chickens share the fields with deer and rabbits, while human hunters stalk the woods.',ter:{seed:177,freq:3,land:.66,mount:.25,edge:3,center:.2,moist:.62,peak:1.6,lakes:[[.45,.5,5],[.3,.35,4]]},t0:1,trees:{oak:160,bush:60,pine:30},an:{x_cow:30,x_sheep:40,x_pig:20,x_chicken:40,x_horse:10,rabbit:80,deer:40,mouse:60,fish:100,fox:5,x_human_hunter:8}},
+ {id:'iceage',n:'Ice age',d:'Woolly mammoths, reindeer and musk oxen on the cold steppe, hunted by sabre-toothed cats, wolves and human hunters.',ter:{seed:189,freq:2.8,land:.7,mount:.5,edge:3,center:.25,moist:.5,lakes:[[.5,.5,5],[.3,.6,4]]},t0:0,trees:{pine:150},an:{x_mammoth:20,x_reindeer:80,x_musk_ox:30,x_arctic_hare:80,fish:150,wolf:3,x_sabre_toothed_cat:2,x_human_hunter:6},adapt:1},
  {id:'barren',n:'Barren land',d:'Bare soil and empty lakes, with a mild climate. Bring it to life yourself.',ter:{seed:91,freq:3,land:.62,mount:.7,edge:3,center:.2,moist:.62,lakes:[[.45,.5,6]]},t0:0,trees:{},an:{},bare:1},
 ];
 function loadScen(id,opts={}){const sc=SCEN.find(s=>s.id===id)||SCEN[0];RNG=seeded((sc.ter.seed*977+(opts.seed||0))>>>0);
@@ -875,7 +1230,9 @@ function loadScen(id,opts={}){const sc=SCEN.find(s=>s.id===id)||SCEN[0];RNG=seed
   if(!sc.bare){for(let i=0;i<N;i++)veg[i]=isWater(i)?0:capOf(meanT(i),rainAt(i))*rr(.5,.9);for(let k=0;k<8;k++)updateVeg(10)}else{veg.fill(0)}
   for(let i=0;i<N;i++)alg[i]=isWater(i)?(sc.bare?0.02:0.5):0;
   for(const [k,n] of Object.entries(sc.trees)){let made=0;for(let q=0;q<n*20&&made<n;q++){const p=randomCell(i=>treeOK(k,i),50);if(!p)continue;let c=0;nearTrees(p[0],p[1],1.2,()=>c++);if(c)continue;addTree(k,p[0],p[1]);made++;if(made%20===0)rebuildTrees()}rebuildTrees()}
-  for(const [k,n] of Object.entries(sc.an).sort((x,y)=>(SP[x[0]].diet==='herb'?0:1)-(SP[y[0]].diet==='herb'?0:1))){let made=0;const s=SP[k];
+  for(const k of Object.keys(sc.an)){if(!SP[k]){const c=CATA.find(c=>c.key===k);if(c)addSpecies(c)}}
+  S.seen={};S.status={};S.statusReady=false;
+  for(const [k,n] of Object.entries(sc.an).filter(([k])=>SP[k]).sort((x,y)=>(SP[x[0]].diet==='herb'?0:1)-(SP[y[0]].diet==='herb'?0:1))){let made=0;const s=SP[k];
     const grp=Math.max(s.herd?5:3,Math.ceil(n/18));for(let g=0;g<n+30&&made<n;g++){const pr=s.prey&&S.animals.filter(z=>s.prey.includes(z.sp));if(pr&&pr.length){const z=pr[Math.floor(rnd()*pr.length)];made+=spawnAt(k,z.x,z.y,Math.min(n-made,s.herd?4:2),true,0.92);continue}const p=randomCell(i=>habitatOK(k,i)&&(s.hab==='water'||s.hab==='air'||(meanT(i)>s.tmin-14&&meanT(i)<s.tmax+2))&&(s.hab!=='amph'||dw[i]<=1),400);if(!p)continue;made+=spawnAt(k,p[0],p[1],Math.min(n-made,grp),true)}}
   RNG=Math.random;rebuildHash();rebuildTrees();sampleHist();S.terrainDirty=true;syncClimateUI();select(null);if(!opts.keepCam){fitWorld();cam.z*=1.9}setView('normal');VIEWCH=0}
 function buildScen(){const g=$('scgrid');g.textContent='';for(const s of SCEN){const b=document.createElement('button');b.className='scb';b.innerHTML='<b></b><span></span>';b.children[0].textContent=s.n;b.children[1].textContent=s.d;b.onclick=()=>{loadScen(s.id);$('scen').hidden=true;toast(s.n)};g.appendChild(b)}}
@@ -975,6 +1332,13 @@ CC(5.6,{t:'Rising seas',g:'The seas rise 60 m. Keep 5 land species alive for 3 y
 CC(3.3,{t:'Call it off',g:'Start an ice age, then stop it again.',hint:'In the World tab, press ❄ Ice age, then press the same button (■ Stop ice age).',setup:scn('meadow'),check:()=>{const s=evN('event')>0,st=CH.events.some(e=>e.k==='stop'&&e.ev==='ice');return[st,st?1:s?.5:0,st?'Stopped':s?'Now stop it':'Start an ice age first']},stars:byTime(15,40)});
 CC(4.5,{t:'Emergency response',g:'A wildfire and a plague break out at once. Stop both, then keep 100 rabbits alive for a year.',hint:'Press 🔥 Wildfire and 🦠 Plague in the World tab (they show ■ Stop while running) to stop them.',setup:scn('meadow',()=>{for(let k=0;k<5;k++){const p=randomCell(i=>!isWater(i)&&veg[i]>.5);if(p)ignite(idx(p[0],p[1]))}plague('rabbit')}),
   check:()=>{const fire=S.burning.size>0,sick=S.animals.some(a=>a.sick>0),calm=!fire&&!sick,n=cnt('rabbit'),p=hold('e',calm&&n>=100,1);return[p>=1,calm?0.3+0.7*p:0,calm?`${n} rabbits · ${holdTxt(p,1)}`:[fire?'Fire still burning':'',sick?'Plague still spreading':''].filter(Boolean).join(' · ')]},fail:()=>cnt('rabbit')?'':'The rabbits died out',stars:byTime(40,100)});
+CC(1.9,{t:'Exotic visitors',g:'Use the search bar to release 3 different animals that are not in the toolbar.',hint:'Type an animal such as elephant, tiger or penguin in the search bar and pick “Release … here”.',setup:scn('meadow'),check:()=>{const n=Object.keys(PLACED).filter(k=>k.startsWith('x_')&&k!=='x_human_hunter'&&PLACED[k]>0).length;return[n>=3,n/3,`${n} of 3 new species released`]},stars:byTime(40,100)});
+CC(4.4,{t:'Elephant country',g:'In the African savanna, keep at least 10 elephants alive for 5 years.',hint:'Elephants need lots of food and water and breed slowly. Keep the waterholes full and the herds fed.',setup:scn('africa'),check:()=>{const n=cnt('x_elephant'),p=hold('h',n>=10,5);return[p>=1,p,`${n} elephants · ${holdTxt(p,5)}`]},fail:()=>cnt('x_elephant')?'':'The elephants died out',stars:byTime(45,120)});
+CC(5.2,{t:'Off the list',g:'The cheetahs are endangered: only 4 are left. Grow them to 15 so they are safe again.',hint:'Cheetahs need gazelles and few rivals. Release gazelles, and keep lions and hyenas in check.',setup:scn('africa'),check:()=>{const n=cnt('x_cheetah');return[n>=15,n/15,`${n} of 15 cheetahs`]},fail:()=>cnt('x_cheetah')?'':'The cheetahs went extinct',stars:byTime(60,160)});
+CC(5.8,{t:'Mammoth hunters',g:'In the ice age, keep at least 5 human hunters and 10 mammoths alive together for 5 years.',hint:'Hunters can wipe out the slow-breeding mammoths. Give them other prey, or remove a few hunters.',setup:scn('iceage'),check:()=>{const h=cnt('x_human_hunter'),m=cnt('x_mammoth'),p=hold('m',h>=5&&m>=10,5);return[p>=1,p,`${h} hunters · ${m} mammoths · ${holdTxt(p,5)}`]},fail:()=>!cnt('x_mammoth')?'The mammoths went extinct':!cnt('x_human_hunter')?'The hunters died out':'',stars:byTime(60,150)});
+CC(4.2,{t:'Ocean giants',g:'In the ocean, keep 3 whales and 3 sharks alive for 5 years.',hint:'Whales eat plankton (algae): seed algae with the Algae brush if it runs low.',setup:scn('reef'),check:()=>{const w=cnt('x_whale'),s=cnt('x_shark'),p=hold('o',w>=3&&s>=3,5);return[p>=1,p,`${w} whales · ${s} sharks · ${holdTxt(p,5)}`]},fail:()=>!cnt('x_whale')?'The whales died out':!cnt('x_shark')?'The sharks died out':'',stars:byTime(45,120)});
+CC(4.7,{t:'Jurassic balance',g:'Keep a T. rex and at least 6 triceratops alive together for 5 years.',hint:'The T. rex eats a lot. Release more plant-eaters, or give the triceratops more room.',setup:scn('jurassic'),check:()=>{const t=cnt('x_t_rex'),r=cnt('x_triceratops'),p=hold('j',t>=1&&r>=6,5);return[p>=1,p,`${t} T. rex · ${r} triceratops · ${holdTxt(p,5)}`]},fail:()=>!cnt('x_t_rex')?'The T. rex died':!cnt('x_triceratops')?'The triceratops died out':'',stars:byTime(45,120)});
+CC(6.3,{t:'Nobody endangered',g:'In the African savanna, have no endangered or extinct species for 2 years in a row.',hint:'Watch the endangered list in the Life tab and help any species that drops below 15.',setup:scn('africa'),check:()=>{const st=S.status||{},bad=SPK.filter(k=>st[k]==='endangered'||st[k]==='extinct'),p=hold('n',!bad.length,2);return[p>=1,p,bad.length?`${bad.length} endangered or extinct: ${bad.slice(0,3).map(k=>SP[k].pl).join(', ')}`:holdTxt(p,2)]},stars:byTime(90,240)});
 // biodiversity and rewilding
 [[8,4.8],[10,6.2],[13,8]].forEach(([n,d])=>CC(d,{t:`${n} species at once`,g:`Have ${n} different species alive at the same time for 2 years.`,hint:'Each species needs its own climate and food. Use different regions of the supercontinent.',setup:scn('pangaea'),check:()=>{const c=speciesAlive().length,p=hold('b',c>=n,2);return[p>=1,p*.8+Math.min(.2,c/n*.2),`${c} species · ${holdTxt(p,2)}`]},stars:byTime(40,120)}));
 [[3,3.6],[6,5.8]].forEach(([n,d])=>CC(d,{t:`Rewild with ${n} species`,g:`On the barren land, have ${n} species with at least 6 animals each, for 2 years.`,hint:'Grow plants first, then plant eaters, then hunters. Seed algae before releasing fish.',setup:scn('barren'),check:()=>{const c=SPK.filter(k=>cnt(k)>=6).length,p=hold('r',c>=n,2);return[p>=1,p*.8+Math.min(.2,c/n*.2),`${c} species with 6+ · ${holdTxt(p,2)}`]},stars:byTime(90,240)}));
@@ -1038,11 +1402,12 @@ const TSTEPS=[
  ['Let go','Press Esc to stop following it.',()=>!S.sel],
  ['Plant a tree','Pick Oak in the toolbar on the left and click on green land.',r=>(PLACED.oak||0)>r.n,r=>{r.n=PLACED.oak||0}],
  ['Release animals','Pick Rabbit and click on the land to release some.',r=>(PLACED.rabbit||0)>r.n,r=>{r.n=PLACED.rabbit||0}],
+ ['Any animal at all','Type elephant (or any animal: tiger, penguin, shark…) in the search bar and press Enter to release some.',r=>NEWSP>r.n||Object.keys(PLACED).some(k=>k.startsWith('x_')&&k!=='x_human_hunter'&&PLACED[k]>(r.p[k]||0)),r=>{r.n=NEWSP;r.p={...PLACED}}],
  ['Make it rain','Pick Rain under Land and paint over some dry ground.',r=>RAINED>r.n,r=>{r.n=RAINED}],
  ['Change the climate','In the World tab, drag the Global temperature slider.',r=>CLIMCH>r.n,r=>{r.n=CLIMCH}],
  ['Cause an event','Press one of the events, such as 🔥 Wildfire or ☄ Meteor.',r=>EVN>r.n,r=>{r.n=EVN}],
  ['Stop the event','Press the same event button again (it now says ■ Stop) to stop it.',r=>EVSTOP>r.n,r=>{r.n=EVSTOP}],
- ['Watch the populations','Open the Life tab to see every species and the population graph.',r=>LIFEOPEN>r.n,r=>{r.n=LIFEOPEN}],
+ ['Watch the populations','Open the Life tab to see every species, the population graph and the endangered list (fewer than 15 left).',r=>LIFEOPEN>r.n,r=>{r.n=LIFEOPEN}],
  ['Views','In the World tab, switch to the Temperature or Food view.',r=>VIEWCH>r.n,r=>{r.n=VIEWCH}],
  ['Save your progress','Click 👤 in the top bar and create an account (a PIN is optional). Your stars save on this device.',r=>ACCN>r.n,r=>{r.n=ACCN}],
 ];
@@ -1091,10 +1456,23 @@ function frame(now){const dtR=Math.min(0.1,(now-last)/1000);last=now;camKeys(dtR
   uiT+=dtR;if(uiT>0.25){uiT=0;updateHud()}
   }catch(err){console.error('[Biosphere]',err)}
   requestAnimationFrame(frame)}
+// endangered species: fewer than 15 alive. Extinct: was alive in this world, now gone.
+const ENDANGERED=15;
+function checkEndangered(c){const st=S.status||(S.status={});S.seen=S.seen||{};const msgs=[];
+  for(const k of SPK){const n=c[k]||0;if(n>0)S.seen[k]=1;if(!S.seen[k])continue;const now=n===0?'extinct':n<ENDANGERED?'endangered':'ok',was=st[k];
+    if(S.statusReady&&was&&was!==now){if(now==='extinct'){msgs.push(`✖ ${SP[k].pl} are extinct`);chEv('extinct',{sp:k})}else if(now==='endangered'&&was==='ok'){msgs.push(`⚠ ${SP[k].pl} are endangered: only ${n} left`);chEv('endangered',{sp:k})}else if(now==='ok'&&was!=='ok'){msgs.push(`✓ ${SP[k].pl} are safe again (${n})`);chEv('recovered',{sp:k})}}
+    st[k]=now}
+  S.statusReady=true;for(const m of msgs.slice(0,3))toast(m);
+  const end=SPK.filter(k=>st[k]==='endangered'),ext=SPK.filter(k=>st[k]==='extinct'),b=$('endBadge');
+  b.hidden=!end.length&&!ext.length;b.textContent=`⚠ ${end.length} endangered${ext.length?` · ✖ ${ext.length} extinct`:''}`}
+function renderEndangered(c){const st=S.status||{},box=$('endBox'),end=SPK.filter(k=>st[k]==='endangered').sort((a,b)=>(c[a]||0)-(c[b]||0)),ext=SPK.filter(k=>st[k]==='extinct');box.hidden=!end.length&&!ext.length;if(box.hidden)return;
+  box.textContent='';const h=document.createElement('span');h.className='k';h.textContent=`Endangered: fewer than ${ENDANGERED} left`;box.appendChild(h);
+  for(const k of [...end,...ext]){const r=document.createElement('button');r.className='endrow'+(st[k]==='extinct'?' ext':'');r.innerHTML='<span></span><b></b>';r.children[0].textContent=`${SP[k].ic} ${SP[k].pl}`;r.children[1].textContent=st[k]==='extinct'?'extinct':c[k];r.onclick=()=>{if(c[k])flyTo(k)};box.appendChild(r)}}
+$('endBadge').onclick=()=>{showTab('life');document.body.classList.add('dockOpen')};
 function updateHud(){updateEventButtons();const c=counts();let n=0,sp=0;for(const k of SPK){n+=c[k];if(c[k])sp++}$('nAnimals').textContent=n;$('nTrees').textContent=S.trees.length;$('nSpecies').textContent=sp;
   $('dateTxt').textContent=dateTxt();const ci=idx(wxOf(W/2),wyOf(H/2));$('tempTxt').textContent=ci>=0?`${cellT(ci).toFixed(0)} °C at the centre${CL.dust>0.5?' · dusty sky':''}`:'';
   $('rateTxt').textContent=S.paused?'Paused':fmtRate(S.speed)+(S.achieved<S.speed*0.85&&S.speed>30?` (running ${fmtRate(Math.max(0.01,S.achieved))})`:'');
-  if(!$('pane-life').hidden)renderLife();updateInspector();chTick();
+  checkEndangered(c);if(!$('pane-life').hidden)renderLife();updateInspector();chTick();
   if(document.visibilityState==='visible'&&$('home').hidden){PROG.secs=(PROG.secs||0)+0.25}}
 addEventListener('resize',()=>{resize()});addEventListener('pagehide',saveProg);
 
