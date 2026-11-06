@@ -183,6 +183,31 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--cool);outline-o
 .cpb:hover{color:var(--ink);background:rgba(127,178,255,.12)}.cpb:active,.cpb.on{background:rgba(255,180,84,.18);color:var(--ink);border-color:rgba(255,180,84,.5)}
 .spds{display:flex;gap:3px;margin:1px 0 2px}.spd{white-space:nowrap;font-family:var(--f-mono);font-size:10px;padding:2px 6px;border-radius:5px;border:1px solid var(--line);color:var(--dim)}
 .spd:hover{color:var(--ink);background:rgba(127,178,255,.1)}.spd[aria-pressed="true"]{color:var(--ink);border-color:rgba(255,180,84,.6);background:rgba(255,180,84,.14)}
+.home{position:fixed;inset:0;z-index:20;pointer-events:none;background:linear-gradient(90deg,rgba(4,6,12,.92) 0,rgba(4,6,12,.78) 34%,rgba(4,6,12,0) 62%)}
+.hcard{pointer-events:auto;position:absolute;left:var(--gut);top:calc(var(--top) + 16px);bottom:calc(var(--bot) + 16px);width:min(560px,calc(100% - 32px));overflow:auto;display:flex;flex-direction:column;gap:22px;padding:8px 4px}
+.htitle{font-family:var(--f-display);font-weight:700;font-size:clamp(40px,7vw,72px);letter-spacing:.08em;text-transform:uppercase;margin:0;line-height:1}.htitle b{color:var(--flare)}
+.htag{margin:10px 0 0;color:var(--dim);font-size:16px}
+.hview{display:flex;flex-direction:column;gap:12px}
+.hb{display:flex;flex-direction:column;align-items:flex-start;gap:4px;text-align:left;padding:18px 20px;border-radius:12px;border:1px solid var(--line-strong);background:rgba(9,12,24,.82)}
+.hb:hover{border-color:var(--cool);background:rgba(20,28,52,.9)}.hb .ht{font-family:var(--f-display);font-weight:500;font-size:22px;letter-spacing:.02em}.hb .hd{font-size:13px;color:var(--dim);line-height:1.4}
+.hb.primary{border-color:rgba(255,180,84,.6);background:rgba(40,28,12,.85)}.hb.primary:hover{background:rgba(60,40,14,.92)}
+.hfoot{margin:0;font-size:12px;color:var(--dim);line-height:1.5}
+.hbar{display:flex;align-items:center;gap:14px}.hbar h2{font-family:var(--f-display);font-weight:500;font-size:24px;margin:0;flex:1}.hstars{font-family:var(--f-mono);font-size:12px;color:var(--flare)}
+.hgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:6px}
+.ct{display:flex;flex-direction:column;align-items:flex-start;gap:3px;padding:8px 9px;border-radius:8px;border:1px solid var(--line);background:rgba(9,12,24,.85);text-align:left;min-height:70px}
+.ct:hover:not(:disabled){border-color:var(--cool)}.ct:disabled{opacity:.45;cursor:not-allowed}.ct .cn{font-family:var(--f-mono);font-size:10px;color:var(--dim)}.ct .ctt{font-size:11.5px;line-height:1.25;color:var(--ink)}
+.ct .cs{font-size:12px;color:var(--flare);letter-spacing:1px;margin-top:auto}.ct.next{border-color:rgba(255,180,84,.7);box-shadow:0 0 0 1px rgba(255,180,84,.3)}
+body.mHome .hud-top,body.mHome .rail,body.mHome .campad,body.mHome .hint,body.mHome .insp,body.mHome .kinds,body.mHome .placeopts,body.mHome .toasts,body.mHome .scen,body.mHome .cpanel,body.mHome #mDel,body.mHome #chHud{display:none!important}
+body.mDemo .rail,body.mDemo .campad,body.mDemo .hint,body.mDemo .insp,body.mDemo .kinds,body.mDemo .placeopts,body.mDemo .hud-top{display:none!important}
+.chhud{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(var(--bot) + 52px);width:min(600px,calc(100% - 300px));padding:12px 14px;z-index:6;display:flex;flex-direction:column;gap:6px}
+.chtop{display:flex;justify-content:space-between}.chtitle{font-family:var(--f-display);font-weight:500;font-size:17px}.chgoal{font-size:13px;line-height:1.45;color:#cfd6e6}
+.chbarw{height:6px;border-radius:3px;background:rgba(127,178,255,.12);overflow:hidden}#chBar{display:block;height:100%;width:0;background:var(--flare);transition:width .25s}
+.chrow{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}.chprog{font-family:var(--f-mono);font-size:11.5px;color:var(--dim)}.chbtns{display:flex;gap:6px}
+.donebg{pointer-events:auto;display:grid;place-items:center;background:rgba(4,6,12,.6)}
+.donecard{width:min(440px,calc(100% - 32px));padding:24px;text-align:center;display:flex;flex-direction:column;gap:10px}.donecard h2{font-family:var(--f-display);font-weight:500;margin:0}
+.dstars{font-size:46px;letter-spacing:6px;color:var(--flare)}.dstars .off{color:rgba(255,255,255,.15)}
+.democap{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(var(--bot) + 8px);width:min(640px,calc(100% - 32px));padding:12px 14px;z-index:6;display:flex;gap:12px;align-items:center;justify-content:space-between}
+@media (max-width:760px){.home{background:rgba(4,6,12,.72)}.chhud{width:auto;left:var(--gut);right:var(--gutR);transform:none;top:calc(var(--top) + 150px);bottom:auto}.hgrid{grid-template-columns:repeat(auto-fill,minmax(84px,1fr))}}
 .hint{position:fixed;left:50%;transform:translateX(-50%);bottom:var(--bot);font-family:var(--f-mono);font-size:11.5px;color:var(--dim);background:var(--panel);border:1px solid var(--line);border-radius:99px;padding:7px 14px;white-space:nowrap;z-index:4;pointer-events:none}
 .toasts{position:fixed;left:50%;transform:translateX(-50%);top:calc(var(--top) + 84px);display:flex;flex-direction:column;align-items:center;gap:6px;z-index:6;pointer-events:none}
 .toast{font-family:var(--f-mono);font-size:12px;padding:7px 14px;border-radius:99px;background:rgba(30,20,10,.85);border:1px solid rgba(255,180,84,.45);color:#ffe1b8;transition:opacity .4s,transform .4s}
@@ -248,6 +273,7 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--cool);outline-o
     <div class="stat"><span class="k">Particles</span><span id="nParts" class="v">0</span></div>
     <div class="stat g"><span class="k">Grid cell</span><span id="gridStep" class="v">1 AU</span></div>
     <div class="findwrap"><input id="find" class="find" placeholder="Search or add: Antares, TON 618…" aria-label="Search for an object to fly to or add" autocomplete="off" spellcheck="false" role="combobox" aria-expanded="false" aria-controls="findList"><div id="findList" class="findlist panel" role="listbox" hidden></div></div>
+    <button id="homeBtn" class="btn" title="Back to the home page">⌂ Home</button>
     <button id="createBtn" class="btn" aria-expanded="false" aria-controls="create">Create</button>
     <button id="scenBtn" class="btn" aria-expanded="false" aria-controls="scen">Scenarios</button>
   </div>
@@ -459,6 +485,42 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--cool);outline-o
     <span></span><button class="cpb" data-cm="out" title="Zoom out (−)" aria-label="Zoom out">－</button><span></span>
   </div>
 </div>
+<div id="home" class="home" role="dialog" aria-label="Home">
+  <div class="hcard">
+    <div class="hhead"><h1 class="htitle">Bary<b>center</b></h1><p class="htag">A 3D sandbox for gravity, worlds and stars</p></div>
+    <div id="hMain" class="hview">
+      <button class="hb" id="hChal"><span class="ht">Challenges</span><span class="hd" id="hChalSub">100 goals, from easy to fiendish</span></button>
+      <button class="hb" id="hDemo"><span class="ht">Demo &amp; tutorial</span><span class="hd">Watch the highlights, or learn the controls step by step</span></button>
+      <button class="hb primary" id="hFree"><span class="ht">Free play</span><span class="hd">The full sandbox: build, break and explore anything</span></button>
+      <p class="hfoot">Real Newtonian gravity with real masses and orbits where known; some visuals are artistic approximations.</p>
+    </div>
+    <div id="hChalView" class="hview" hidden>
+      <div class="hbar"><button class="linkb hback">← Back</button><h2>Challenges</h2><span id="hStars" class="hstars"></span></div>
+      <p class="hfoot">Finish a challenge to unlock the next. Faster and more precise solutions earn more stars.</p>
+      <div id="hGrid" class="hgrid"></div>
+    </div>
+    <div id="hDemoView" class="hview" hidden>
+      <div class="hbar"><button class="linkb hback">← Back</button><h2>Demo &amp; tutorial</h2></div>
+      <button class="hb" id="hWatch"><span class="ht">Watch the demo</span><span class="hd">A two-minute tour of the most spectacular things the sandbox can do</span></button>
+      <button class="hb primary" id="hTut"><span class="ht">Start the tutorial</span><span class="hd">Learn every control step by step; each step completes when you do it</span></button>
+    </div>
+  </div>
+</div>
+<div id="chHud" class="chhud panel" hidden aria-live="polite">
+  <div class="chtop"><span id="chNum" class="k"></span><span id="chTime" class="k"></span></div>
+  <div id="chTitle" class="chtitle"></div>
+  <div id="chGoal" class="chgoal"></div>
+  <div class="chbarw"><span id="chBar"></span></div>
+  <div class="chrow"><span id="chProg" class="chprog"></span><span class="chbtns"><button id="chHint" class="btn ghost">Hint</button><button id="chRestart" class="btn">Restart</button><button id="chExit" class="btn ghost">Exit</button></span></div>
+</div>
+<div id="chDone" class="home donebg" hidden role="dialog" aria-label="Challenge result">
+  <div class="donecard panel">
+    <div id="dStars" class="dstars"></div>
+    <h2 id="dTitle"></h2><p id="dText" class="hfoot"></p>
+    <div class="actions" style="justify-content:center"><button id="dNext" class="btn primary">Next challenge</button><button id="dRetry" class="btn">Try again</button><button id="dList" class="btn ghost">All challenges</button></div>
+  </div>
+</div>
+<div id="demoCap" class="democap panel" hidden><div><span id="demoStep" class="k"></span><div id="demoTitle" class="chtitle"></div><div id="demoText" class="chgoal"></div></div><button id="demoExit" class="btn">Exit demo</button></div>
 <div id="hint" class="hint"></div>
 <div id="toasts" class="toasts" aria-live="polite"></div>
 
@@ -726,6 +788,7 @@ function compactMerge(a,b){
   const M=a.m+b.m,both=big.type==='blackhole'&&small.type==='blackhole',nsns=big.type==='neutron'&&small.type==='neutron';
   for(const k of ['x','y','z','vx','vy','vz'])big[k]=(a[k]*a.m+b[k]*b.m)/M;
   const sn=small.name||classify(small),bn=big.name||classify(big);
+  chEv('merge',{a:small.name,b:big.name,into:big.type});chEv(both?'bhmerge':nsns?'kilonova':'nsbh',{});
   small.dead=true;if(S.sel===small)S.sel=big;
   if(both){big.m=M*0.95;toast(`Black holes merged into ${sig(big.m)} M☉. ${sig(M*0.05)} M☉ of mass was radiated as gravitational waves.`);gwave(big.x,big.y,big.z,3);flash(big.x,big.y,big.z,hitR(big)*3,'#c9a2ff')}
   else{
@@ -746,6 +809,7 @@ function merge(a,b){
   if(isCompact(a)&&isCompact(b))return compactMerge(a,b);
   let big=a.m>=b.m?a:b, small=big===a?b:a;
   if(small.type==='blackhole'&&big.type!=='blackhole'){const t=big;big=small;small=t}
+  chEv('merge',{a:small.name,b:big.name,into:big.type,comet:!!(small.comet||big.comet)});
   if(big.type==='rock'&&(small.type==='star'||small.type==='dwarf')){big.type=small.type}
   const M=a.m+b.m, relV=Math.hypot(small.vx-big.vx,small.vy-big.vy,small.vz-big.vz), ratio=small.m/big.m;
   const n=norm([small.x-big.x,small.y-big.y,small.z-big.z]);
@@ -776,11 +840,11 @@ function merge(a,b){
   typeRules(big);
 }
 function typeRules(b){
-  if(b.type==='rock'&&b.m>=0.08){b.type='star';toast(`${b.name||'A body'} ignited into a star`);flash(b.x,b.y,b.z,b.r*4,'#fff0c0')}
+  if(b.type==='rock'&&b.m>=0.08){chEv('ignite',{name:b.name});b.type='star';toast(`${b.name||'A body'} ignited into a star`);flash(b.x,b.y,b.z,b.r*4,'#fff0c0')}
   if(b.type==='dwarf'&&b.m>1.44){toast(`${b.name} passed the Chandrasekhar limit: Type Ia supernova`);supernova(b,false);return}
-  if(b.type==='star'&&b.m>=40&&!(b.cat&&b.m<b.cat*1.3)){b.type='blackhole';toast(`${b.name} collapsed into a black hole`);flash(b.x,b.y,b.z,b.r*6,'#c9a2ff')}
+  if(b.type==='star'&&b.m>=40&&!(b.cat&&b.m<b.cat*1.3)){chEv('collapse',{name:b.name});b.type='blackhole';toast(`${b.name} collapsed into a black hole`);flash(b.x,b.y,b.z,b.r*6,'#c9a2ff')}
   if(b.type==='neutron'&&b.m>2.3){b.type='blackhole';toast(`${b.name} collapsed past the neutron-star limit into a black hole`);flash(b.x,b.y,b.z,0.1,'#c9a2ff')}
-  if(b.bd&&b.m>=0.08){b.bd=0;b.Lsun=b.Teff=b.rTrue=undefined;b.kindLabel='';toast(`${b.name||'The brown dwarf'} gained enough mass to start fusion: it is now a red dwarf star`);flash(b.x,b.y,b.z,hitR(b)*4,'#ffb080')}
+  if(b.bd&&b.m>=0.08){chEv('ignite',{name:b.name});b.bd=0;b.Lsun=b.Teff=b.rTrue=undefined;b.kindLabel='';toast(`${b.name||'The brown dwarf'} gained enough mass to start fusion: it is now a red dwarf star`);flash(b.x,b.y,b.z,hitR(b)*4,'#ffb080')}
   if(b.type==='star')b.color=b.bd?'#9c4a32':colorFor(b);
   if(b.type==='blackhole')b.color='#b48cff';
   b.r=radiusFor(b);S.dirty=true;
@@ -807,6 +871,7 @@ function spray(c,n,count,relV,color){
 }
 function flash(x,y,z,r,color){S.flashes.push({x,y,z,r,t:0,dur:1.3,color})}
 function supernova(b,remnant=true){
+  chEv(remnant?'supernova':'ia',{name:b.name});
   const m=b.m, n=Math.min(1200,400+m*25), base=8+Math.sqrt(m)*7;
   for(let i=0;i<n;i++){
     const d=randDir(),sp=base*rnd(0.25,1)*rnd(0.6,1),life=rnd(4,10);
@@ -1017,15 +1082,16 @@ function updateCam(){
 }
 // returns [X,Y,scale(px per AU),depth] or null if behind the camera
 const PJ=[0,0,0,0];
+let VIEW_OX=0; // sideways shift of the view centre (used on the home page so the live system sits beside the menu)
 function proj(x,y,z){
   const dx=x-C.ex,dy=y-C.ey,dz=z-C.ez,cz=dx*C.fx+dy*C.fy+dz*C.fz;
   if(cz<C.near)return null;
   const s=C.F/cz;
-  PJ[0]=W/2+(dx*C.rx+dy*C.ry+dz*C.rz)*s;PJ[1]=H/2-(dx*C.ux+dy*C.uy+dz*C.uz)*s;PJ[2]=s;PJ[3]=cz;
+  PJ[0]=W/2+VIEW_OX+(dx*C.rx+dy*C.ry+dz*C.rz)*s;PJ[1]=H/2-(dx*C.ux+dy*C.uy+dz*C.uz)*s;PJ[2]=s;PJ[3]=cz;
   return PJ;
 }
 function rayPlane(X,Y,pz){
-  const a=(X-W/2)/C.F,b=(H/2-Y)/C.F;
+  const a=(X-W/2-VIEW_OX)/C.F,b=(H/2-Y)/C.F;
   const dx=C.fx+C.rx*a+C.ux*b,dy=C.fy+C.ry*a+C.uy*b,dz=C.fz+C.rz*a+C.uz*b;
   let t=Math.abs(dz)>1e-6?(pz-C.ez)/dz:-1;
   if(!(t>0)||t>cam.dist*30)t=cam.dist;
@@ -1951,7 +2017,9 @@ function fillParents(b,p){const sel=$('eParent'),kids=descendants(b);sel.textCon
   sel.value=p?String(p.id):''}
 // Put b into a circular orbit around p, keeping b's moons with it. Distance: where b is now, limited to
 // what p can hold onto (its Hill sphere) and kept clear of p's surface.
+let ORBSET=0;
 function setOrbitAround(b,p){
+  ORBSET++;
   if(!b||!p||b===p)return;if(descendants(b).has(p)){toast(`${b.name||'It'} can’t orbit one of its own moons.`);return}
   const gp=parentOf(p),cur=Math.hypot(b.x-p.x,b.y-p.y,b.z-p.z),lo=(hitR(p)+hitR(b))*2.5;let hi=Infinity,warn=false;
   if(gp){const ap=Math.hypot(p.x-gp.x,p.y-gp.y,p.z-gp.z),hill=ap*Math.cbrt((p.m+b.m)/(3*gp.m));if(isFinite(hill)&&hill>0)hi=hill*0.45}
@@ -1972,6 +2040,7 @@ function replaceWith(b,c){
   const kids=S.bodies.filter(q=>q!==b&&parentOf(q)===b),o=c.mk(),keep=$('eReplKeep').checked;
   const nb=addBody({...o,name:c.keepName&&b.name?b.name:uniqueName(c.n),x:b.x,y:b.y,z:b.z,vx:b.vx,vy:b.vy,vz:b.vz,axisN:b.axis});
   if(c.keepName&&b.name)nb.name=b.name;
+  chEv('replace',{from:b.name,to:nb.type});
   const wasSel=S.sel===b,follow=S.follow;b.dead=true;S.bodies=S.bodies.filter(q=>!q.dead);
   if(keep)for(const q of kids){const r=[q.x-nb.x,q.y-nb.y,q.z-nb.z],v=[q.vx-b.vx,q.vy-b.vy,q.vz-b.vz],d=Math.hypot(...r);let n=cross(r,v);if(Math.hypot(...n)<1e-14)n=[0,0,1];n=norm(n);
     const t=norm(cross(n,r)),sp=Math.sqrt(G*(nb.m+q.m)/d),dv=[nb.vx+t[0]*sp-q.vx,nb.vy+t[1]*sp-q.vy,nb.vz+t[2]*sp-q.vz];
@@ -2502,6 +2571,7 @@ function addFamous(c){
 }
 let tsAcc=0;
 function updateHud(){
+  chTick();
   $('elapsed').textContent=fmtTime(S.t);
   const so=$('speedOut'),lim=S.capped&&!S.paused&&S.achieved<0.95;so.textContent=lim?`${fmtSpeed(S.speed*S.achieved)} of ${fmtSpeed(S.speed)}`:fmtSpeed(S.speed);so.classList.toggle('capped',lim);
   so.title=lim?'Your computer can’t compute this many steps per second, so time runs slower than requested. Accuracy is kept.':'';
@@ -2754,7 +2824,7 @@ const scenEl=$('scen');
 for(const s of SCEN){const b=document.createElement('button');b.innerHTML=`<span class="t">${s.t}</span><span class="d">${s.d}</span>`;
   b.addEventListener('click',()=>{load(s);closeScen()});scenEl.appendChild(b)}
 function setReal(v){S.realSize=v;$('tReal').setAttribute('aria-pressed',v);for(const b of S.bodies)b.r=radiusFor(b);S.dirty=true}
-function load(s){clear();if(s.exag&&S.realSize){setReal(false);toast('This scene uses enlarged sizes so bodies can collide')}setTog('zones','tZones',!!s.zones);if(s.id!=='empty')setTool('select');s.run();setPaused(false)}
+function load(s){if(CH.active&&!CH.loading)endChallenge();if(TUT.on&&!CH.loading)endTutorial();clear();if(s.exag&&S.realSize){setReal(false);toast('This scene uses enlarged sizes so bodies can collide')}setTog('zones','tZones',!!s.zones);if(s.id!=='empty')setTool('select');s.run();setPaused(false)}
 function closeScen(){scenEl.hidden=true;$('scenBtn').setAttribute('aria-expanded','false');$('create').hidden=true;$('createBtn').setAttribute('aria-expanded','false')}
 $('createBtn').addEventListener('click',()=>{const open=$('create').hidden;closeScen();$('create').hidden=!open;$('createBtn').setAttribute('aria-expanded',open);if(open){$('insp').hidden=true;renderSaved()}else if(S.sel)$('insp').hidden=false});
 $('scenBtn').addEventListener('click',()=>{const open=scenEl.hidden;$('create').hidden=true;$('createBtn').setAttribute('aria-expanded','false');scenEl.hidden=!open;$('scenBtn').setAttribute('aria-expanded',open);if(open)$('insp').hidden=true;else if(S.sel)$('insp').hidden=false});
@@ -2821,6 +2891,8 @@ window.addEventListener('keyup',e=>{const k=CAMKEYS[e.key.toLowerCase()]||(e.key
 window.addEventListener('blur',()=>CAMHELD.clear());
 window.addEventListener('keydown',e=>{
   if(['INPUT','SELECT','TEXTAREA'].includes(e.target.tagName))return;
+  if(!$('home').hidden||!$('chDone').hidden){if(e.key==='Escape'&&!$('home').hidden)homeView('hMain');return}
+  if(document.body.classList.contains('mDemo')){if(e.key==='Escape')stopDemo();return}
   {const lk=e.key.toLowerCase();if(!e.ctrlKey&&!e.metaKey&&!e.altKey&&(CAMKEYS[lk]||(lk==='f'&&!S.sel))){CAMHELD.add(CAMKEYS[lk]||'down');return}}
   if(e.key==='Home'){overviewForce();return}
   if(e.key===' '){e.preventDefault();setPaused(!S.paused)}
@@ -2835,6 +2907,202 @@ window.addEventListener('keydown',e=>{
   else{const i='1234567890'.indexOf(e.key);if(i>=0)setTool(['select','star','rocky','giant','moon','asteroid','comet','blackhole','measure','orbit'][i])}
 });
 window.addEventListener('resize',resize);
+
+/* ---------- home page, challenges, demo and tutorial ---------- */
+const CH={active:null,idx:-1,events:[],hold:{},t0:0,real0:0,base:0,done:false,failed:'',loading:false,ref:{}};
+const PROG_KEY='barycenter.progress';let PROG={stars:{}};
+try{const v=JSON.parse(localStorage.getItem(PROG_KEY)||'null');if(v&&typeof v.stars==='object')PROG=v}catch(e){}
+function saveProg(){try{localStorage.setItem(PROG_KEY,JSON.stringify(PROG))}catch(e){}}
+function chEv(k,d){if(CH.active&&!CH.done&&!CH.loading)CH.events.push({k,...(d||{}),t:S.t})}
+const BN=n=>S.bodies.find(b=>b.name===n);
+const mine=()=>S.bodies.filter(b=>b.id>CH.base);
+function orb(b,p){const r=[b.x-p.x,b.y-p.y,b.z-p.z],v=[b.vx-p.vx,b.vy-p.vy,b.vz-p.vz],d=Math.hypot(...r),mu=G*(p.m+b.m),E=dot(v,v)/2-mu/d;
+  if(E>=0)return{a:Infinity,e:1,d,bound:false};const a=-mu/(2*E),h=Math.hypot(...cross(r,v));return{a,e:Math.sqrt(Math.max(0,1+2*E*h*h/(mu*mu))),d,bound:true}}
+function hold(key,cond,years){if(!cond){CH.hold[key]=null;return 0}if(CH.hold[key]==null)CH.hold[key]=S.t;return Math.min(1,(S.t-CH.hold[key])/years)}
+const realSecs=()=>(performance.now()-CH.real0)/1000;
+const byTime=(t3,t2)=>()=>{const s=realSecs();return s<=t3?3:s<=t2?2:1};
+const byE=(e3,e2)=>m=>m<=e3?3:m<=e2?2:1;
+const evHas=f=>CH.events.some(f);
+const merged=(a,b)=>evHas(e=>e.k==='merge'&&((e.a===a&&e.b===b)||(e.a===b&&e.b===a)));
+const scen=id=>()=>load(SCEN.find(x=>x.id===id));
+function holdTxt(p,H){return p>0?`holding: ${(p*H).toFixed(1)} of ${H} years`:''}
+// a challenge: title, goal, how it is set up, a check that returns [done, progress 0..1, text, metric], an optional fail check and a star rating
+const CHALS=[];const CC=(diff,o)=>CHALS.push({diff,...o});
+// find things
+[['Saturn',1],['Titan',1.1],['Pluto',1.3],['Halley',1.5],['Psyche',1.7]].forEach(([n,d])=>CC(d,{t:`Find ${n}`,g:`Find ${n} and follow it with the camera.`,hint:'Type its name in the search bar and press Enter, or double-click it.',setup:scen('solar'),
+  check:()=>{const ok=S.sel&&S.sel.name===n;return[ok&&S.follow,ok?1:0,ok?'Found it':'Not found yet']},stars:byTime(20,45)}));
+// measuring
+[['Earth','Mars',1.2],['Sun','Neptune',1.6],['Jupiter','Saturn',2],['Moon','Earth',2.4]].forEach(([a,b,d])=>CC(d,{t:`Measure ${a} to ${b}`,g:`Use the Measure tool to measure the distance from ${a} to ${b}.`,hint:'Pick the ruler (Measure) in the toolbar, click one, then the other. Zoom in close for the Moon.',setup:scen('solar'),
+  check:()=>{const m=S.measure;const nm=ep=>ep&&ep.id?(S.bodies.find(q=>q.id===ep.id)||{}).name:null;const set=m&&m.b?[nm(m.a),nm(m.b)]:[];const ok=set.includes(a)&&set.includes(b);return[ok,ok?1:0,m&&m.a?'Measuring…':'Pick the Measure tool']},stars:byTime(25,60)}));
+// place a planet in a chosen orbit
+[[0.8,1.2,3,'sun',2],[1.5,2.5,5,'sun',2.5],[0.3,0.6,5,'sun',3],[3,5,8,'sun',3.5],[0.05,0.12,2,'red',4.5],[8,12,15,'blue',5],[0.95,1.05,10,'sun',6],[1.95,2.05,10,'sun',7]].forEach(([a1,a2,H,k,d])=>CC(d,{t:`Orbit between ${a1} and ${a2} AU`,
+  g:`Place a planet so that it orbits the ${k==='red'?'red dwarf':k==='blue'?'blue giant':'star'} between ${a1} and ${a2} AU, and keep it there for ${H} years.`,hint:'Pick Rocky planet, then click (not drag) at the right distance: the guide shows the distance. Drag the planet afterwards to adjust.',
+  setup:()=>{load(SCEN.find(x=>x.id==='empty'));const st=addBody({type:'star',...STARKINDS[k],name:'Home star'});CH.ref.star=st.id;fit(a2*1.8);setTool('rocky')},
+  check:()=>{const st=S.bodies.find(q=>q.id===CH.ref.star);if(!st)return[false,0,'The star is gone'];let best=null;for(const b of mine())if(b.type==='rock'&&parentOf(b)===st){const o=orb(b,st);if(o.a>=a1&&o.a<=a2&&o.e<0.3&&(!best||o.e<best.e))best=o}
+    const p=hold('o',!!best,H);return[p>=1,p,best?`Orbit ${best.a.toFixed(2)} AU, eccentricity ${best.e.toFixed(2)} · ${holdTxt(p,H)}`:'No planet in that range yet',best&&best.e]},
+  fail:()=>S.bodies.find(q=>q.id===CH.ref.star)?'':'The star was destroyed',stars:byE(0.03,0.1)}));
+// moons
+[['Earth',2],['Mars',2.8],['Venus',3.2],['Jupiter',3.6],['Saturn',4],['Neptune',4.6]].forEach(([n,d])=>CC(d,{t:`A new moon for ${n}`,g:`Give ${n} a new moon that stays in orbit for 3 years.`,hint:`Double-click ${n} to fly to it, pick the Moon tool, and click close to ${n}: inside the orbits of its existing moons, which can otherwise fling yours away.`,setup:scen('solar'),
+  check:()=>{const P=BN(n);const gp=P&&parentOf(P),hill=gp?orb(P,gp).a*Math.cbrt(P.m/(3*gp.m)):Infinity;
+    // any new body bound to the planet within its sphere of influence counts (even if it ends up circling an existing moon)
+    const m=P&&mine().find(b=>{if(b===P)return false;const o=orb(b,P);return o.bound&&o.d<hill});const p=hold('m',!!m,3);return[p>=1,p,m?`${m.name||'Your moon'} is orbiting · ${holdTxt(p,3)}`:`No new moon around ${n} yet`]},fail:()=>BN(n)?'':`${n} was destroyed`,stars:byTime(60,150)}));
+// rings and magnetic fields
+[['Mars',1,2],['Venus',0.5,2.4],['Moon',0.2,3]].forEach(([n,mg,d])=>CC(d,{t:`Rings and a field for ${n}`,g:`Give ${n} rings and a magnetic field of at least ${mg} G.`,hint:`Select ${n}, open Edit, then Surface and texture → Rings, and Magnetic field → Strength.`,setup:scen('solar'),
+  check:()=>{const b=BN(n);const r=!!(b&&b.ring),f=!!(b&&b.mag>=mg);return[r&&f,(r+f)/2,`Rings ${r?'✓':'✗'} · field ${b?fmtG(b.mag||0):'—'} ${f?'✓':'✗'}`]},fail:()=>BN(n)?'':`${n} was destroyed`,stars:byTime(40,90)}));
+// crashes
+[['Mars','Earth',3],['Moon','Earth',3.3],['Venus','Mercury',3.6],['Ceres','Mars',4],['Jupiter','Saturn',4.4],['Halley','Earth',5],['Eros','Moon',5.6],['Pluto','Neptune',6]].forEach(([a,b,d])=>CC(d,{t:`Crash ${a} into ${b}`,g:`Make ${a} collide with ${b}.`,hint:`Drag ${a} next to ${b}, or use Edit → Orbit to aim it. Holding Shift when you let go makes it fall instead of orbit.`,setup:scen('solar'),
+  check:()=>{const ok=merged(a,b);return[ok,ok?1:0,ok?'Impact!':`${a} and ${b} haven't met yet`]},fail:()=>(!BN(a)||!BN(b))&&!merged(a,b)?`${!BN(a)?a:b} was destroyed by something else`:'',stars:byTime(45,120)}));
+// temperatures
+[['Mars',273,320,3],['Earth',350,400,3.4],['Venus',273,320,4],['Jupiter',150,200,4.5],['Earth',200,240,5],['Neptune',273,330,5.5],['Mercury',260,300,6],['Titan',273,300,6.5]].forEach(([n,t1,t2,d])=>CC(d,{t:`${n} at ${t1}–${t2} K`,g:`Make ${n}'s average temperature between ${t1} and ${t2} K (${Math.round(t1-273)} to ${Math.round(t2-273)} °C) and keep it there for 2 years.`,hint:'Move it closer to or farther from the Sun (drag it or Edit → Orbit), or change its atmosphere in Edit.',setup:scen('solar'),
+  check:()=>{const b=BN(n);const T=b&&b.T;const ok=T!=null&&T>=t1&&T<=t2;const p=hold('t',ok,2);return[p>=1,p,T!=null?`Now ${Math.round(T)} K · ${holdTxt(p,2)}`:'—']},fail:()=>BN(n)?'':`${n} was destroyed`,stars:byTime(90,200)}));
+// comets
+[['Sun',3.5],['Jupiter',4.2],['Earth',5.2]].forEach(([n,d])=>CC(d,{t:`Comet into ${n}`,g:`Hit ${n} with a comet you create.`,hint:'Pick the Comet tool, then drag to throw it toward the target. The dashed line shows its path.',setup:scen('solar'),
+  check:()=>{const ok=evHas(e=>e.k==='merge'&&e.comet&&(e.a===n||e.b===n));return[ok,ok?1:0,ok?'Direct hit!':'No hit yet']},fail:()=>BN(n)?'':`${n} was destroyed`,stars:byTime(45,120)}));
+// tidal locking
+[['Mars','Sun',3.8],['Earth','Sun',4.3]].forEach(([n,P,d])=>CC(d,{t:`Lock ${n} to the ${P}`,g:`Tidally lock ${n} so it always shows the same face to the ${P}.`,hint:'Select it, open Edit → Rotation → Tidal lock to parent.',setup:scen('solar'),
+  check:()=>{const b=BN(n);const ok=!!(b&&b.locked&&parentOf(b)===BN(P));return[ok,ok?1:0,ok?'Locked':'Still spinning freely']},stars:byTime(30,70)}));
+// replacing
+CC(4.8,{t:'Turn Jupiter into a star',g:'Make Jupiter a star, by replacing it or by giving it enough mass to start fusion.',hint:'Select Jupiter → Edit → Replace with… → Red dwarf, or raise its mass past 0.08 solar masses.',setup:scen('solar'),
+  check:()=>{const ok=evHas(e=>(e.k==='replace'&&e.from==='Jupiter'&&e.to==='star')||(e.k==='ignite'&&e.name==='Jupiter'));return[ok,ok?1:0,ok?'Jupiter shines!':'Jupiter is still a planet']},stars:byTime(40,90)});
+CC(6.2,{t:'A black hole for a sun',g:'Replace the Sun with a black hole, and keep Earth orbiting it for 5 years.',hint:'Select the Sun → Edit → Replace with… → Black hole, with “Keep everything that orbits it in orbit” ticked.',setup:scen('solar'),
+  check:()=>{const e=BN('Earth');const p0=e&&parentOf(e);const ok=!!(p0&&p0.type==='blackhole'&&evHas(x=>x.k==='replace'&&x.from==='Sun'));const p=hold('b',ok,5);return[p>=1,p,ok?`Earth orbits the black hole · ${holdTxt(p,5)}`:'Earth does not orbit a black hole yet']},fail:()=>BN('Earth')?'':'Earth was destroyed',stars:byTime(60,150)});
+CC(7.2,{t:'Ocean Earth',g:'Replace Earth with an ocean world and keep its life likelihood at 60% or more for a year.',hint:'Select Earth → Edit → Replace with… → Ocean world. Then check its Info tab; add a magnetic field if needed.',setup:scen('solar'),
+  check:()=>{const b=BN('Earth');const L=b&&lifeScore(b);const ok=!!(b&&b.surf==='ocean'&&L&&L.p>=0.6);const p=hold('w',ok,1);return[p>=1,p,b?`Ocean ${b.surf==='ocean'?'✓':'✗'} · life ${L?Math.round(L.p*100):0}% · ${holdTxt(p,1)}`:'—']},fail:()=>BN('Earth')?'':'Earth was destroyed',stars:byTime(60,150)});
+// ejections
+[['Mars',4.5],['Earth',5],['Venus',5.5],['Jupiter',6],['Mercury',6.5],['Neptune',7.2]].forEach(([n,d])=>CC(d,{t:`Throw ${n} out`,g:`Fling ${n} out of the Solar System on an escape path.`,hint:'Edit → Orbit → Faster a few times, or swing it past a giant planet.',setup:()=>{scen('solar')();const b=BN(n),s0=BN('Sun');CH.ref.a0=orb(b,s0).a},
+  check:()=>{const b=BN(n),s0=BN('Sun');if(!b||!s0)return[false,0,'—'];const o=orb(b,s0),far=Math.max(3*CH.ref.a0,40);return[!o.bound&&o.d>far,o.bound?0:Math.min(1,o.d/far),o.bound?'Still bound to the Sun':`Escaping: ${o.d.toFixed(1)} of ${far.toFixed(0)} AU`]},fail:()=>BN(n)?'':`${n} was destroyed`,stars:byTime(90,200)}));
+// exploding stars
+CC(4.6,{t:'Supernova',g:'Make the Sun go supernova.',hint:'Select the Sun → Info tab → Go supernova.',setup:scen('solar'),check:()=>{const ok=evHas(e=>e.k==='supernova');return[ok,ok?1:0,ok?'Boom!':'The Sun is still shining']},stars:byTime(20,45)});
+CC(5.4,{t:'Collapse into a black hole',g:'Pile mass onto a star until it collapses into a black hole.',hint:'Select a star → Mass ×10 a few times (40 solar masses is the limit), or crash stars together.',setup:scen('solar'),check:()=>{const ok=evHas(e=>e.k==='collapse');return[ok,ok?1:0,ok?'Collapsed!':'No collapse yet']},stars:byTime(40,90)});
+CC(6.8,{t:'Type Ia supernova',g:'Push a white dwarf past 1.44 solar masses so it explodes.',hint:'Sirius B is a white dwarf. Select it and raise its mass, or crash something heavy into it.',setup:scen('sirius'),check:()=>{const ok=evHas(e=>e.k==='ia');return[ok,ok?1:0,ok?'Detonated!':'Sirius B is still intact']},stars:byTime(40,90)});
+// habitability
+[['Mars',0.5,4.8],['Venus',0.4,5.6],['Mercury',0.3,6.2],['Titan',0.3,6.6],['Ganymede',0.3,7],['Mars',0.8,7.6],['Venus',0.7,8.2],['Moon',0.4,8.6]].forEach(([n,tg,d])=>CC(d,{t:`Habitable ${n} (${Math.round(tg*100)}%)`,g:`Raise ${n}'s life likelihood to ${Math.round(tg*100)}% or more and keep it there for a year.`,hint:'Check its Info tab to see what is missing: temperature (orbit), water, air and gases, magnetic field.',setup:scen('solar'),
+  check:()=>{const b=BN(n);const L=b&&lifeScore(b);const v=L?L.p:0;const p=hold('h',v>=tg,1);CH.ref.best=Math.max(CH.ref.best||0,v);return[p>=1,Math.max(p,Math.min(0.99,v/tg)*0.6),`Life ${Math.round(v*100)}% · ${holdTxt(p,1)||'need '+Math.round(tg*100)+'%'}`,v]},
+  fail:()=>BN(n)?'':`${n} was destroyed`,stars:m=>m>=tg+0.3?3:m>=tg+0.15?2:1}));
+// breathable air
+[['Mars',5],['Venus',5.8],['Moon',6.4]].forEach(([n,d])=>CC(d,{t:`Breathable ${n}`,g:`Give ${n} air a human could breathe: 16–35% oxygen, 0.5–3 bar, almost no CO₂.`,hint:'Edit → Water and atmosphere: set the pressure, then the gas mix (try the “Earth air” preset).',setup:scen('solar'),
+  check:()=>{const b=BN(n);const ok=!!(b&&breathable(b));return[ok,ok?1:0,b?`${fmtAtm(b.atm)} · ${mainGases(b)||'no air'}`:'—']},fail:()=>BN(n)?'':`${n} was destroyed`,stars:byTime(60,150)}));
+// binary stars
+[[10,5],[20,5.8],[30,6.6],[50,7.6]].forEach(([H,d])=>CC(d,{t:`A second sun (${H} yr)`,g:`Add a second star that orbits the Sun (or that the Sun orbits), and keep the pair together for ${H} years.`,hint:'Pick Star, choose a light type such as Red dwarf, and click a few AU from the Sun.',setup:scen('solar'),
+  check:()=>{const s0=BN('Sun');let best=null;if(s0)for(const b of mine())if((b.type==='star'||b.type==='dwarf')&&(parentOf(b)===s0||parentOf(s0)===b)){const o=parentOf(b)===s0?orb(b,s0):orb(s0,b);if(o.bound&&(!best||o.e<best.e))best=o}
+    const p=hold('bi',!!best,H);return[p>=1,p,best?`Pair bound, eccentricity ${best.e.toFixed(2)} · ${holdTxt(p,H)}`:'No companion star yet',best&&best.e]},fail:()=>BN('Sun')?'':'The Sun was destroyed',stars:byE(0.1,0.3)}));
+// brown dwarf
+[['alone',5.2],['with planets',6]].forEach(([v,d])=>CC(d,{t:`Ignite a brown dwarf (${v})`,g:'Feed the brown dwarf until it reaches 0.08 solar masses and starts fusion.',hint:'Raise its mass in Edit, or crash planets into it.',
+  setup:()=>{load(SCEN.find(x=>x.id==='empty'));const bd=addBody({type:'star',...STARKINDS.brown,...STARKINDS.brown.extra,name:'Failed star'});if(v!=='alone')for(const a of [0.6,1.2,2])orbitAround(bd,a,{type:'rock',m:318*ME*rnd(1,4),color:pick(PAL.giant),ring:false});fit(2.5);setTool('select')},
+  check:()=>{const ok=evHas(e=>e.k==='ignite');return[ok,ok?1:0,ok?'It ignited!':'Not yet']},stars:byTime(40,100)}));
+// black hole feasts
+[[3,5,5.4],[5,5,6],[8,5,6.6],[12,10,7.2],[20,10,7.8],[30,20,8.4],[40,20,9],[50,30,9.5]].forEach(([N,T,d])=>CC(d,{t:`Black hole feast: ${N}`,g:`Use black holes to swallow ${N} objects within ${T} years of placing the first one.`,hint:'Pick Black hole and click near the busy inner Solar System. Bigger black holes pull harder (Before placing → Mass).',setup:scen('solar'),
+  check:()=>{const bh=S.bodies.some(b=>b.type==='blackhole');if(bh&&CH.ref.bh==null)CH.ref.bh=S.t;const n=CH.events.filter(e=>e.k==='merge'&&e.into==='blackhole').length;const used=CH.ref.bh==null?0:S.t-CH.ref.bh;
+    return[n>=N,Math.min(1,n/N),CH.ref.bh==null?'Place a black hole to start the clock':`Swallowed ${n} of ${N} · ${Math.max(0,T-used).toFixed(1)} years left`,used/T]},
+  fail:()=>CH.ref.bh!=null&&S.t-CH.ref.bh>T?`Time's up: ${T} years passed`:'',stars:m=>m<=1/3?3:m<=2/3?2:1}));
+// time
+[[100,60,4.4],[500,90,6],[1000,120,7.4],[2000,150,8.8]].forEach(([N,L,d])=>CC(d,{t:`Fast-forward ${N} years`,g:`Simulate ${N} years of the Solar System within ${L} seconds of real time.`,hint:'Use the 100 yr button. Busy scenes run slower: removing tiny objects helps.',setup:()=>{scen('solar')();CH.ref.t0=S.t},
+  check:()=>{const y=S.t-CH.ref.t0;return[y>=N,Math.min(1,y/N),`${y.toFixed(0)} of ${N} years · ${Math.max(0,L-realSecs()).toFixed(0)} s left`]},fail:()=>realSecs()>L?`Out of time: ${L} seconds passed`:'',stars:()=>{const s=realSecs();return s<=L*0.5?3:s<=L*0.8?2:1}}));
+// black hole and neutron star mergers
+[[50,6.2],[20,7],[10,8],[5,9.2]].forEach(([T,d])=>CC(d,{t:`Merge black holes (${T} yr)`,g:`Make the two black holes merge within ${T} years.`,hint:'Drag one black hole close to the other, or use Edit → Orbit → Slower so they fall together.',
+  setup:()=>{load(SCEN.find(x=>x.id==='empty'));const M=55,rel=orbitState({x:0,y:0,z:0,vx:0,vy:0,vz:0,m:30},40,{m:25,inc:0,node:0,ang:0});addBody({type:'blackhole',m:30,name:'Black hole A',x:-rel.x*25/M,y:-rel.y*25/M,vx:-rel.vx*25/M,vy:-rel.vy*25/M});addBody({type:'blackhole',m:25,name:'Black hole B',x:rel.x*30/M,y:rel.y*30/M,vx:rel.vx*30/M,vy:rel.vy*30/M});fit(35);setTool('select')},
+  check:()=>{const ok=evHas(e=>e.k==='bhmerge');return[ok,ok?1:0,ok?'Merged!':`${Math.max(0,T-(S.t-CH.t0)).toFixed(1)} years left`,(S.t-CH.t0)/T]},fail:()=>S.t-CH.t0>T&&!evHas(e=>e.k==='bhmerge')?`Time's up`:'',stars:m=>m<=1/3?3:m<=2/3?2:1}));
+[[6.4],[7.2],[8]].forEach(([d],i)=>CC(d,{t:`Kilonova ${i+1}`,g:'Make the two neutron stars collide.',hint:'Drag one onto the other, or make it orbit slower so it falls in.',
+  setup:()=>{load(SCEN.find(x=>x.id==='empty'));const D=[3,8,20][i],rel=orbitState({x:0,y:0,z:0,vx:0,vy:0,vz:0,m:1.4},D,{m:1.4,inc:0,node:0,ang:0});addBody({type:'neutron',m:1.4,name:'Neutron star A',x:-rel.x/2,y:-rel.y/2,vx:-rel.vx/2,vy:-rel.vy/2});addBody({type:'neutron',m:1.4,name:'Neutron star B',x:rel.x/2,y:rel.y/2,vx:rel.vx/2,vy:rel.vy/2});fit(D*1.4);setTool('select')},
+  check:()=>{const ok=evHas(e=>e.k==='kilonova');return[ok,ok?1:0,ok?'Kilonova!':'Not yet']},stars:byTime(60,150)}));
+// stable additions
+[[2,3,10,6.6],[1.3,1.8,10,7.4],[12,16,20,8],[0.6,0.9,5,8.8],[3,4,20,9.6]].forEach(([a1,a2,H,d])=>CC(d,{t:`Gas giant at ${a1}–${a2} AU`,g:`Add a gas giant orbiting the Sun between ${a1} and ${a2} AU, without losing any of the eight planets, for ${H} years.`,hint:'Pick Gas giant and click at the right distance. Close orbits disturb neighbours: aim for a circular orbit.',setup:scen('solar'),
+  check:()=>{const s0=BN('Sun');let best=null;if(s0)for(const b of mine())if(b.type==='rock'&&b.m>=50*ME&&parentOf(b)===s0){const o=orb(b,s0);if(o.a>=a1&&o.a<=a2&&(!best||o.e<best.e))best=o}
+    const p=hold('g',!!best,H);return[p>=1,p,best?`Giant at ${best.a.toFixed(2)} AU · ${holdTxt(p,H)}`:'No gas giant in that range yet',best&&best.e]},
+  fail:()=>{const s0=BN('Sun');const lost=['Mercury','Venus','Earth','Mars','Jupiter','Saturn','Uranus','Neptune'].find(n=>{const b=BN(n);return !b||!s0||parentOf(b)!==s0});return lost?`${lost} was lost`:''},stars:byE(0.05,0.15)}));
+CHALS.sort((a,b)=>a.diff-b.diff);
+const unlocked=i=>i===0||PROG.stars[i-1]>0;
+function totalStars(){return Object.values(PROG.stars).reduce((a,b)=>a+b,0)}
+
+function setMode(m){document.body.classList.toggle('mHome',m==='home');document.body.classList.toggle('mDemo',m==='demo')}
+function homeView(v){for(const id of ['hMain','hChalView','hDemoView'])$(id).hidden=id!==v;if(v==='hChalView')renderGrid();const done=Object.keys(PROG.stars).length;$('hChalSub').textContent=done?`${done} of 100 complete · ${totalStars()} of 300 stars`:'100 goals, from easy to fiendish'}
+function showHome(){stopDemo(true);if(CH.active)endChallenge();if(TUT.on)endTutorial();$('chDone').hidden=true;
+  CH.loading=true;load(SCEN.find(x=>x.id==='solar'));CH.loading=false;setTog('labels','tLabels',false);setTog('zones','tZones',false);setTog('spin','tSpin',true);setView(-0.9,0.42);fit(3.2);setSpeed(0.4);
+  VIEW_OX=innerWidth>900?innerWidth*0.2:0;
+  select(null);setMode('home');$('home').hidden=false;homeView('hMain')}
+function leaveHome(){VIEW_OX=0;$('home').hidden=true;setMode('');setTog('labels','tLabels',true);setTog('spin','tSpin',false)}
+$('homeBtn').addEventListener('click',showHome);
+document.querySelectorAll('.hback').forEach(b=>b.addEventListener('click',()=>homeView('hMain')));
+$('hChal').addEventListener('click',()=>homeView('hChalView'));
+$('hDemo').addEventListener('click',()=>homeView('hDemoView'));
+$('hFree').addEventListener('click',()=>{leaveHome();load(SCEN.find(x=>x.id==='solar'))});
+function renderGrid(){const g=$('hGrid');g.textContent='';let next=-1;
+  CHALS.forEach((c,i)=>{const st=PROG.stars[i]||0,un=unlocked(i);if(un&&!st&&next<0)next=i;const b=document.createElement('button');b.className='ct'+(i===next?' next':'');b.disabled=!un;b.title=un?`${c.t}: ${c.g}`:'Finish the previous challenge to unlock';
+    b.innerHTML='<span class="cn"></span><span class="ctt"></span><span class="cs"></span>';b.children[0].textContent=`#${i+1}`;b.children[1].textContent=un?c.t:'Locked';b.children[2].textContent=un?(st?'★'.repeat(st)+'☆'.repeat(3-st):'☆☆☆'):'🔒';
+    b.onclick=()=>startChallenge(i);g.appendChild(b)});
+  $('hStars').textContent=`★ ${totalStars()} / 300`;if(next>=0)setTimeout(()=>{const el=g.children[next];if(el)el.scrollIntoView({block:'nearest'})},30)}
+function startChallenge(i){
+  const c=CHALS[i];if(!c||!unlocked(i))return;leaveHome();$('chDone').hidden=true;
+  CH.active=c;CH.idx=i;CH.events=[];CH.hold={};CH.ref={};CH.done=false;CH.failed='';CH.loading=true;
+  try{c.setup()}finally{CH.loading=false}
+  CH.base=S.bodies.reduce((m,b)=>Math.max(m,b.id),0);CH.t0=S.t;CH.real0=performance.now();setPaused(false);
+  $('chHud').hidden=false;$('chNum').textContent=`Challenge ${i+1} of 100`;$('chTitle').textContent=c.t;$('chGoal').textContent=c.g;$('chProg').textContent='';$('chBar').style.width='0%';$('chHint').hidden=!c.hint}
+function endChallenge(){CH.active=null;$('chHud').hidden=true}
+function chTick(){
+  if(TUT.on)tutTick();
+  if(!CH.active||CH.done)return;const c=CH.active;let r;try{r=c.check()}catch(e){r=[false,0,'']}
+  const [done,p,txt,metric]=r;$('chProg').textContent=CH.failed||txt||'';$('chBar').style.width=Math.round(Math.max(0,Math.min(1,p||0))*100)+'%';
+  const t=realSecs();$('chTime').textContent=`${Math.floor(t/60)}:${String(Math.floor(t%60)).padStart(2,'0')}`;
+  if(done){CH.done=true;const st=Math.max(1,Math.min(3,c.stars(metric)));const prev=PROG.stars[CH.idx]||0;if(st>prev)PROG.stars[CH.idx]=st;saveProg();
+    $('dStars').innerHTML='★'.repeat(st)+'<span class="off">'+'★'.repeat(3-st)+'</span>';$('dTitle').textContent=`Challenge ${CH.idx+1} complete!`;
+    $('dText').textContent=`${c.t} · ${Math.floor(t/60)}:${String(Math.floor(t%60)).padStart(2,'0')}${st<3?' · Faster or more precise solutions earn more stars.':' · Perfect!'}${prev>st?` Your best is still ${prev} ★.`:''}`;
+    $('dNext').hidden=CH.idx>=CHALS.length-1;$('dNext').textContent='Next challenge';$('dRetry').hidden=false;$('dList').textContent='All challenges';$('chDone').hidden=false;$('chHud').hidden=true;return}
+  const f=c.fail&&c.fail();if(f){CH.failed=f;CH.done=true;$('dStars').innerHTML='<span class="off">★★★</span>';$('dTitle').textContent='Not this time';$('dText').textContent=f+'. Try again?';$('dNext').hidden=true;$('dRetry').hidden=false;$('dList').textContent='All challenges';$('chDone').hidden=false;$('chHud').hidden=true}
+}
+$('chRestart').addEventListener('click',()=>startChallenge(CH.idx));
+$('chExit').addEventListener('click',()=>{endChallenge();showHome();homeView('hChalView')});
+$('chHint').addEventListener('click',()=>{if(CH.active)toast('Hint: '+CH.active.hint)});
+$('dNext').addEventListener('click',()=>{if(TUT.on||CH.idx<0){showHome();homeView('hChalView');return}startChallenge(CH.idx+1)});
+$('dRetry').addEventListener('click',()=>{if(TUT.finished){TUT.finished=false;startTutorial();return}startChallenge(CH.idx)});
+$('dList').addEventListener('click',()=>{if(TUT.finished){TUT.finished=false;$('chDone').hidden=true;endChallenge();leaveHome();load(SCEN.find(x=>x.id==='solar'));return}endChallenge();showHome();homeView('hChalView')});
+
+/* tutorial: each step completes when the player does it (new features get a step here too) */
+const TUT={on:false,i:0,ref:{},finished:false};
+const TSTEPS=[
+ ['Look around','Drag with the mouse (or one finger) to rotate the camera around the Solar System.',r=>Math.abs(cam.yaw-r.yaw)>0.6||Math.abs(cam.pitch-r.pitch)>0.3,r=>{r.yaw=cam.yaw;r.pitch=cam.pitch}],
+ ['Zoom','Scroll (or pinch) to zoom in toward the Sun. Zoom goes toward wherever your pointer is.',r=>cam.dist<r.d*0.4,r=>{r.d=cam.dist}],
+ ['Move the camera','Hold W, A, S or D (or use the camera pad at the bottom right) to move around.',r=>Math.hypot(cam.tx-r.x,cam.ty-r.y)>cam.dist*0.3,r=>{r.x=cam.tx;r.y=cam.ty}],
+ ['Pause time','Press Space or the ⏸ button to pause the simulation.',()=>S.paused],
+ ['Speed up','Resume, then press the “10 yr” button to run 10 years every second.',()=>!S.paused&&S.speed>=9.9],
+ ['Fly to a planet','Type Saturn in the search bar and press Enter (or double-click Saturn).',()=>S.sel&&S.sel.name==='Saturn'&&S.follow],
+ ['Read about it','The panel shows its orbit, temperature, magnetic field and life likelihood. Open the Edit tab.',()=>S.sel&&!$('editPane').hidden],
+ ['Back to everything','Close the panel (×) or press Esc: the camera pulls back to show the whole system.',()=>!S.sel],
+ ['Add a planet','Pick Rocky planet in the toolbar, then click near the Sun to drop it into orbit. The guide shows its distance.',r=>S.bodies.some(b=>b.id>r.base&&b.type==='rock'),r=>{r.base=S.bodies.reduce((m,b)=>Math.max(m,b.id),0)}],
+ ['Choose what orbits what','Pick the Orbit tool, click a planet, then click what it should orbit.',r=>ORBSET>r.n,r=>{r.n=ORBSET}],
+ ['Measure','Pick Measure (the ruler) and click two places to measure the distance between them.',()=>S.measure&&S.measure.b],
+ ['Add a famous object','Type Betelgeuse in the search bar and press Add.',()=>S.bodies.some(b=>/^Betelgeuse/.test(b.name))],
+ ['Star types','Pick the Star tool and choose a type, such as Hypergiant, Brown dwarf or Black dwarf, then click to place one.',r=>S.bodies.some(b=>b.id>r.base&&(b.type==='star'||b.type==='dwarf'||b.type==='neutron')&&!/^Betelgeuse/.test(b.name)),r=>{r.base=S.bodies.reduce((m,b)=>Math.max(m,b.id),0)}],
+ ['Black hole','Pick Black hole and click near the Sun. Watch it pull things in (and drag it around).',()=>S.bodies.some(b=>b.type==='blackhole')],
+ ['Views','Try the toolbar views: turn on Zones (habitable zones), Heat (temperature map) or Sky (background stars).',r=>S.zones!==r.z||S.heat!==r.h||S.sky!==r.s,r=>{r.z=S.zones;r.h=S.heat;r.s=S.sky}],
+];
+function startTutorial(){leaveHome();$('chDone').hidden=true;CH.loading=true;load(SCEN.find(x=>x.id==='solar'));CH.loading=false;TUT.on=true;TUT.i=0;TUT.finished=false;tutStep()}
+function tutStep(){const st=TSTEPS[TUT.i];if(!st){TUT.on=false;TUT.finished=true;$('chHud').hidden=true;$('dStars').innerHTML='★★★';$('dTitle').textContent='Tutorial complete!';$('dText').textContent='You know all the controls. Try the challenges, or build anything in free play.';
+    $('dNext').hidden=false;$('dNext').textContent='Challenges';$('dRetry').hidden=false;$('dList').textContent='Free play';$('chDone').hidden=false;return}
+  TUT.ref={};if(st[3])st[3](TUT.ref);$('chHud').hidden=false;$('chNum').textContent=`Tutorial · step ${TUT.i+1} of ${TSTEPS.length}`;$('chTitle').textContent=st[0];$('chGoal').textContent=st[1];$('chProg').textContent='';$('chTime').textContent='';$('chBar').style.width=Math.round(TUT.i/TSTEPS.length*100)+'%';$('chHint').hidden=true;
+  $('chRestart').textContent='Skip step'}
+function tutTick(){const st=TSTEPS[TUT.i];if(st&&st[2](TUT.ref)){TUT.i++;toast('✓ '+st[0]);tutStep()}}
+function endTutorial(){TUT.on=false;$('chHud').hidden=true;$('chRestart').textContent='Restart'}
+$('hTut').addEventListener('click',startTutorial);
+$('chRestart').addEventListener('click',e=>{if(TUT.on){e.stopImmediatePropagation();TUT.i++;tutStep()}},true);
+$('chExit').addEventListener('click',e=>{if(TUT.on){e.stopImmediatePropagation();endTutorial();showHome();homeView('hDemoView')}},true);
+
+/* demo: an automatic tour of highlights */
+const DEMO=[
+ ['solar','Our Solar System','Every planet, major moon, dwarf planet, comet and asteroid, on real orbits with real masses.',()=>{setView(-0.8,0.5);fit(6);setSpeed(0.5)}],
+ ['bhmerger','Black holes merging','Two black holes spiral together and merge, sending gravitational waves rippling across space.',()=>{}],
+ ['nsmerger','Neutron stars colliding','A kilonova: the explosion that forges gold and platinum, collapsing into a black hole.',()=>{}],
+ ['rogue','A rogue black hole','A black hole dives through the Solar System, scattering and swallowing planets.',()=>{setSpeed(2)}],
+ ['nursery','A stellar nursery','Hot young stars blow a cavity in a glowing gas cloud while new stars ignite.',()=>{}],
+ ['galaxy','Galaxies colliding','The Milky Way and Andromeda merge into one giant elliptical galaxy.',()=>{}],
+ ['eyeball','An eyeball world','A tidally locked ocean planet: endless day on one side, frozen night on the other.',()=>{}],
+ ['trappist','TRAPPIST-1','Seven Earth-sized worlds packed around a tiny red star.',()=>{setSpeed(0.01)}],
+];
+let demoI=-1,demoTimer=0;
+function startDemo(){leaveHome();setMode('demo');$('demoCap').hidden=false;demoI=-1;nextDemo()}
+function nextDemo(){clearTimeout(demoTimer);demoI=(demoI+1)%DEMO.length;const [id,t,x,f]=DEMO[demoI];CH.loading=true;load(SCEN.find(s=>s.id===id));CH.loading=false;f();setTog('spin','tSpin',true);setTog('labels','tLabels',false);setTog('zones','tZones',false);
+  $('demoStep').textContent=`Demo · ${demoI+1} of ${DEMO.length}`;$('demoTitle').textContent=t;$('demoText').textContent=x;demoTimer=setTimeout(nextDemo,14000)}
+function stopDemo(quiet){clearTimeout(demoTimer);if(demoI<0&&quiet)return;demoI=-1;$('demoCap').hidden=true;setMode('');if(!quiet)showHome()}
+$('hWatch').addEventListener('click',startDemo);$('demoExit').addEventListener('click',()=>stopDemo());
 
 /* ---------- loop ---------- */
 let last=performance.now(),uiT=0;
@@ -2854,7 +3122,7 @@ function frame(now){
   uiT+=rdt;if(uiT>0.15){uiT=0;updateHud();if(S.sel)updateInspector()}
   requestAnimationFrame(frame);
 }
-resize();updateCam();setTool('select');load(SCEN[0]);
+resize();updateCam();setTool('select');showHome();
 requestAnimationFrame(frame);
 })();
 </script>
