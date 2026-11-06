@@ -208,15 +208,16 @@ body.mDemo .rail,body.mDemo .dock,body.mDemo .placeopts,body.mDemo .hint,body.mD
     <div class="sl"><div class="row"><span class="k">Rainfall</span><span id="rainV">100%</span></div><input type="range" id="rainS" min="0" max="250" step="5" value="100"></div>
     <div class="sl"><div class="row"><span class="k">Sea level</span><span id="seaV">0 m</span></div><input type="range" id="seaS" min="-100" max="100" step="2" value="0"></div>
     <div class="row"><span class="k">Seasons</span><button class="btn" id="seasonBtn" aria-pressed="true">On</button></div>
-    <span class="k">Events</span>
+    <span class="k">Events · press again to stop</span>
     <div class="evs">
       <button class="btn" data-ev="ice">❄ Ice age</button><button class="btn" data-ev="heat">☀ Heat wave</button>
       <button class="btn" data-ev="drought">🏜 Drought</button><button class="btn" data-ev="flood">🌊 Floods</button>
       <button class="btn" data-ev="plague">🦠 Plague</button><button class="btn" data-ev="meteor">☄ Meteor</button>
-      <button class="btn" data-ev="fire">🔥 Wildfire</button><button class="btn" data-ev="normal">↺ Normal climate</button>
+      <button class="btn" data-ev="fire">🔥 Wildfire</button><button class="btn" data-ev="normal">↺ Stop all events</button>
     </div>
     <span class="k">Views</span>
     <div class="views" id="views"><button class="btn" data-view="normal" aria-pressed="true">Natural</button><button class="btn" data-view="temp" aria-pressed="false">Temperature</button><button class="btn" data-view="food" aria-pressed="false">Food</button><button class="btn" data-view="rain" aria-pressed="false">Rain</button></div>
+    <div class="row"><span class="k">Species badges when zoomed in</span><button class="btn" id="lblBtn" aria-pressed="true">On</button></div>
     <p class="note">Plants grow where it is warm and wet enough. Animals need food, water and a bearable temperature. Every baby inherits its parents' genes with small random changes, so species slowly adapt: that is evolution.</p>
   </div>
   <div class="pane" id="pane-life" hidden>
@@ -343,6 +344,8 @@ let SEASON=0;
 const meanT=i=>tBase[i]+CL.temp-CL.dust;
 const cellT=i=>tBase[i]+CL.temp-CL.dust+sAmp[i]*SEASON;
 const rainAt=i=>clamp(moist[i]*CL.rain+wet[i],0,2.5);
+// what plants can drink: rain plus water from a nearby lake, river or sea
+const wetAt=i=>{const d=dw[i];return rainAt(i)+(d<=5?0.6*(1-d/6):0)};
 const isWater=i=>hgt[i]<sea();
 const idx=(x,y)=>((y|0)<0||(y|0)>=GH||(x|0)<0||(x|0)>=GW)?-1:(y|0)*GW+(x|0);
 function computeDW(){const s=sea(),q=new Int32Array(N);let h=0,t=0;for(let i=0;i<N;i++){if(hgt[i]<s){dw[i]=0;q[t++]=i}else dw[i]=255}
@@ -356,6 +359,8 @@ function genTerrain(o){const n1=makeNoise(o.seed),n2=makeNoise(o.seed+7),n3=make
   const sorted=Float32Array.from(raw).sort(),thr=sorted[Math.floor((1-o.land)*(N-1))],mn=sorted[0],mx=sorted[N-1];
   for(let i=0;i<N;i++){const v=raw[i];hgt[i]=v<thr?SEA0*(v-mn)/(thr-mn+1e-9):SEA0+(1-SEA0)*Math.pow((v-thr)/(mx-thr+1e-9),o.peak||1.2)}
   for(const [lx,ly,lr] of (o.lakes||[])){for(let y=-lr;y<=lr;y++)for(let x=-lr;x<=lr;x++){const i=idx(lx*GW+x,ly*GH+y);if(i<0)continue;const d=Math.hypot(x,y)/lr;if(d<1)hgt[i]=Math.min(hgt[i],SEA0-0.02*(1-d)-0.001)}}
+  {// soften the land so lakes and coasts have smooth, natural shapes
+   const t=new Float32Array(N);for(let pass=0;pass<2;pass++){for(let y=0;y<GH;y++)for(let x=0;x<GW;x++){let sum=0,n=0;for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++){const xx=x+dx,yy=y+dy;if(xx<0||yy<0||xx>=GW||yy>=GH)continue;sum+=hgt[yy*GW+xx];n++}t[y*GW+x]=sum/n}hgt.set(t)}}
   computeDW();
   for(let i=0;i<N;i++){const x=i%GW,y=(i/GW)|0;moist[i]=clamp(fbm(n2,x/GW*4,y/GH*3,4)*1.2-0.1+o.moist-0.5+(dw[i]<6?0.12*(1-dw[i]/6):0),0,1.4)}
   wet.fill(0);scar.fill(0);burn.fill(0);computeClimate()}
@@ -366,7 +371,7 @@ function updateVeg(dt){const s=sea();
   for(let i=0;i<N;i++){
     if(hgt[i]<s){veg[i]=0;const T=cellT(i),cap=T<1?0.05:T<30?Math.min(1,(s-hgt[i])<0.06?1:0.45):0.5;let a=alg[i];
       if(a<0.01){a=0.01}a=a<cap?cap/(1+(cap-a)/a*Math.exp(-0.035*dt)):a+(cap-a)*Math.min(1,0.03*dt);alg[i]=a;continue}
-    alg[i]=0;const T=cellT(i),R=rainAt(i),cap=capOf(T,R);let v=veg[i];
+    alg[i]=0;const T=cellT(i),R=wetAt(i),cap=capOf(T,R);let v=veg[i];
     if(v<0.003){if(cap>0.05){const x=i%GW;const nb=(x>0?veg[i-1]:0)+(x<GW-1?veg[i+1]:0)+(i>=GW?veg[i-GW]:0)+(i<N-GW?veg[i+GW]:0);if(nb>0.25&&rnd()<0.08*dt)v=0.03}}
     else if(cap>v)v=cap/(1+(cap-v)/v*Math.exp(-0.05*dt));
     else{const floor=Math.min(v,0.12*capOf(meanT(i),R));v=Math.max(floor,v-(v-cap)*Math.min(1,0.03*dt))}
@@ -491,11 +496,11 @@ function giveBirth(a){const s=SP[a.sp];const n=ri(s.litter[0],s.litter[1]);let b
 
 /* ---------- trees ---------- */
 function addTree(k,x,y,o={}){if(S.trees.length>=MAXT)return null;const t={id:S.nextId++,k,x,y,age:o.age??rr(800,9000),size:o.size??rr(.5,1),hp:1,fruit:rr(0,.6),life:TK[k].life*rr(.7,1.2),rot:rnd()*TAU};S.trees.push(t);return t}
-function treeOK(k,i){if(i<0||isWater(i))return false;const t=TK[k],T=meanT(i),R=rainAt(i);return T>=t.tmin-2&&T<=t.tmax+2&&R>=t.rmin*0.8&&R<=t.rmax&&elevKm(i)<3.2}
+function treeOK(k,i){if(i<0||isWater(i))return false;const t=TK[k],T=meanT(i),R=wetAt(i);return T>=t.tmin-2&&T<=t.tmax+2&&R>=t.rmin*0.8&&R<=t.rmax&&elevKm(i)<3.2}
 function stepTrees(dt){let crowd;
   for(const t of S.trees){if(t.dead)continue;const i=idx(t.x,t.y),k=TK[t.k];t.age+=dt;
     if(i<0||isWater(i)){t.dead=true;t.cause='flooded';continue}
-    const T=meanT(i),R=rainAt(i);const bad=Math.max(0,k.tmin-T)+Math.max(0,T-k.tmax)+Math.max(0,(k.rmin-R)*20)+Math.max(0,(R-k.rmax)*20);
+    const T=meanT(i),R=wetAt(i);const bad=Math.max(0,k.tmin-T)+Math.max(0,T-k.tmax)+Math.max(0,(k.rmin-R)*20)+Math.max(0,(R-k.rmax)*20);
     if(bad>1)t.hp-=bad*0.0025*dt;else t.hp=Math.min(1,t.hp+0.01*dt);
     if(t.hp<=0||t.age>t.life){t.dead=true;t.cause=t.hp<=0?'climate':'old age';continue}
     t.size=Math.min(1,t.size+0.0006*dt*(bad>1?0.2:1));
@@ -536,10 +541,39 @@ function speciesAlive(){return SPK.filter(k=>S.animals.some(a=>!a.dead&&a.sp===k
 /* ================= rendering ================= */
 const cv=$('world'),ctx=cv.getContext('2d');let gx=ctx;let W=0,H=0,DPR=1;
 const cam={x:GW*CELL/2,y:GH*CELL/2,z:1,ox:0};
-// terrain is coloured per cell, then drawn at 3x with smooth blending and fine grain for texture
-const UP=3,off=document.createElement('canvas');off.width=GW*UP;off.height=GH*UP;const octx=off.getContext('2d');const big=octx.createImageData(GW*UP,GH*UP);
-const img={data:new Uint8ClampedArray(N*4)};const GRAIN=new Float32Array(GW*UP*GH*UP);{const r=seeded(17);for(let i=0;i<GRAIN.length;i++)GRAIN[i]=0.96+r()*0.08}
-const tex=document.createElement('canvas');tex.width=tex.height=192;{const t=tex.getContext('2d'),d=t.createImageData(192,192),r=seeded(5);for(let i=0;i<d.data.length;i+=4){const v=110+r()*90|0;d.data[i]=d.data[i+1]=d.data[i+2]=v;d.data[i+3]=255}t.putImageData(d,0,0)}
+// terrain: every cell gets a colour and a slope shade; the visible area is then drawn pixel by pixel at screen
+// resolution, with wobbly (not blocky) borders between cells and fine surface detail, so it stays sharp at any zoom
+const img={data:new Uint8ClampedArray(N*4)},SH=new Float32Array(N),LC=new Float32Array(N*3),WC=new Float32Array(N*3);
+function tileNoise(seed,blur,passes){const r=seeded(seed),T=new Float32Array(65536);for(let i=0;i<65536;i++)T[i]=r();const tmp=new Float32Array(65536);
+  for(let p=0;p<passes;p++){for(let y=0;y<256;y++)for(let x=0;x<256;x++){let s=0;for(let k=-blur;k<=blur;k++)s+=T[y*256+((x+k)&255)];tmp[y*256+x]=s/(2*blur+1)}
+    for(let y=0;y<256;y++)for(let x=0;x<256;x++){let s=0;for(let k=-blur;k<=blur;k++)s+=tmp[((y+k)&255)*256+x];T[y*256+x]=s/(2*blur+1)}}
+  let mn=1,mx=0;for(const v of T){if(v<mn)mn=v;if(v>mx)mx=v}for(let i=0;i<65536;i++)T[i]=(T[i]-mn)/(mx-mn);return T}
+const WARPX=tileNoise(3,6,2),WARPY=tileNoise(4,6,2),DET1=tileNoise(5,2,1),DET2=tileNoise(6,1,1);
+const tv=document.createElement('canvas'),tvx=tv.getContext('2d');let tvImg=null,tvInfo=null,tvStill=0;
+function renderTerrainView(RS){const w=Math.max(1,Math.ceil(W*RS)),h=Math.max(1,Math.ceil(H*RS));if(tv.width!==w||tv.height!==h||!tvImg){tv.width=w;tv.height=h;tvImg=tvx.createImageData(w,h)}
+  const D=tvImg.data,C=img.data,inv=1/(cam.z*RS*CELL),wx0=wxOf(0),wy0=wyOf(0),nat=S.view==='normal';
+  const a1=nat?0.10*clamp(1-inv*5,0,1):0,a2=nat?0.08*clamp(1-inv*24,0,1):0,wa=clamp(1-inv*2,0,1),sl=sea(),edge=Math.max(0.0015,inv*0.012);
+  let q=0;for(let py=0;py<h;py++){const wy=wy0+py*inv;
+    for(let px=0;px<w;px++,q+=4){const wx=wx0+px*inv;
+      if(wx<0||wy<0||wx>=GW||wy>=GH){D[q]=10;D[q+1]=36;D[q+2]=66;D[q+3]=255;continue}
+      const fx=wx-.5,fy=wy-.5,x0=fx<0?0:fx|0,y0=fy<0?0:fy|0,x1=x0<GW-1?x0+1:x0,y1=y0<GH-1?y0+1:y0,tx=fx-x0<0?0:fx-x0>1?1:fx-x0,ty=fy-y0<0?0:fy-y0>1?1:fy-y0;
+      const i00=y0*GW+x0,i10=y0*GW+x1,i01=y1*GW+x0,i11=y1*GW+x1,w00=(1-tx)*(1-ty),w10=tx*(1-ty),w01=(1-tx)*ty,w11=tx*ty;
+      const ti=(((wy*3)|0)&255)*256+(((wx*3)|0)&255);
+      const hb=hgt[i00]*w00+hgt[i10]*w10+hgt[i01]*w01+hgt[i11]*w11+(WARPX[ti]-.5)*0.03*wa;
+      // 0 = land, 1 = water, with a one-pixel soft edge
+      let wt=(sl-hb)/edge+0.5;wt=wt<0?0:wt>1?1:wt;
+      let f=SH[i00]*w00+SH[i10]*w10+SH[i01]*w01+SH[i11]*w11;
+      if(a1)f*=1+(DET1[(((wy*5)|0)&255)*256+(((wx*5)|0)&255)]-.5)*2*a1;if(a2)f*=1+(DET2[(((wy*26)|0)&255)*256+(((wx*26)|0)&255)]-.5)*2*a2;
+      const fw=nat?1+(DET1[(((wy*3)|0)&255)*256+(((wx*3)|0)&255)]-.5)*0.08*wa:1;
+      const j00=i00*3,j10=i10*3,j01=i01*3,j11=i11*3;
+      for(let k=0;k<3;k++){const l=(LC[j00+k]*w00+LC[j10+k]*w10+LC[j01+k]*w01+LC[j11+k]*w11)*f,wv=(WC[j00+k]*w00+WC[j10+k]*w10+WC[j01+k]*w01+WC[j11+k]*w11)*fw;D[q+k]=l+(wv-l)*wt}
+      D[q+3]=255}}
+  tvx.putImageData(tvImg,0,0);tvInfo={wx0,wy0,inv,z:cam.z,x:cam.x,y:cam.y,ox:cam.ox,W,H,RS}}
+function drawTerrain(now){const hi=Math.min(DPR,Math.sqrt(750000/(W*H))),lo=Math.min(hi,Math.sqrt(160000/(W*H)));
+  const moved=!tvInfo||tvInfo.z!==cam.z||tvInfo.x!==cam.x||tvInfo.y!==cam.y||tvInfo.ox!==cam.ox||tvInfo.W!==W||tvInfo.H!==H;
+  if(moved){renderTerrainView(lo);tvStill=now;S.tvDirty=false}
+  else if((tvInfo.RS<hi&&now-tvStill>140)||S.tvDirty){renderTerrainView(hi);S.tvDirty=false}
+  const k=tvInfo.inv*CELL*cam.z;ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';ctx.drawImage(tv,sx(tvInfo.wx0),sy(tvInfo.wy0),tv.width*k,tv.height*k)}
 let texPat=null;
 function resize(){DPR=Math.min(2,devicePixelRatio||1);W=innerWidth;H=innerHeight;cv.width=W*DPR;cv.height=H*DPR;ctx.setTransform(DPR,0,0,DPR,0,0)}
 const sx=wx=>(wx*CELL-cam.x)*cam.z+W/2+cam.ox,sy=wy=>(wy*CELL-cam.y)*cam.z+H/2;
@@ -550,7 +584,7 @@ function heatCol(t){// -30..45 °C
   const u=clamp((t+30)/75,0,1);const st=[[40,60,170],[60,150,220],[120,200,140],[240,220,90],[235,120,50],[180,30,40]];const f=u*(st.length-1),k=Math.min(st.length-2,f|0),q=f-k;return st[k].map((c,j)=>c+(st[k+1][j]-c)*q)}
 function paintTerrain(){const d=img.data,s=sea(),v=S.view;
   for(let i=0;i<N;i++){const x=i%GW,y=(i/GW)|0,h=hgt[i];let r,g,b;
-    const hl=x>0&&y>0?hgt[i-GW-1]:h,hr=x<GW-1&&y<GH-1?hgt[i+GW+1]:h;const shade=1+clamp((hl-hr)*9,-.35,.35);
+    const hl=x>0&&y>0?hgt[i-GW-1]:h,hr=x<GW-1&&y<GH-1?hgt[i+GW+1]:h;const shade=1+clamp((hl-hr)*11,-.38,.38);
     if(v==='temp'){[r,g,b]=heatCol(cellT(i));if(h<s){r*=.7;g*=.7;b*=.8}}
     else if(v==='rain'){const R=clamp(rainAt(i)/1.4,0,1);r=lerp(200,30,R);g=lerp(170,110,R);b=lerp(110,220,R);if(h<s){r=20;g=40;b=80}}
     else if(v==='food'){if(h<s){const a=alg[i];r=10;g=30+a*120;b=60+a*80}else{const f=veg[i];r=lerp(60,40,f);g=lerp(45,210,f);b=lerp(35,60,f)}}
@@ -562,14 +596,12 @@ function paintTerrain(){const d=img.data,s=sea(),v=S.view;
       const t=clamp(f*1.15,0,1);r=lerp(br,gr,t);g=lerp(bg,gg,t);b=lerp(bb,gb,t);
       if(scar[i]>0){const c=scar[i]*0.8;r=lerp(r,34,c);g=lerp(g,30,c);b=lerp(b,26,c)}
       if(T<-3||ek>3.8){const sn=clamp(Math.max((-3-T)/4,(ek-3.8)*1.5),0,1)*(R>0.12?1:0.4);r=lerp(r,238,sn);g=lerp(g,242,sn);b=lerp(b,246,sn)}
-      r*=shade;g*=shade;b*=shade}
-    const o=i*4;d[o]=r;d[o+1]=g;d[o+2]=b;d[o+3]=255}
-  const B=big.data,BW2=GW*UP,gr=v==='normal';
-  for(let Y=0;Y<GH*UP;Y++){const fy=(Y+.5)/UP-.5,y0=Math.max(0,Math.floor(fy)),y1=Math.min(GH-1,y0+1),ty=clamp(fy-y0,0,1);
-    for(let X=0;X<BW2;X++){const fx=(X+.5)/UP-.5,x0=Math.max(0,Math.floor(fx)),x1=Math.min(GW-1,x0+1),tx=clamp(fx-x0,0,1);
-      const a=(y0*GW+x0)*4,b2=(y0*GW+x1)*4,c=(y1*GW+x0)*4,e=(y1*GW+x1)*4,o=(Y*BW2+X)*4,q=Y*BW2+X,gn=gr?GRAIN[q]:1;
-      for(let k=0;k<3;k++){const top=d[a+k]+(d[b2+k]-d[a+k])*tx,bot=d[c+k]+(d[e+k]-d[c+k])*tx,vv=top+(bot-top)*ty;B[o+k]=vv>200?vv:vv*gn}B[o+3]=255}}
-  octx.putImageData(big,0,0);S.terrainDirty=false}
+      }
+    SH[i]=h<s&&v==='normal'?1:shade;const o=i*4;d[o]=r;d[o+1]=g;d[o+2]=b;d[o+3]=255;const o3=i*3;
+    if(v!=='normal'){LC[o3]=WC[o3]=r;LC[o3+1]=WC[o3+1]=g;LC[o3+2]=WC[o3+2]=b}
+    else if(h<s){WC[o3]=r;WC[o3+1]=g;WC[o3+2]=b;LC[o3]=214;LC[o3+1]=196;LC[o3+2]=146}
+    else{LC[o3]=r;LC[o3+1]=g;LC[o3+2]=b;const T=cellT(i);if(T<-3){WC[o3]=214;WC[o3+1]=228;WC[o3+2]=238}else{WC[o3]=70;WC[o3+1]=150;WC[o3+2]=168}}}
+  S.terrainDirty=false;S.tvDirty=true}
 function drawTree(t,X,Y,z){const k=TK[t.k],s=(0.45+t.size*0.75)*z*CELL;
   gx.fillStyle='rgba(0,0,0,.28)';gx.beginPath();gx.ellipse(X+s*0.35,Y+s*0.4,s*1.05,s*0.75,0,0,TAU);gx.fill();
   if(t.k==='pine'){gx.fillStyle='#1d3a22';gx.beginPath();for(let q=0;q<16;q++){const a=q/16*TAU+t.rot,r=q%2?s*0.55:s*1.05;gx.lineTo(X+Math.cos(a)*r,Y+Math.sin(a)*r)}gx.fill();gx.fillStyle='#2e5a33';gx.beginPath();gx.arc(X-s*.12,Y-s*.12,s*.45,0,TAU);gx.fill()}
@@ -579,7 +611,8 @@ function drawTree(t,X,Y,z){const k=TK[t.k],s=(0.45+t.size*0.75)*z*CELL;
     if(t.k==='bush'&&t.fruit>0.25&&z>0.8){gx.fillStyle='#5560c8';for(let q=0;q<Math.round(t.fruit*6);q++){const a=q*2.4+t.rot;gx.beginPath();gx.arc(X+Math.cos(a)*s*.4,Y+Math.sin(a)*s*.4,Math.max(1,s*.1),0,TAU);gx.fill()}}}
   if(t.hp<0.6){gx.fillStyle=`rgba(150,120,60,${(0.6-t.hp)*0.9})`;gx.beginPath();gx.arc(X,Y,s*.9,0,TAU);gx.fill()}}
 function drawAnimal(a,X,Y,z,big){const s=SP[a.sp],k=(a.age<s.mature?0.55+0.45*a.age/s.mature:1)*Math.pow(a.genes.size,.6);let L=s.len*k*z*(big||1)*0.9,Wd=L*s.wid;
-  if(L<2.2&&!big){gx.fillStyle=a.col;gx.fillRect(X-1.2,Y-1.2,2.4,2.4);return}
+  if(!big&&L<5.5){const r=z<0.45?2:2.8;gx.fillStyle='rgba(0,0,0,.55)';gx.beginPath();gx.arc(X,Y,r+1,0,TAU);gx.fill();gx.fillStyle=SPCOL[a.sp];gx.beginPath();gx.arc(X,Y,r,0,TAU);gx.fill();return}
+  if(!big&&L<9){const f=9/L;L*=f;Wd*=f}
   gx.save();gx.translate(X,Y);gx.rotate(a.dir);
   if(s.hab==='air'){const sh=L*0.9;gx.fillStyle='rgba(0,0,0,.2)';gx.save();gx.translate(sh,sh);hawkShape(L);gx.fill();gx.restore();gx.fillStyle=a.col;hawkShape(L);gx.fill();gx.fillStyle='#e8e0d0';gx.beginPath();gx.arc(L*.42,0,L*.1,0,TAU);gx.fill();gx.restore();return}
   if(s.hab!=='water'){gx.fillStyle='rgba(0,0,0,.25)';gx.beginPath();gx.ellipse(L*.08,L*.12,L*.55,Wd*.6,0,0,TAU);gx.fill()}
@@ -587,10 +620,10 @@ function drawAnimal(a,X,Y,z,big){const s=SP[a.sp],k=(a.age<s.mature?0.55+0.45*a.
   if(a.sp==='fish'){gx.globalAlpha=.9;gx.beginPath();gx.ellipse(0,0,L/2,Wd/2,0,0,TAU);gx.fill();gx.beginPath();gx.moveTo(-L*.4,0);gx.lineTo(-L*.75,-Wd*.6);gx.lineTo(-L*.75,Wd*.6);gx.fill();gx.globalAlpha=1;gx.restore();return}
   // tail
   if(a.sp==='fox'||a.sp==='wolf'||a.sp==='lion'||a.sp==='otter'){gx.strokeStyle=a.col;gx.lineWidth=Math.max(1,Wd*(a.sp==='fox'?.45:.25));gx.lineCap='round';gx.beginPath();gx.moveTo(-L*.4,0);gx.quadraticCurveTo(-L*.65,Wd*.3*Math.sin(S.t*3+a.id),-L*(a.sp==='fox'?.85:.75),0);gx.stroke()}
-  gx.beginPath();gx.ellipse(0,0,L/2,Wd/2,0,0,TAU);gx.fill();
+  gx.beginPath();gx.ellipse(0,0,L/2,Wd/2,0,0,TAU);gx.fill();gx.strokeStyle='rgba(0,0,0,.55)';gx.lineWidth=Math.max(.8,L*.05);gx.stroke();
   if(a.sp==='zebra'&&L>6){gx.strokeStyle='#222';gx.lineWidth=Math.max(.6,L*.04);for(let q=-3;q<=3;q++){gx.beginPath();gx.moveTo(q*L*.1,-Wd*.45);gx.lineTo(q*L*.1+L*.03,Wd*.45);gx.stroke()}}
   if(a.sp==='camel'){gx.fillStyle='rgba(120,85,40,.45)';gx.beginPath();gx.arc(-L*.05,0,Wd*.35,0,TAU);gx.fill();gx.fillStyle=a.col}
-  const hx=L*.5,hr=Wd*.42;gx.fillStyle=shadeCol(a.col,-18);gx.beginPath();gx.arc(hx,0,hr,0,TAU);gx.fill();
+  const hx=L*.5,hr=Wd*.42;gx.fillStyle=shadeCol(a.col,-18);gx.beginPath();gx.arc(hx,0,hr,0,TAU);gx.fill();gx.stroke();
   if(a.sp==='rabbit'){gx.beginPath();gx.ellipse(hx-hr*.4,-hr*.7,hr*1,hr*.32,-.5,0,TAU);gx.ellipse(hx-hr*.4,hr*.7,hr*1,hr*.32,.5,0,TAU);gx.fill()}
   if(a.sp==='deer'&&a.sex==='m'&&a.age>s.mature){gx.strokeStyle='#d8c6a0';gx.lineWidth=Math.max(.6,L*.04);gx.beginPath();gx.moveTo(hx,-hr*.5);gx.lineTo(hx-hr,-hr*1.8);gx.moveTo(hx,hr*.5);gx.lineTo(hx-hr,hr*1.8);gx.stroke()}
   if(a.sp==='lion'&&a.sex==='m'&&a.age>s.mature){gx.fillStyle='#8a5a28';gx.beginPath();gx.arc(hx-hr*.2,0,hr*1.45,0,TAU);gx.fill();gx.fillStyle=shadeCol(a.col,-10);gx.beginPath();gx.arc(hx+hr*.1,0,hr*.9,0,TAU);gx.fill()}
@@ -600,9 +633,8 @@ function hawkShape(L){gx.beginPath();gx.moveTo(L*.5,0);gx.lineTo(L*.05,-L*.12);g
 function shadeCol(c,d){const m=c.match(/\d+/g);if(m)return`rgb(${clamp(+m[0]+d,0,255)},${clamp(+m[1]+d,0,255)},${clamp(+m[2]+d,0,255)})`;const n=parseInt(c.slice(1),16);return`rgb(${clamp((n>>16)+d,0,255)},${clamp((n>>8&255)+d,0,255)},${clamp((n&255)+d,0,255)})`}
 let lastPaint=0;
 function render(now){ctx.fillStyle='#08100c';ctx.fillRect(0,0,W,H);
-  if(S.terrainDirty||now-lastPaint>320){paintTerrain();lastPaint=now}
-  const x0=sx(0),y0=sy(0),ww=GW*CELL*cam.z,hh=GH*CELL*cam.z;ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';ctx.drawImage(off,x0,y0,ww,hh);
-  if(cam.z>1.4&&S.view==='normal'){if(!texPat)texPat=ctx.createPattern(tex,'repeat');ctx.save();ctx.globalAlpha=Math.min(.16,(cam.z-1.4)*.08);ctx.globalCompositeOperation='soft-light';ctx.translate(x0,y0);ctx.scale(cam.z/2,cam.z/2);ctx.fillStyle=texPat;ctx.fillRect(0,0,ww*2/cam.z,hh*2/cam.z);ctx.restore()}
+  if(S.terrainDirty||now-lastPaint>700){paintTerrain();lastPaint=now}
+  drawTerrain(now);
   const z=cam.z,vx0=wxOf(-40),vx1=wxOf(W+40),vy0=wyOf(-40),vy1=wyOf(H+40);
   // fire
   if(S.burning.size){for(const i of S.burning){const x=i%GW,y=(i/GW)|0;if(x<vx0||x>vx1||y<vy0||y>vy1)continue;const f=.6+.4*Math.sin(performance.now()/90+i);ctx.fillStyle=`rgba(255,${120+60*f|0},40,${.55+.3*f})`;ctx.fillRect(sx(x)-1,sy(y)-1,CELL*z+2,CELL*z+2)}}
@@ -611,6 +643,10 @@ function render(now){ctx.fillStyle='#08100c';ctx.fillRect(0,0,W,H);
   if(z<0.55){for(const t of vis){ctx.fillStyle=t.k==='pine'?'#1f3d24':t.k==='cactus'?'#5c8a4b':'#2f5527';const r=Math.max(1.2,(0.6+t.size)*z*CELL*0.8);ctx.fillRect(sx(t.x)-r/2,sy(t.y)-r/2,r,r)}}else for(const t of vis)drawTree(t,sx(t.x),sy(t.y),z);
   // animals (birds last)
   const air=[];for(const a of S.animals){if(a.dead||a.x<vx0||a.x>vx1||a.y<vy0||a.y>vy1)continue;if(SP[a.sp].hab==='air'){air.push(a);continue}drawAnimal(a,sx(a.x),sy(a.y),z)}for(const a of air)drawAnimal(a,sx(a.x),sy(a.y),z);
+  if(S.labels&&z>=1.8){let n=0;ctx.font='12px system-ui,"Apple Color Emoji","Segoe UI Emoji"';ctx.textAlign='center';ctx.textBaseline='bottom';
+    for(const a of S.animals){if(a.dead||a.x<vx0||a.x>vx1||a.y<vy0||a.y>vy1)continue;if(++n>350)break;const X=sx(a.x),Y=sy(a.y)-Math.max(7,SP[a.sp].len*z*0.55);
+      ctx.fillStyle='rgba(8,14,11,.6)';ctx.beginPath();ctx.arc(X,Y-7,8,0,TAU);ctx.fill();ctx.fillStyle='#fff';ctx.fillText(SP[a.sp].ic,X,Y-0.5)}
+    ctx.textAlign='start';ctx.textBaseline='alphabetic'}
   // particles
   for(const p of S.parts){const X=sx(p.x),Y=sy(p.y),u=p.life/p.max;if(p.k==='smoke'){ctx.fillStyle=`rgba(70,70,70,${u*.35})`;ctx.beginPath();ctx.arc(X,Y,(1-u)*10*z+2,0,TAU);ctx.fill()}else{ctx.fillStyle=`rgba(255,${180*u|0},60,${u})`;ctx.fillRect(X-1.5,Y-1.5,3,3)}}
   if(S.flash&&S.flash.t>0){const X=sx(S.flash.x),Y=sy(S.flash.y),r=(1-S.flash.t)*160*z+20;const g=ctx.createRadialGradient(X,Y,0,X,Y,r);g.addColorStop(0,`rgba(255,240,200,${S.flash.t})`);g.addColorStop(1,'rgba(255,120,40,0)');ctx.fillStyle=g;ctx.beginPath();ctx.arc(X,Y,r,0,TAU);ctx.fill()}
@@ -656,7 +692,7 @@ function select(o){S.sel=o;S.selDead=null;if(!o)S.follow=false;buildInspector();
 function applyTool(px,py,first){const x=wxOf(px),y=wyOf(py),t=S.tool,i=idx(x,y);if(i<0)return;
   if(SP[t]){if(!first)return;const n=spawnAt(t,x,y,S.count,false);if(!n)toast(SP[t].hab==='water'?`${SP[t].pl} need water: click on a lake or the sea`:SP[t].hab==='land'||SP[t].hab==='amph'?`${SP[t].pl} need land`:'No room');else{PLACED[t]=(PLACED[t]||0)+n;chEv('place',{sp:t,n})}return}
   if(TK[t]){if(!first&&Math.hypot(x-ptr.lastPaint.x,y-ptr.lastPaint.y)<1.6)return;ptr.lastPaint={x,y};if(isWater(i)){if(first)toast('Trees need land');return}
-    let crowd=0;nearTrees(x,y,1.2,()=>crowd++);if(crowd&&!first)return;rebuildTreesSoon();const tr=addTree(t,x,y,{age:0,size:0.18});if(tr){PLACED[t]=(PLACED[t]||0)+1;if(first&&!treeOK(t,i))toast(`${TK[t].n} trees struggle here: ${meanT(i)<TK[t].tmin?'too cold':meanT(i)>TK[t].tmax?'too hot':rainAt(i)<TK[t].rmin?'too dry':'too wet'}`)}return}
+    let crowd=0;nearTrees(x,y,1.2,()=>crowd++);if(crowd&&!first)return;rebuildTreesSoon();const tr=addTree(t,x,y,{age:0,size:0.18});if(tr){PLACED[t]=(PLACED[t]||0)+1;if(first&&!treeOK(t,i))toast(`${TK[t].n} trees struggle here: ${meanT(i)<TK[t].tmin?'too cold':meanT(i)>TK[t].tmax?'too hot':wetAt(i)<TK[t].rmin?'too dry':'too wet'}`)}return}
   if(t==='meteor'){if(!first||S.falling)return;S.falling={x,y,t:0};return}
   const R=S.brush;let changed=false;
   for(let yy=-R;yy<=R;yy++)for(let xx=-R;xx<=R;xx++){const d=Math.hypot(xx,yy);if(d>R)continue;const j=idx(x+xx,y+yy);if(j<0)continue;const f=1-d/(R+1);
@@ -700,16 +736,30 @@ function showTab(t){document.querySelectorAll('.tab').forEach(b=>b.setAttribute(
 let LIFEOPEN=0,INSPOPEN=0;
 document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>showTab(b.dataset.tab));
 function syncClimateUI(){$('tempS').value=CL.temp;$('rainS').value=Math.round(CL.rain*100);$('seaS').value=CL.seaM;$('tempV').textContent=(CL.temp>=0?'+':'')+CL.temp+' °C';$('rainV').textContent=Math.round(CL.rain*100)+'%';$('seaV').textContent=(CL.seaM>=0?'+':'')+CL.seaM+' m';$('seasonBtn').setAttribute('aria-pressed',CL.seasons);$('seasonBtn').textContent=CL.seasons?'On':'Off'}
-$('tempS').oninput=e=>{CL.temp=+e.target.value;syncClimateUI();CLIMCH++};$('rainS').oninput=e=>{CL.rain=e.target.value/100;syncClimateUI();CLIMCH++};
+$('tempS').oninput=e=>{CL.temp=+e.target.value;EVP.ice=EVP.heat=null;syncClimateUI();CLIMCH++};$('rainS').oninput=e=>{CL.rain=e.target.value/100;syncClimateUI();CLIMCH++};
 $('seaS').oninput=e=>{CL.seaM=+e.target.value;syncClimateUI();terrainChangedSoon();CLIMCH++};$('seasonBtn').onclick=()=>{CL.seasons=!CL.seasons;syncClimateUI()};
 let CLIMCH=0;
-function climateEvent(ev){chEv('event',{ev});EVN++;const vis=()=>{const c=[wxOf(W/2),wyOf(H/2)];return c};
-  if(ev==='ice'){CL.temp=-10;toast('An ice age begins: −10 °C')}else if(ev==='heat'){CL.temp=8;toast('A heat wave: +8 °C')}else if(ev==='drought'){CL.rain=0.3;toast('Drought: rainfall falls to 30%')}
-  else if(ev==='flood'){CL.seaM=60;terrainChanged();toast('The seas rise 60 m')}else if(ev==='normal'){CL.temp=0;CL.rain=1;CL.seaM=0;CL.dust=0;terrainChanged();toast('Climate back to normal')}
-  else if(ev==='plague'){const c=counts();const sp=SPK.slice().sort((a,b)=>c[b]-c[a])[0];const n=plague(sp);toast(n?`A plague strikes the ${SP[sp].pl.toLowerCase()}: ${n} sick`:'Nobody to infect')}
-  else if(ev==='meteor'){const p=randomCell(i=>!isWater(i))||[GW/2,GH/2];S.falling={x:p[0],y:p[1],t:0};toast('A meteor is coming!')}
-  else if(ev==='fire'){let n=0;for(let k=0;k<400&&n<4;k++){const p=randomCell(i=>!isWater(i)&&veg[i]>0.4);if(p&&ignite(idx(p[0],p[1])))n++}toast(n?'Wildfire!':'Nothing dry enough to burn');if(n)chEv('fire',{})}
-  syncClimateUI()}
+// events: press once to start, press again to stop (the button shows which events are running)
+const EVP={};
+const EVNAME={ice:'Ice age',heat:'Heat wave',drought:'Drought',flood:'Floods',plague:'Plague',meteor:'Meteor',fire:'Wildfire'};
+function evActive(ev){if(ev==='ice')return EVP.ice!=null;if(ev==='heat')return EVP.heat!=null;if(ev==='drought')return EVP.drought!=null;if(ev==='flood')return EVP.flood!=null;
+  if(ev==='plague')return S.animals.some(a=>a.sick>0);if(ev==='fire')return S.burning.size>0;if(ev==='meteor')return !!S.falling||CL.dust>0.4;return false}
+function stopEvent(ev){chEv('stop',{ev});EVSTOP++;
+  if(ev==='ice'||ev==='heat'){CL.temp=EVP[ev]??0;EVP[ev]=null}else if(ev==='drought'){CL.rain=EVP.drought??1;EVP.drought=null}else if(ev==='flood'){CL.seaM=EVP.flood??0;EVP.flood=null;terrainChanged()}
+  else if(ev==='plague'){for(const a of S.animals)a.sick=0}else if(ev==='fire'){for(const i of S.burning)burn[i]=0;S.burning.clear()}else if(ev==='meteor'){S.falling=null;CL.dust=0}
+  toast(`${EVNAME[ev]} stopped`);syncClimateUI();updateEventButtons()}
+function climateEvent(ev){if(ev!=='normal'&&evActive(ev)){stopEvent(ev);return}chEv('event',{ev});EVN++;
+  if(ev==='ice'){if(EVP.heat!=null){EVP.ice=EVP.heat;EVP.heat=null}else EVP.ice=CL.temp;CL.temp=-10;toast('An ice age begins: −10 °C · press again to stop it')}
+  else if(ev==='heat'){if(EVP.ice!=null){EVP.heat=EVP.ice;EVP.ice=null}else EVP.heat=CL.temp;CL.temp=8;toast('A heat wave: +8 °C · press again to stop it')}
+  else if(ev==='drought'){EVP.drought=CL.rain;CL.rain=0.3;toast('Drought: rainfall falls to 30% · press again to stop it')}
+  else if(ev==='flood'){EVP.flood=CL.seaM;CL.seaM=60;terrainChanged();toast('The seas rise 60 m · press again to stop it')}
+  else if(ev==='normal'){CL.temp=0;CL.rain=1;CL.seaM=0;CL.dust=0;S.falling=null;for(const i of S.burning)burn[i]=0;S.burning.clear();for(const a of S.animals)a.sick=0;for(const k in EVP)EVP[k]=null;terrainChanged();EVSTOP++;chEv('stop',{ev:'all'});toast('All events stopped: climate back to normal')}
+  else if(ev==='plague'){const c=counts();const sp=SPK.slice().sort((a,b)=>c[b]-c[a])[0];const n=plague(sp);toast(n?`A plague strikes the ${SP[sp].pl.toLowerCase()}: ${n} sick · press again to cure it`:'Nobody to infect')}
+  else if(ev==='meteor'){const p=randomCell(i=>!isWater(i))||[GW/2,GH/2];S.falling={x:p[0],y:p[1],t:0};toast('A meteor is coming! Press again to stop it')}
+  else if(ev==='fire'){let n=0;for(let k=0;k<400&&n<4;k++){const p=randomCell(i=>!isWater(i)&&veg[i]>0.4);if(p&&ignite(idx(p[0],p[1])))n++}toast(n?'Wildfire! Press again to put it out':'Nothing dry enough to burn');if(n)chEv('fire',{})}
+  syncClimateUI();updateEventButtons()}
+function updateEventButtons(){document.querySelectorAll('[data-ev]').forEach(b=>{const ev=b.dataset.ev;if(ev==='normal')return;const on=evActive(ev);if(!b.dataset.label)b.dataset.label=b.textContent;const t=on?'■ Stop '+EVNAME[ev].toLowerCase():b.dataset.label;if(b.textContent!==t)b.textContent=t;b.classList.toggle('danger',on);b.setAttribute('aria-pressed',on?'true':'false')})}
+let EVSTOP=0;
 document.querySelectorAll('[data-ev]').forEach(b=>b.onclick=()=>climateEvent(b.dataset.ev));
 document.querySelectorAll('[data-view]').forEach(b=>b.onclick=()=>setView(b.dataset.view));
 function setView(v){S.view=v;S.terrainDirty=true;document.querySelectorAll('[data-view]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.view===v?'true':'false'));VIEWCH++}
@@ -762,7 +812,7 @@ function updateInspector(){const o=S.sel;if(!o||$('pane-insp').hidden)return;con
     const tmin=s.tmin-o.genes.fur-(o.genes.size-1)*4,tmax=s.tmax-o.genes.fur*0.5;
     rows=[['Energy',Math.round(o.e*100)+'%'],['Water',s.thirst?Math.round(o.w*100)+'%':'—'],['Doing',STATE[o.state]||o.state],['Children',o.kids],['Kills',o.kills],['Eats',s.diet==='herb'?(s.hab==='water'?'Algae':'Plants'):s.diet==='omni'?'Fruit, fish, small animals, plants':(s.prey||[]).map(k=>SP[k].pl).join(', ')],['Comfort',`${tmin.toFixed(0)} to ${tmax.toFixed(0)} °C`],['Here',`${T.toFixed(0)} °C${o.stress>1?' (stressed)':''}`]];
     for(const g of ['speed','size','sense'])R['g_'+g].textContent=o.genes[g].toFixed(2);R.g_fur.textContent=o.genes.fur.toFixed(1)}
-  else rows=[['Age',(o.age/365).toFixed(0)+' years'],['Size',Math.round(o.size*100)+'%'],['Health',Math.round(o.hp*100)+'%'],['Fruit',TK[o.k].fruit?Math.round(o.fruit*100)+'%':'—'],['Here',`${meanT(i).toFixed(0)} °C average`],['Rain',Math.round(rainAt(i)*100)+'%']];
+  else rows=[['Age',(o.age/365).toFixed(0)+' years'],['Size',Math.round(o.size*100)+'%'],['Health',Math.round(o.hp*100)+'%'],['Fruit',TK[o.k].fruit?Math.round(o.fruit*100)+'%':'—'],['Here',`${meanT(i).toFixed(0)} °C average`],['Water',Math.round(wetAt(i)*100)+'%'+(dw[i]<=4?' (near water)':'')]];
   if(R.kv.children.length!==rows.length){R.kv.textContent='';for(const r of rows){const d=document.createElement('div');d.innerHTML='<span class="k"></span><span class="v"></span>';R.kv.appendChild(d)}}
   rows.forEach((r,j)=>{R.kv.children[j].children[0].textContent=r[0];R.kv.children[j].children[1].textContent=r[1]});
   // portrait
@@ -810,7 +860,7 @@ function loadScen(id,opts={}){const sc=SCEN.find(s=>s.id===id)||SCEN[0];RNG=seed
   for(const [k,n] of Object.entries(sc.trees)){let made=0;for(let q=0;q<n*20&&made<n;q++){const p=randomCell(i=>treeOK(k,i),50);if(!p)continue;let c=0;nearTrees(p[0],p[1],1.2,()=>c++);if(c)continue;addTree(k,p[0],p[1]);made++;if(made%20===0)rebuildTrees()}rebuildTrees()}
   for(const [k,n] of Object.entries(sc.an).sort((x,y)=>(SP[x[0]].diet==='herb'?0:1)-(SP[y[0]].diet==='herb'?0:1))){let made=0;const s=SP[k];
     const grp=Math.max(s.herd?5:3,Math.ceil(n/18));for(let g=0;g<n+30&&made<n;g++){const pr=s.prey&&S.animals.filter(z=>s.prey.includes(z.sp));if(pr&&pr.length){const z=pr[Math.floor(rnd()*pr.length)];made+=spawnAt(k,z.x,z.y,Math.min(n-made,s.herd?4:2),true,0.92);continue}const p=randomCell(i=>habitatOK(k,i)&&(s.hab==='water'||s.hab==='air'||(meanT(i)>s.tmin-14&&meanT(i)<s.tmax+2))&&(s.hab!=='amph'||dw[i]<=1),400);if(!p)continue;made+=spawnAt(k,p[0],p[1],Math.min(n-made,grp),true)}}
-  RNG=Math.random;rebuildHash();rebuildTrees();sampleHist();S.terrainDirty=true;syncClimateUI();select(null);if(!opts.keepCam)fitWorld();setView('normal');VIEWCH=0}
+  RNG=Math.random;rebuildHash();rebuildTrees();sampleHist();S.terrainDirty=true;syncClimateUI();select(null);if(!opts.keepCam){fitWorld();cam.z*=1.9}setView('normal');VIEWCH=0}
 function buildScen(){const g=$('scgrid');g.textContent='';for(const s of SCEN){const b=document.createElement('button');b.className='scb';b.innerHTML='<b></b><span></span>';b.children[0].textContent=s.n;b.children[1].textContent=s.d;b.onclick=()=>{loadScen(s.id);$('scen').hidden=true;toast(s.n)};g.appendChild(b)}}
 $('scenBtn').onclick=()=>{$('scen').hidden=!$('scen').hidden};$('scenClose').onclick=()=>$('scen').hidden=true;
 
@@ -892,8 +942,8 @@ CC(2.2,{t:'Make it yours',g:'Create an account (👤 at the top) or sign in to o
 [[15,4],[30,5.5],[60,7]].forEach(([n,d])=>CC(d,{t:`Generation ${n}`,g:`Breed any species to generation ${n}.`,hint:'Small animals like mice and rabbits breed fastest. Speed up time and keep them fed.',setup:scn('meadow'),check:()=>{const m=Math.max(0,...Object.values(S.maxGen));return[m>=n,m/n,`Highest generation: ${m}`]},stars:byTime(n*3,n*8)}));
 // plants and land
 [[.3,3],[.55,4.4],[.8,6]].forEach(([f,d])=>CC(d,{t:`Green ${Math.round(f*100)}% of the land`,g:`Bring the barren land to life: cover ${Math.round(f*100)}% of it with plants.`,hint:'Paint grass with the Grass brush; it spreads by itself where it is warm and wet. Rain and the climate sliders help.',setup:scn('barren'),check:()=>{const v=vegCover();return[v>=f,v/f,`${Math.round(v*100)}% covered`]},stars:byTime(f*120,f*300)}));
-CC(4.8,{t:'Desert bloom',g:'Cover 30% of the desert with plants.',hint:'Raise the rainfall, use the Rain brush, or cool the climate a little.',setup:scn('desert'),check:()=>{const v=vegCover();return[v>=.3,v/.3,`${Math.round(v*100)}% covered`]},stars:byTime(40,120)});
-CC(4,{t:'Arctic thaw',g:'Warm the Arctic until half of the land is covered with plants.',hint:'Use the Global temperature slider in the World tab.',setup:scn('arctic'),check:()=>{const v=vegCover();return[v>=.5,v/.5,`${Math.round(v*100)}% covered`]},stars:byTime(30,90)});
+CC(4.8,{t:'Desert bloom',g:'Green the desert: raise its plant cover by 25 percentage points.',hint:'Raise the rainfall, use the Rain brush, dig lakes, or cool the climate a little.',setup:scn('desert',()=>{CH.ref.v0=vegCover()}),check:()=>{const v=vegCover(),goal=Math.min(.95,CH.ref.v0+.25);return[v>=goal,(v-CH.ref.v0)/(goal-CH.ref.v0),`${Math.round(v*100)}% covered · goal ${Math.round(goal*100)}%`]},stars:byTime(40,120)});
+CC(4,{t:'Arctic thaw',g:'Warm the Arctic until its plant cover rises by 30 percentage points.',hint:'Use the Global temperature slider in the World tab.',setup:scn('arctic',()=>{CH.ref.v0=vegCover()}),check:()=>{const v=vegCover(),goal=Math.min(.95,CH.ref.v0+.3);return[v>=goal,(v-CH.ref.v0)/(goal-CH.ref.v0),`${Math.round(v*100)}% covered · goal ${Math.round(goal*100)}%`]},stars:byTime(30,90)});
 [[700,3.4],[1400,5.2]].forEach(([n,d])=>CC(d,{t:`A forest of ${n}`,g:`Have ${n} trees growing in the meadow.`,hint:'Plant trees in suitable places; grown trees spread their own seeds. Fires and bad climate kill them.',setup:scn('meadow'),check:()=>{const c=S.trees.length;return[c>=n,c/n,`${c} of ${n} trees`]},stars:byTime(n/6,n/2)}));
 CC(3,{t:'Dig a lake',g:'Make a new lake of at least 150 squares with the Water tool, then put 20 fish in the world.',hint:'Pick Water and paint on dry land. Then release fish into it.',setup:scn('savanna'),check:()=>{const w=Math.min(1,WATERED/150),f=cnt('fish');return[WATERED>=150&&f>=20,w*.6+Math.min(.4,f/50),`${Math.min(WATERED,150)} of 150 squares · ${f} fish`]},stars:byTime(60,150)});
 CC(3.8,{t:'Snow on the mountain',g:'Raise a new mountain on the warm islands high enough to have snow all year (25 new snowy squares).',hint:'Pick Raise and paint the same spot again and again. It gets colder 6.5 °C for every kilometre up.',setup:scn('islands',()=>{CH.ref.c0=snowCells()}),check:()=>{const c=snowCells()-CH.ref.c0;return[c>=25,clamp(c/25,0,1),`New snowy squares: ${Math.max(0,c)} of 25`]},stars:byTime(40,100)});
@@ -905,6 +955,9 @@ CC(4.4,{t:'Stop the plague',g:'A disease spreads through the rabbits. Have 60 ra
 CC(5.2,{t:'Firefighter',g:'A wildfire breaks out. Keep at least 70% of the trees alive for a year.',hint:'Pause, then paint water or remove dry grass in a line ahead of the flames to make firebreaks.',setup:scn('meadow',()=>{CH.ref.t0=S.trees.length;for(let k=0;k<5;k++){const p=randomCell(i=>!isWater(i)&&veg[i]>.5);if(p)ignite(idx(p[0],p[1]))}}),check:()=>{const f=S.trees.length/(CH.ref.t0||1),y=yrs();return[y>=1&&f>=.7,Math.min(1,y),`${Math.round(f*100)}% of trees left · ${(y*12).toFixed(0)} of 12 months`]},fail:()=>S.trees.length<CH.ref.t0*.7?'Too many trees burned':'',stars:byTime(40,100)});
 CC(6,{t:'After the meteor',g:'A meteor strikes. Have 6 species alive 4 years later.',hint:'The dust cools the world for a few years. Keep the survivors fed; you can release new animals too.',setup:scn('pangaea',()=>{meteor(GW*.5,GH*.5,14)}),check:()=>{const n=speciesAlive().length,y=yrs();return[y>=4&&n>=6,Math.min(1,y/4)*.7+Math.min(.3,n/20),`${n} species · year ${y.toFixed(1)} of 4`]},stars:byTime(60,150)});
 CC(5.6,{t:'Rising seas',g:'The seas rise 60 m. Keep 5 land species alive for 3 years.',hint:'Raise land for the animals, or move them to the hills.',setup:scn('meadow',()=>{CL.seaM=60;syncClimateUI();terrainChanged()}),check:()=>{const n=speciesAlive().filter(k=>SP[k].hab==='land').length,p=hold('h',n>=5,3);return[p>=1,p,`${n} land species · ${holdTxt(p,3)}`]},stars:byTime(45,120)});
+CC(3.3,{t:'Call it off',g:'Start an ice age, then stop it again.',hint:'In the World tab, press ❄ Ice age, then press the same button (■ Stop ice age).',setup:scn('meadow'),check:()=>{const s=evN('event')>0,st=CH.events.some(e=>e.k==='stop'&&e.ev==='ice');return[st,st?1:s?.5:0,st?'Stopped':s?'Now stop it':'Start an ice age first']},stars:byTime(15,40)});
+CC(4.5,{t:'Emergency response',g:'A wildfire and a plague break out at once. Stop both, then keep 100 rabbits alive for a year.',hint:'Press 🔥 Wildfire and 🦠 Plague in the World tab (they show ■ Stop while running) to stop them.',setup:scn('meadow',()=>{for(let k=0;k<5;k++){const p=randomCell(i=>!isWater(i)&&veg[i]>.5);if(p)ignite(idx(p[0],p[1]))}plague('rabbit')}),
+  check:()=>{const fire=S.burning.size>0,sick=S.animals.some(a=>a.sick>0),calm=!fire&&!sick,n=cnt('rabbit'),p=hold('e',calm&&n>=100,1);return[p>=1,calm?0.3+0.7*p:0,calm?`${n} rabbits · ${holdTxt(p,1)}`:[fire?'Fire still burning':'',sick?'Plague still spreading':''].filter(Boolean).join(' · ')]},fail:()=>cnt('rabbit')?'':'The rabbits died out',stars:byTime(40,100)});
 // biodiversity and rewilding
 [[8,4.8],[10,6.2],[13,8]].forEach(([n,d])=>CC(d,{t:`${n} species at once`,g:`Have ${n} different species alive at the same time for 2 years.`,hint:'Each species needs its own climate and food. Use different regions of the supercontinent.',setup:scn('pangaea'),check:()=>{const c=speciesAlive().length,p=hold('b',c>=n,2);return[p>=1,p*.8+Math.min(.2,c/n*.2),`${c} species · ${holdTxt(p,2)}`]},stars:byTime(40,120)}));
 [[3,3.6],[6,5.8]].forEach(([n,d])=>CC(d,{t:`Rewild with ${n} species`,g:`On the barren land, have ${n} species with at least 6 animals each, for 2 years.`,hint:'Grow plants first, then plant eaters, then hunters. Seed algae before releasing fish.',setup:scn('barren'),check:()=>{const c=SPK.filter(k=>cnt(k)>=6).length,p=hold('r',c>=n,2);return[p>=1,p*.8+Math.min(.2,c/n*.2),`${c} species with 6+ · ${holdTxt(p,2)}`]},stars:byTime(90,240)}));
@@ -971,6 +1024,7 @@ const TSTEPS=[
  ['Make it rain','Pick Rain under Land and paint over some dry ground.',r=>RAINED>r.n,r=>{r.n=RAINED}],
  ['Change the climate','In the World tab, drag the Global temperature slider.',r=>CLIMCH>r.n,r=>{r.n=CLIMCH}],
  ['Cause an event','Press one of the events, such as 🔥 Wildfire or ☄ Meteor.',r=>EVN>r.n,r=>{r.n=EVN}],
+ ['Stop the event','Press the same event button again (it now says ■ Stop) to stop it.',r=>EVSTOP>r.n,r=>{r.n=EVSTOP}],
  ['Watch the populations','Open the Life tab to see every species and the population graph.',r=>LIFEOPEN>r.n,r=>{r.n=LIFEOPEN}],
  ['Views','In the World tab, switch to the Temperature or Food view.',r=>VIEWCH>r.n,r=>{r.n=VIEWCH}],
  ['Save your progress','Click 👤 in the top bar and create an account (a PIN is optional). Your stars save on this device.',r=>ACCN>r.n,r=>{r.n=ACCN}],
@@ -982,6 +1036,7 @@ function tutStep(){const st=TSTEPS[TUT.i];if(!st){TUT.on=false;TUT.finished=true
 function tutTick(){const st=TSTEPS[TUT.i];if(st&&st[2](TUT.ref)){TUT.i++;toast('✓ '+st[0]);tutStep()}}
 function endTutorial(){TUT.on=false;$('chHud').hidden=true;$('chRestart').textContent='Restart'}
 $('hTut').onclick=startTutorial;
+$('lblBtn').onclick=()=>{S.labels=!S.labels;$('lblBtn').setAttribute('aria-pressed',S.labels);$('lblBtn').textContent=S.labels?'On':'Off'};S.labels=true;
 
 /* demo */
 const DEMO=[
@@ -1017,7 +1072,7 @@ function frame(now){const dtR=Math.min(0.1,(now-last)/1000);last=now;camKeys(dtR
   uiT+=dtR;if(uiT>0.25){uiT=0;updateHud()}
   }catch(err){console.error('[Biosphere]',err)}
   requestAnimationFrame(frame)}
-function updateHud(){const c=counts();let n=0,sp=0;for(const k of SPK){n+=c[k];if(c[k])sp++}$('nAnimals').textContent=n;$('nTrees').textContent=S.trees.length;$('nSpecies').textContent=sp;
+function updateHud(){updateEventButtons();const c=counts();let n=0,sp=0;for(const k of SPK){n+=c[k];if(c[k])sp++}$('nAnimals').textContent=n;$('nTrees').textContent=S.trees.length;$('nSpecies').textContent=sp;
   $('dateTxt').textContent=dateTxt();const ci=idx(wxOf(W/2),wyOf(H/2));$('tempTxt').textContent=ci>=0?`${cellT(ci).toFixed(0)} °C at the centre${CL.dust>0.5?' · dusty sky':''}`:'';
   $('rateTxt').textContent=S.paused?'Paused':fmtRate(S.speed)+(S.achieved<S.speed*0.85&&S.speed>30?` (running ${fmtRate(Math.max(0.01,S.achieved))})`:'');
   if(!$('pane-life').hidden)renderLife();updateInspector();chTick();
