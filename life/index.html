@@ -1,0 +1,1033 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="Biosphere: a living-world sandbox. Plants and animals eat, breed and evolve; change the climate, start wildfires, drop meteors.">
+<title>Biosphere Sandbox</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Oxanium:wght@500;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: a living landscape fills the screen; field-station panels float at the edges */
+:root{
+  --void:#060a08;
+  --panel:rgba(10,18,15,.86);
+  --line:rgba(150,210,170,.16);
+  --line-strong:rgba(150,210,170,.34);
+  --ink:#e4efe7;
+  --dim:#8fa699;
+  --flare:#ffc35a;
+  --cool:#7fe0a8;
+  --danger:#ff6b5a;
+  --f-display:'Oxanium','Segoe UI',system-ui,sans-serif;
+  --f-body:'IBM Plex Sans',system-ui,-apple-system,sans-serif;
+  --f-mono:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+  --gut:max(16px, env(safe-area-inset-left, 0px));
+  --gutR:max(16px, env(safe-area-inset-right, 0px));
+  --top:calc(env(safe-area-inset-top, 0px) + 12px);
+  --bot:calc(env(safe-area-inset-bottom, 0px) + 12px);
+  color-scheme:dark;
+}
+[hidden]{display:none!important}
+html,body{height:100%;margin:0}
+body{background:var(--void);color:var(--ink);font-family:var(--f-body);overflow:hidden;-webkit-user-select:none;user-select:none}
+#world{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:none;cursor:grab}
+#world.place{cursor:crosshair}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+.k{font-family:var(--f-mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--dim)}
+.v{font-family:var(--f-mono);font-size:13px;font-variant-numeric:tabular-nums;color:var(--ink)}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+button:focus-visible,input:focus-visible{outline:2px solid var(--cool);outline-offset:2px}
+.btn{font-family:var(--f-mono);font-size:12px;padding:7px 11px;border:1px solid var(--line-strong);border-radius:7px;color:var(--ink);background:rgba(127,224,168,.06);white-space:nowrap}
+.btn:hover{background:rgba(127,224,168,.14)}
+.btn[aria-pressed="true"]{background:rgba(127,224,168,.22);border-color:var(--cool)}
+.btn.primary{background:rgba(255,195,90,.16);border-color:rgba(255,195,90,.6);color:#ffe6b8}
+.btn.danger{border-color:rgba(255,107,90,.5);color:#ffb1a6}
+.btn.ghost{border-color:transparent;color:var(--dim)}
+input[type=range]{accent-color:var(--cool);width:100%}
+
+/* top bar */
+.hud-top{position:fixed;top:var(--top);left:var(--gut);right:var(--gutR);display:flex;gap:10px;align-items:stretch;z-index:5;pointer-events:none}
+.hud-top>*{pointer-events:auto}
+.brand{padding:10px 14px;display:flex;flex-direction:column;justify-content:center}
+.brand h1{font-family:var(--f-display);font-weight:700;font-size:18px;letter-spacing:.1em;margin:0;text-transform:uppercase}.brand h1 b{color:var(--flare)}
+.brand .sub{font-size:11px;color:var(--dim)}
+.time{display:flex;gap:12px;align-items:center;padding:8px 12px}
+#pauseBtn{width:40px;height:40px;border-radius:9px;border:1px solid rgba(255,195,90,.55);background:rgba(255,195,90,.12);font-size:16px}
+.spds{display:flex;gap:3px}.spd{font-family:var(--f-mono);font-size:10.5px;padding:3px 7px;border-radius:5px;border:1px solid var(--line);color:var(--dim);white-space:nowrap}
+.spd:hover{color:var(--ink)}.spd[aria-pressed="true"]{color:var(--ink);border-color:rgba(255,195,90,.6);background:rgba(255,195,90,.14)}
+.tcol{display:flex;flex-direction:column;gap:4px}
+.right{margin-left:auto;display:flex;gap:10px;align-items:center;padding:8px 10px;flex-wrap:wrap;justify-content:flex-end}
+.stat{display:flex;flex-direction:column;gap:2px;min-width:54px}
+.findwrap{position:relative}
+.find{width:210px;font:inherit;font-size:13px;padding:8px 10px;border-radius:8px;border:1px solid var(--line-strong);background:rgba(0,0,0,.35);color:var(--ink)}
+.findlist{position:absolute;top:calc(100% + 4px);left:0;right:0;z-index:9;padding:4px;display:flex;flex-direction:column;gap:2px;max-height:300px;overflow:auto}
+.findlist button{text-align:left;padding:7px 9px;border-radius:6px;font-size:13px}.findlist button:hover,.findlist button.on{background:rgba(127,224,168,.14)}
+.findlist small{color:var(--dim);margin-left:6px}
+
+/* tool rail */
+.rail{position:fixed;left:var(--gut);top:calc(var(--top) + 76px);bottom:var(--bot);width:86px;overflow-y:auto;overflow-x:hidden;z-index:4;padding:6px;display:flex;flex-direction:column;gap:3px;scrollbar-width:thin}
+.rail h3{font-family:var(--f-mono);font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--dim);margin:8px 2px 2px;font-weight:500}
+.tool{display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 2px;border-radius:7px;border:1px solid transparent;font-size:10.5px;color:#cfdcd3;line-height:1.1;text-align:center}
+.tool .ico{font-size:19px;line-height:1}
+.tool:hover{background:rgba(127,224,168,.1)}.tool[aria-pressed="true"]{background:rgba(255,195,90,.15);border-color:rgba(255,195,90,.55);color:#fff}
+.placeopts{position:fixed;left:calc(var(--gut) + 96px);bottom:var(--bot);z-index:4;padding:8px 12px;display:flex;gap:14px;align-items:center;font-size:12px}
+.placeopts label{display:flex;gap:6px;align-items:center;color:var(--dim)}.placeopts input[type=range]{width:110px}
+.seg{display:flex;gap:3px}.seg button{font-family:var(--f-mono);font-size:11px;padding:3px 8px;border-radius:5px;border:1px solid var(--line);color:var(--dim)}.seg button[aria-pressed="true"]{color:var(--ink);border-color:var(--cool);background:rgba(127,224,168,.16)}
+
+/* dock */
+.dock{position:fixed;right:var(--gutR);top:calc(var(--top) + 76px);bottom:var(--bot);width:330px;z-index:4;display:flex;flex-direction:column;overflow:hidden}
+.tabs{display:flex;border-bottom:1px solid var(--line)}.tab{flex:1;padding:10px 4px;font-family:var(--f-mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--dim);border-bottom:2px solid transparent}
+.tab[aria-selected="true"]{color:var(--ink);border-color:var(--flare)}
+.pane{padding:12px 14px;overflow:auto;flex:1;display:flex;flex-direction:column;gap:12px}
+.row{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.sl{display:flex;flex-direction:column;gap:4px}.sl .row span:last-child{font-family:var(--f-mono);font-size:12px}
+.evs{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.views{display:flex;gap:4px;flex-wrap:wrap}
+.splist{display:flex;flex-direction:column;gap:3px}
+.sprow{display:grid;grid-template-columns:14px 1fr auto;gap:8px;align-items:center;font-size:12.5px;padding:3px 4px;border-radius:5px}
+.sprow:hover{background:rgba(127,224,168,.08)}.sprow i{width:10px;height:10px;border-radius:50%;display:block}.sprow b{font-family:var(--f-mono);font-weight:500;font-size:12px}
+.sprow.zero{opacity:.4}
+#graph{width:100%;height:150px;display:block;border:1px solid var(--line);border-radius:8px;background:rgba(0,0,0,.25)}
+.gene{display:grid;grid-template-columns:86px 1fr 46px;gap:8px;align-items:center;font-size:12px}
+.gene .bar{height:6px;border-radius:3px;background:rgba(127,224,168,.12);overflow:hidden}.gene .bar span{display:block;height:100%;background:var(--cool)}
+.gene input{margin:0}
+.ititle{font-family:var(--f-display);font-weight:500;font-size:22px;margin:0}
+.isub{font-size:12.5px;color:var(--dim);margin-top:-8px}
+.kv{display:grid;grid-template-columns:1fr 1fr;gap:6px}.kv div{border:1px solid var(--line);border-radius:7px;padding:6px 8px}.kv .k{display:block}.kv .v{font-size:13px}
+.note{font-size:12px;color:var(--dim);line-height:1.5;margin:0}
+#iPic{width:100%;height:120px;border-radius:8px;background:#0c1410;display:block}
+.toasts{position:fixed;left:50%;transform:translateX(-50%);top:calc(var(--top) + 84px);z-index:8;display:flex;flex-direction:column;gap:6px;align-items:center;pointer-events:none}
+.toast{font-size:13px;padding:8px 14px;border-radius:99px;background:var(--panel);border:1px solid var(--line-strong);animation:tin .25s ease-out}
+@keyframes tin{from{opacity:0;transform:translateY(-6px)}}
+.hint{position:fixed;left:50%;transform:translateX(-50%);bottom:var(--bot);font-family:var(--f-mono);font-size:11.5px;color:var(--dim);background:var(--panel);border:1px solid var(--line);border-radius:99px;padding:7px 14px;white-space:nowrap;z-index:3;pointer-events:none}
+.zoomb{position:fixed;right:calc(var(--gutR) + 342px);bottom:var(--bot);z-index:4;display:flex;flex-direction:column;gap:4px;padding:4px}
+.zoomb button{width:32px;height:30px;border-radius:6px;border:1px solid var(--line);font-size:15px;color:var(--dim)}.zoomb button:hover{color:var(--ink)}
+
+/* scenarios */
+.scen{position:fixed;right:var(--gutR);top:calc(var(--top) + 76px);width:min(520px,calc(100% - 32px));z-index:7;padding:14px;display:flex;flex-direction:column;gap:10px;max-height:calc(100% - 120px);overflow:auto}
+.scgrid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.scb{text-align:left;padding:10px 12px;border-radius:9px;border:1px solid var(--line);display:flex;flex-direction:column;gap:3px}.scb:hover{border-color:var(--cool)}
+.scb b{font-family:var(--f-display);font-weight:500;font-size:15px}.scb span{font-size:12px;color:var(--dim);line-height:1.35}
+
+/* home */
+.home{position:fixed;inset:0;z-index:20;pointer-events:none;background:linear-gradient(90deg,rgba(5,10,8,.93) 0,rgba(5,10,8,.78) 34%,rgba(5,10,8,0) 62%)}
+.hcard{pointer-events:auto;position:absolute;left:var(--gut);top:calc(var(--top) + 16px);bottom:calc(var(--bot) + 16px);width:min(560px,calc(100% - 32px));overflow:auto;display:flex;flex-direction:column;gap:22px;padding:8px 4px}
+.htitle{font-family:var(--f-display);font-weight:700;font-size:clamp(40px,7vw,72px);letter-spacing:.08em;text-transform:uppercase;margin:0;line-height:1}.htitle b{color:var(--flare)}
+.htag{margin:10px 0 0;color:var(--dim);font-size:16px}
+.hacct{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+.chip{display:inline-flex;align-items:center;gap:6px;font-family:var(--f-mono);font-size:12px;padding:7px 12px;border-radius:99px;border:1px solid var(--line-strong);background:rgba(8,14,11,.82);color:var(--ink);text-decoration:none}
+.chip:hover{border-color:var(--cool)}.chip b{color:var(--flare);font-weight:600}.chip.other{border-color:rgba(127,178,255,.5);color:#cfe0ff}
+.hview{display:flex;flex-direction:column;gap:12px}
+.hb{display:flex;flex-direction:column;align-items:flex-start;gap:4px;text-align:left;padding:18px 20px;border-radius:12px;border:1px solid var(--line-strong);background:rgba(8,14,11,.84)}
+.hb:hover{border-color:var(--cool);background:rgba(16,30,24,.92)}.hb .ht{font-family:var(--f-display);font-weight:500;font-size:22px}.hb .hd{font-size:13px;color:var(--dim);line-height:1.4}
+.hb.primary{border-color:rgba(255,195,90,.6);background:rgba(40,30,12,.86)}.hb.primary:hover{background:rgba(60,44,14,.92)}
+.hfoot{margin:0;font-size:12px;color:var(--dim);line-height:1.5}
+.hbar{display:flex;align-items:center;gap:14px}.hbar h2{font-family:var(--f-display);font-weight:500;font-size:24px;margin:0;flex:1}.hstars{font-family:var(--f-mono);font-size:12px;color:var(--flare)}
+.hgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:6px}
+.ct{display:flex;flex-direction:column;align-items:flex-start;gap:3px;padding:8px 9px;border-radius:8px;border:1px solid var(--line);background:rgba(8,14,11,.86);text-align:left;min-height:70px}
+.ct:hover:not(:disabled){border-color:var(--cool)}.ct:disabled{opacity:.45;cursor:not-allowed}.ct .cn{font-family:var(--f-mono);font-size:10px;color:var(--dim)}.ct .ctt{font-size:11.5px;line-height:1.25}
+.ct .cs{font-size:12px;color:var(--flare);letter-spacing:1px;margin-top:auto}.ct.next{border-color:rgba(255,195,90,.7);box-shadow:0 0 0 1px rgba(255,195,90,.3)}
+body.mHome .hud-top,body.mHome .rail,body.mHome .dock,body.mHome .placeopts,body.mHome .hint,body.mHome .zoomb,body.mHome .scen,body.mHome #chHud,body.mHome .toasts{display:none!important}
+body.mDemo .rail,body.mDemo .dock,body.mDemo .placeopts,body.mDemo .hint,body.mDemo .zoomb,body.mDemo .hud-top{display:none!important}
+.chhud{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(var(--bot) + 52px);width:min(600px,calc(100% - 480px));min-width:300px;padding:12px 14px;z-index:6;display:flex;flex-direction:column;gap:6px}
+.chtop{display:flex;justify-content:space-between}.chtitle{font-family:var(--f-display);font-weight:500;font-size:17px}.chgoal{font-size:13px;line-height:1.45;color:#d2e0d7}
+.chbarw{height:6px;border-radius:3px;background:rgba(127,224,168,.12);overflow:hidden}#chBar{display:block;height:100%;width:0;background:var(--flare);transition:width .25s}
+.chrow{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}.chprog{font-family:var(--f-mono);font-size:11.5px;color:var(--dim)}.chbtns{display:flex;gap:6px}
+.donebg{pointer-events:auto;display:grid;place-items:center;background:rgba(5,10,8,.6)}
+.donecard{width:min(440px,calc(100% - 32px));padding:24px;text-align:center;display:flex;flex-direction:column;gap:10px}.donecard h2{font-family:var(--f-display);font-weight:500;margin:0}
+.dstars{font-size:34px;color:var(--flare);letter-spacing:4px}.dstars .off{color:rgba(255,255,255,.15)}
+.actions{display:flex;gap:8px;flex-wrap:wrap}
+.democap{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(var(--bot) + 10px);width:min(640px,calc(100% - 32px));padding:14px 18px;z-index:21;display:flex;flex-direction:column;gap:6px}
+.democap h2{font-family:var(--f-display);font-weight:500;font-size:22px;margin:0}.democap p{margin:0;font-size:14px;color:#d2e0d7}
+.ovl{position:fixed;inset:0;z-index:30;display:grid;place-items:center;background:rgba(5,10,8,.6)}
+.obox{width:min(460px,calc(100% - 32px));max-height:min(80vh,640px);overflow:auto;padding:18px;display:flex;flex-direction:column;gap:12px}
+.obox h2{font-family:var(--f-display);font-weight:500;font-size:22px;margin:0;flex:1}
+.arow{display:flex;align-items:center;gap:8px;padding:9px 10px;border:1px solid var(--line);border-radius:8px}.arow.cur{border-color:rgba(255,195,90,.6);background:rgba(40,30,12,.5)}
+.arow .an{flex:1;min-width:0}.arow .as{font-family:var(--f-mono);font-size:11px;color:var(--dim)}
+.arow input,.aform input{font:inherit;font-size:13px;padding:7px 9px;border-radius:7px;border:1px solid var(--line-strong);background:rgba(0,0,0,.35);color:var(--ink);min-width:0}
+.arow input{width:80px}.aform{display:flex;gap:6px;flex-wrap:wrap}.aform input{flex:1 1 120px}
+.pbig{font-family:var(--f-display);font-size:54px;line-height:1;color:var(--flare)}
+
+@media (max-width:1300px){.right .stat{display:none}.brand .sub{display:none}.find{width:170px}}
+@media (max-width:760px){
+  .hud-top{flex-wrap:wrap}.brand{display:none}.time{flex:1 1 100%}.right{flex:1 1 100%;justify-content:space-between}.findwrap{flex:1 1 100%;order:-1}.find{width:100%;box-sizing:border-box}
+  .rail{top:auto;left:var(--gut);right:var(--gutR);bottom:var(--bot);width:auto;height:64px;flex-direction:row;overflow-x:auto;overflow-y:hidden}
+  .rail h3{display:none}.tool{min-width:58px}
+  .placeopts{left:var(--gut);bottom:calc(var(--bot) + 72px)}
+  .dock{top:auto;bottom:calc(var(--bot) + 120px);left:var(--gut);right:var(--gutR);width:auto;height:42vh}
+  body:not(.dockOpen) .dock{display:none}
+  .zoomb{right:var(--gutR);bottom:calc(var(--bot) + 120px)}
+  .home{background:rgba(5,10,8,.74)}
+  .chhud{width:auto;min-width:0;left:var(--gut);right:var(--gutR);transform:none;bottom:calc(var(--bot) + 124px);max-height:36vh;overflow:auto}
+  .hint{display:none}
+}
+#dockBtn{display:none}@media (max-width:760px){#dockBtn{display:inline-block}}
+</style>
+</head>
+<body>
+
+
+<canvas id="world" aria-label="The world: drag to look around, scroll to zoom"></canvas>
+
+<header class="hud-top">
+  <div class="brand panel"><h1>Bio<b>sphere</b></h1><span class="sub">A living-world sandbox</span></div>
+  <div class="time panel">
+    <button id="pauseBtn" title="Pause or resume (Space)" aria-label="Pause">⏸</button>
+    <div class="tcol">
+      <span class="k">Time rate</span>
+      <div class="spds" id="spds"></div>
+      <span class="v" id="rateTxt">1 week / s</span>
+    </div>
+    <div class="tcol"><span class="k">Date</span><span class="v" id="dateTxt">Year 1, spring</span><span class="v" id="tempTxt" style="font-size:11px;color:var(--dim)"></span></div>
+  </div>
+  <div class="right panel">
+    <div class="stat"><span class="k">Animals</span><span id="nAnimals" class="v">0</span></div>
+    <div class="stat"><span class="k">Trees</span><span id="nTrees" class="v">0</span></div>
+    <div class="stat"><span class="k">Species</span><span id="nSpecies" class="v">0</span></div>
+    <div class="findwrap"><input id="find" class="find" placeholder="Find or add a species…" aria-label="Find or add a species" autocomplete="off" spellcheck="false"><div id="findList" class="findlist panel" hidden></div></div>
+    <button id="homeBtn" class="btn" title="Back to the home page">⌂ Home</button>
+    <button id="acctBtn" class="btn" title="Account: save your progress on this device">👤</button>
+    <button id="scenBtn" class="btn">Worlds</button>
+    <button id="dockBtn" class="btn">Panel</button>
+  </div>
+</header>
+
+<nav class="rail panel" id="rail" aria-label="Tools"></nav>
+<div class="placeopts panel" id="placeopts">
+  <label>Brush <input type="range" id="brush" min="1" max="12" value="4"><span id="brushV" class="v">4</span></label>
+  <span class="k" id="cntK">Place</span><div class="seg" id="cntSeg"><button data-n="1" aria-pressed="false">1</button><button data-n="2" aria-pressed="true">2</button><button data-n="6" aria-pressed="false">6</button><button data-n="12" aria-pressed="false">12</button></div>
+</div>
+
+<aside class="dock panel" id="dock">
+  <div class="tabs" role="tablist"><button class="tab" role="tab" data-tab="world" aria-selected="true">World</button><button class="tab" role="tab" data-tab="life" aria-selected="false">Life</button><button class="tab" role="tab" data-tab="insp" aria-selected="false">Inspect</button></div>
+  <div class="pane" id="pane-world">
+    <div class="sl"><div class="row"><span class="k">Global temperature</span><span id="tempV">+0 °C</span></div><input type="range" id="tempS" min="-15" max="15" step="0.5" value="0"></div>
+    <div class="sl"><div class="row"><span class="k">Rainfall</span><span id="rainV">100%</span></div><input type="range" id="rainS" min="0" max="250" step="5" value="100"></div>
+    <div class="sl"><div class="row"><span class="k">Sea level</span><span id="seaV">0 m</span></div><input type="range" id="seaS" min="-100" max="100" step="2" value="0"></div>
+    <div class="row"><span class="k">Seasons</span><button class="btn" id="seasonBtn" aria-pressed="true">On</button></div>
+    <span class="k">Events</span>
+    <div class="evs">
+      <button class="btn" data-ev="ice">❄ Ice age</button><button class="btn" data-ev="heat">☀ Heat wave</button>
+      <button class="btn" data-ev="drought">🏜 Drought</button><button class="btn" data-ev="flood">🌊 Floods</button>
+      <button class="btn" data-ev="plague">🦠 Plague</button><button class="btn" data-ev="meteor">☄ Meteor</button>
+      <button class="btn" data-ev="fire">🔥 Wildfire</button><button class="btn" data-ev="normal">↺ Normal climate</button>
+    </div>
+    <span class="k">Views</span>
+    <div class="views" id="views"><button class="btn" data-view="normal" aria-pressed="true">Natural</button><button class="btn" data-view="temp" aria-pressed="false">Temperature</button><button class="btn" data-view="food" aria-pressed="false">Food</button><button class="btn" data-view="rain" aria-pressed="false">Rain</button></div>
+    <p class="note">Plants grow where it is warm and wet enough. Animals need food, water and a bearable temperature. Every baby inherits its parents' genes with small random changes, so species slowly adapt: that is evolution.</p>
+  </div>
+  <div class="pane" id="pane-life" hidden>
+    <span class="k">Population over time</span>
+    <canvas id="graph"></canvas>
+    <div class="splist" id="splist"></div>
+    <p class="note">Click a species to fly to one. Averages show how each species is evolving.</p>
+  </div>
+  <div class="pane" id="pane-insp" hidden>
+    <div id="inspEmpty"><p class="note">Click an animal or a tree to inspect it. Double-click to follow it with the camera.</p></div>
+    <div id="inspBody" class="hview" hidden></div>
+  </div>
+</aside>
+<div class="zoomb panel"><button id="zIn" title="Zoom in">+</button><button id="zOut" title="Zoom out">−</button><button id="zFit" title="Show the whole world">⤢</button></div>
+<div class="hint" id="hint">Drag to look around · scroll to zoom · click an animal to inspect it</div>
+<div class="toasts" id="toasts" aria-live="polite"></div>
+
+<div class="scen panel" id="scen" hidden>
+  <div class="row"><span class="k">Choose a world</span><button class="btn ghost" id="scenClose">×</button></div>
+  <div class="scgrid" id="scgrid"></div>
+</div>
+
+<div id="home" class="home" role="dialog" aria-label="Home">
+  <div class="hcard">
+    <div class="hhead"><h1 class="htitle">Bio<b>sphere</b></h1><p class="htag">A living world of plants and animals that eat, breed and evolve</p>
+      <div class="hacct"><button class="chip" id="hAcctBtn">👤 <span id="hAcctName">Guest</span></button><button class="chip" id="hPlays" title="Total plays by everyone">▶ <b id="hPlaysN">0</b> <span id="hPlaysL">plays</span></button><a class="chip other" id="hOther" href="https://jacob711-oss.github.io/barycenter/" target="_blank" rel="noopener">🪐 Try our other game: Barycenter</a></div></div>
+    <div id="hMain" class="hview">
+      <button class="hb" id="hChal"><span class="ht">Challenges</span><span class="hd" id="hChalSub">Goals from easy to fiendish</span></button>
+      <button class="hb" id="hDemo"><span class="ht">Demo &amp; tutorial</span><span class="hd">Watch the highlights, or learn the controls step by step</span></button>
+      <button class="hb primary" id="hFree"><span class="ht">Free play</span><span class="hd">The full sandbox: plant, breed, evolve and terraform anything</span></button>
+      <p class="hfoot">Simplified but real ecology: food chains, predator and prey cycles, climate limits and evolution by natural selection.</p>
+    </div>
+    <div id="hChalView" class="hview" hidden>
+      <div class="hbar"><button class="btn ghost hback">← Back</button><h2>Challenges</h2><span id="hStars" class="hstars"></span></div>
+      <p class="hfoot">Finish a challenge to unlock the next. Faster solutions earn more stars.</p>
+      <div id="hGrid" class="hgrid"></div>
+    </div>
+    <div id="hDemoView" class="hview" hidden>
+      <div class="hbar"><button class="btn ghost hback">← Back</button><h2>Demo &amp; tutorial</h2></div>
+      <button class="hb" id="hWatch"><span class="ht">Watch the demo</span><span class="hd">A tour of living worlds, evolution, wildfires and a meteor strike</span></button>
+      <button class="hb primary" id="hTut"><span class="ht">Start the tutorial</span><span class="hd">Learn every control step by step; each step completes when you do it</span></button>
+    </div>
+  </div>
+</div>
+<div id="chHud" class="chhud panel" hidden aria-live="polite">
+  <div class="chtop"><span id="chNum" class="k"></span><span id="chTime" class="k"></span></div>
+  <div id="chTitle" class="chtitle"></div>
+  <div id="chGoal" class="chgoal"></div>
+  <div class="chbarw"><span id="chBar"></span></div>
+  <div class="chrow"><span id="chProg" class="chprog"></span><div class="chbtns"><button id="chHint" class="btn">Hint</button><button id="chRestart" class="btn">Restart</button><button id="chExit" class="btn ghost">Exit</button></div></div>
+</div>
+<div id="demoCap" class="democap panel" hidden><span class="k" id="demoStep"></span><h2 id="demoTitle"></h2><p id="demoText"></p><div class="actions"><button class="btn" id="demoNext">Next ›</button><button class="btn ghost" id="demoExit">Exit demo</button></div></div>
+<div id="acct" class="ovl" hidden role="dialog" aria-label="Accounts">
+  <div class="obox panel">
+    <div class="hbar"><h2>Accounts</h2><button class="btn" id="acctClose" aria-label="Close">×</button></div>
+    <p class="hfoot">Your stars, plays and time are saved in this browser on this device. Accounts are shared with Barycenter when both games are opened from the same site.</p>
+    <div id="acctList" class="hview" style="gap:6px"></div>
+    <form id="acctForm" class="aform"><input id="acctNew" maxlength="20" placeholder="Your name" autocomplete="off"><input id="acctPin" maxlength="4" inputmode="numeric" placeholder="PIN (optional)" autocomplete="off"><button class="btn primary" type="submit">Create account</button></form>
+    <p class="hfoot" id="acctMsg" aria-live="polite"></p>
+  </div>
+</div>
+<div id="chDone" class="home donebg" hidden role="dialog" aria-label="Challenge result">
+  <div class="donecard panel">
+    <div id="dStars" class="dstars"></div><h2 id="dTitle"></h2><p id="dText" class="hfoot" style="font-size:13px"></p>
+    <div class="actions" style="justify-content:center"><button id="dNext" class="btn primary">Next challenge</button><button id="dRetry" class="btn">Try again</button><button id="dList" class="btn ghost">All challenges</button></div>
+  </div>
+</div>
+
+<script>
+'use strict';
+/* ================= Biosphere: the simulation ================= */
+const $=id=>document.getElementById(id);
+const clamp=(v,a,b)=>v<a?a:v>b?b:v,lerp=(a,b,t)=>a+(b-a)*t,TAU=Math.PI*2;
+let RNG=Math.random;const rnd=()=>RNG(),rr=(a,b)=>a+(b-a)*rnd(),ri=(a,b)=>Math.floor(rr(a,b+1));
+function gauss(){let u=0,v=0;while(!u)u=rnd();while(!v)v=rnd();return Math.sqrt(-2*Math.log(u))*Math.cos(TAU*v)}
+function seeded(s){let a=s>>>0||1;return()=>{a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+
+/* world grid: GW x GH cells, positions are in cell units */
+const GW=300,GH=190,N=GW*GH,CELL=6;
+const hgt=new Float32Array(N),moist=new Float32Array(N),veg=new Float32Array(N),alg=new Float32Array(N),wet=new Float32Array(N),scar=new Float32Array(N),burn=new Float32Array(N),tBase=new Float32Array(N),sAmp=new Float32Array(N);
+const dw=new Uint8Array(N);
+const SEA0=0.34;
+const CL={temp:0,rain:1,seaM:0,seasons:true,dust:0,t0:0,tc:16,latK:20};
+const sea=()=>SEA0+CL.seaM*0.0006;
+const S={t:90,speed:7,paused:false,animals:[],trees:[],nextId:1,sel:null,follow:false,tool:'select',brush:4,count:2,hist:[],view:'normal',achieved:0,burning:new Set(),parts:[],scen:'meadow',terrainDirty:true,lastHist:0,maxGen:{},born:0,died:0,kills:0};
+
+/* ---------- species ---------- */
+// spd and sense in cells per day / cells; meta, thirst: share of a full tank used per day; life, mature, gest in days; t: comfortable temperature range in °C
+const SP={
+ rabbit:{n:'Rabbit',pl:'Rabbits',ic:'🐇',col:'#a8906f',diet:'herb',hab:'land',len:5,wid:.55,spd:1.25,sense:6,meta:.05,thirst:.06,life:1600,mature:110,gest:30,litter:[2,5],repE:.68,eat:.09,conv:6,tmin:-4,tmax:32,mass:.35},
+ mouse:{n:'Mouse',pl:'Mice',ic:'🐁',col:'#8d7c6c',diet:'herb',hab:'land',len:3,wid:.5,spd:1,sense:4,meta:.06,thirst:.05,life:800,mature:55,gest:21,litter:[3,6],repE:.66,eat:.05,conv:8,tmin:-2,tmax:36,mass:.15},
+ deer:{n:'Deer',pl:'Deer',ic:'🦌',col:'#9b6b43',diet:'herb',hab:'land',len:10,wid:.42,spd:1.8,sense:9,meta:.028,thirst:.06,life:4000,mature:360,gest:150,litter:[1,2],repE:.7,eat:.16,conv:4.5,tmin:-10,tmax:31,mass:1.4,herd:1},
+ bison:{n:'Bison',pl:'Bison',ic:'🦬',col:'#5c4231',diet:'herb',hab:'land',len:14,wid:.55,spd:1.1,sense:7,meta:.024,thirst:.06,life:5500,mature:600,gest:230,litter:[1,1],repE:.7,eat:.26,conv:2.8,tmin:-22,tmax:31,mass:2.5,herd:1},
+ zebra:{n:'Zebra',pl:'Zebras',ic:'🦓',col:'#e9e5dc',diet:'herb',hab:'land',len:12,wid:.44,spd:1.9,sense:9,meta:.028,thirst:.07,life:5000,mature:540,gest:250,litter:[1,1],repE:.7,eat:.2,conv:3.4,tmin:6,tmax:43,mass:1.8,herd:1},
+ camel:{n:'Camel',pl:'Camels',ic:'🐪',col:'#c9a46a',diet:'herb',hab:'land',len:14,wid:.45,spd:1.25,sense:8,meta:.02,thirst:.012,life:9000,mature:1300,gest:390,litter:[1,1],repE:.7,eat:.2,conv:3.4,tmin:0,tmax:52,mass:2.4,sparse:1},
+ fox:{n:'Fox',pl:'Foxes',ic:'🦊',col:'#c8642a',diet:'carn',hab:'land',len:7,wid:.4,spd:1.95,sense:9,meta:.022,thirst:.06,life:2600,mature:280,gest:52,litter:[2,4],repE:.72,prey:['rabbit','mouse'],tmin:-16,tmax:33,mass:.6},
+ wolf:{n:'Wolf',pl:'Wolves',ic:'🐺',col:'#7e7b77',diet:'carn',hab:'land',len:12,wid:.38,spd:2.2,sense:12,meta:.018,thirst:.06,life:4000,mature:620,gest:63,litter:[2,4],repE:.74,prey:['deer','rabbit','bison'],tmin:-32,tmax:28,mass:1.2,herd:1},
+ lion:{n:'Lion',pl:'Lions',ic:'🦁',col:'#c99a52',diet:'carn',hab:'land',len:14,wid:.42,spd:2.15,sense:14,meta:.012,thirst:.06,life:5000,mature:950,gest:110,litter:[1,3],repE:.74,prey:['zebra','deer','bison','camel','rabbit','mouse'],tmin:6,tmax:46,mass:1.8,herd:1},
+ bear:{n:'Bear',pl:'Bears',ic:'🐻',col:'#5b3e29',diet:'omni',hab:'land',len:13,wid:.55,spd:1.35,sense:10,meta:.018,thirst:.05,life:9000,mature:1400,gest:220,litter:[1,2],repE:.74,prey:['fish','rabbit','deer'],eat:.12,conv:1.4,tmin:-28,tmax:30,mass:2.2},
+ hawk:{n:'Hawk',pl:'Hawks',ic:'🦅',col:'#6f5337',diet:'carn',hab:'air',len:7,wid:.35,spd:3,sense:16,meta:.022,thirst:.03,life:5000,mature:650,gest:35,litter:[1,3],repE:.72,prey:['mouse','rabbit','fish'],tmin:-12,tmax:40,mass:.4},
+ fish:{n:'Fish',pl:'Fish',ic:'🐟',col:'#a3bccb',diet:'herb',hab:'water',len:3.5,wid:.35,spd:1.4,sense:5,meta:.05,thirst:0,life:1500,mature:180,gest:20,litter:[3,8],repE:.66,eat:.05,conv:4,tmin:0,tmax:33,mass:.25,herd:1},
+ otter:{n:'Otter',pl:'Otters',ic:'🦦',col:'#4f3a2a',diet:'carn',hab:'amph',len:8,wid:.35,spd:1.6,sense:8,meta:.022,thirst:0,life:4000,mature:650,gest:60,litter:[1,3],repE:.72,prey:['fish'],tmin:-12,tmax:31,mass:.6},
+};
+const SPK=Object.keys(SP);
+const PREDS={};for(const k of SPK)PREDS[k]=SPK.filter(p=>(SP[p].prey||[]).includes(k));
+const TK={
+ oak:{n:'Oak',ic:'🌳',tmin:-2,tmax:28,rmin:.42,rmax:9,life:22000,fruit:1,col:'#3f6a2c'},
+ pine:{n:'Pine',ic:'🌲',tmin:-18,tmax:20,rmin:.28,rmax:9,life:25000,col:'#24452a'},
+ palm:{n:'Palm',ic:'🌴',tmin:17,tmax:42,rmin:.5,rmax:9,life:18000,fruit:1,col:'#4d7a2e'},
+ cactus:{n:'Cactus',ic:'🌵',tmin:10,tmax:50,rmin:0,rmax:.45,life:30000,col:'#5f8a4a'},
+ bush:{n:'Berry bush',ic:'🫐',tmin:2,tmax:33,rmin:.34,rmax:9,life:6000,fruit:1,col:'#3c5f33'},
+};
+
+/* ---------- noise and terrain ---------- */
+function makeNoise(seed){const r=seeded(seed),P=new Uint8Array(512),G=new Float32Array(256);for(let i=0;i<256;i++){P[i]=i;G[i]=r()}for(let i=255;i>0;i--){const j=Math.floor(r()*(i+1));[P[i],P[j]]=[P[j],P[i]]}for(let i=0;i<256;i++)P[i+256]=P[i];
+  const v=(x,y)=>G[P[P[x&255]+(y&255)]];const f=t=>t*t*(3-2*t);
+  return(x,y)=>{const xi=Math.floor(x),yi=Math.floor(y),xf=f(x-xi),yf=f(y-yi);return lerp(lerp(v(xi,yi),v(xi+1,yi),xf),lerp(v(xi,yi+1),v(xi+1,yi+1),xf),yf)}}
+function fbm(n,x,y,oct){let a=0,s=1,f=1,t=0;for(let o=0;o<oct;o++){a+=n(x*f,y*f)*s;t+=s;s*=.5;f*=2.03}return a/t}
+const lat=y=>(y/GH)*2-1;
+function elevKm(i){const s=sea(),u=Math.max(0,hgt[i]-s)/(1-s);return u*u*5}
+function computeClimate(){for(let i=0;i<N;i++){const y=(i/GW)|0,L=lat(y);tBase[i]=CL.t0+CL.tc-CL.latK*Math.pow(Math.abs(L),1.5)-6.5*elevKm(i);sAmp[i]=(3+13*Math.abs(L))*(L<0?1:-1)}}
+function seasonF(){return CL.seasons?-Math.cos(TAU*(S.t-15)/365):0}
+let SEASON=0;
+const meanT=i=>tBase[i]+CL.temp-CL.dust;
+const cellT=i=>tBase[i]+CL.temp-CL.dust+sAmp[i]*SEASON;
+const rainAt=i=>clamp(moist[i]*CL.rain+wet[i],0,2.5);
+const isWater=i=>hgt[i]<sea();
+const idx=(x,y)=>((y|0)<0||(y|0)>=GH||(x|0)<0||(x|0)>=GW)?-1:(y|0)*GW+(x|0);
+function computeDW(){const s=sea(),q=new Int32Array(N);let h=0,t=0;for(let i=0;i<N;i++){if(hgt[i]<s){dw[i]=0;q[t++]=i}else dw[i]=255}
+  while(h<t){const i=q[h++],x=i%GW,d=dw[i]+1;if(d>=255)continue;const nb=[x>0?i-1:-1,x<GW-1?i+1:-1,i-GW,i+GW];for(const j of nb)if(j>=0&&j<N&&dw[j]>d){dw[j]=d;q[t++]=j}}}
+function terrainChanged(){computeDW();computeClimate();S.terrainDirty=true}
+
+function genTerrain(o){const n1=makeNoise(o.seed),n2=makeNoise(o.seed+7),n3=makeNoise(o.seed+13);const raw=new Float32Array(N);
+  for(let y=0;y<GH;y++)for(let x=0;x<GW;x++){const i=y*GW+x,nx=x/GW,ny=y/GH;let v=fbm(n1,nx*o.freq,ny*o.freq*0.63,6);
+    const ridge=1-Math.abs(fbm(n3,nx*o.freq*1.7,ny*o.freq*1.1,4)*2-1);v+=ridge*o.mount*0.25;
+    const dx=(nx-.5)*2,dy=(ny-.5)*2,edge=Math.max(Math.abs(dx),Math.abs(dy));v-=Math.max(0,edge-.72)*o.edge;if(o.center)v+=(1-Math.hypot(dx,dy*0.9))*o.center;raw[i]=v}
+  const sorted=Float32Array.from(raw).sort(),thr=sorted[Math.floor((1-o.land)*(N-1))],mn=sorted[0],mx=sorted[N-1];
+  for(let i=0;i<N;i++){const v=raw[i];hgt[i]=v<thr?SEA0*(v-mn)/(thr-mn+1e-9):SEA0+(1-SEA0)*Math.pow((v-thr)/(mx-thr+1e-9),o.peak||1.2)}
+  for(const [lx,ly,lr] of (o.lakes||[])){for(let y=-lr;y<=lr;y++)for(let x=-lr;x<=lr;x++){const i=idx(lx*GW+x,ly*GH+y);if(i<0)continue;const d=Math.hypot(x,y)/lr;if(d<1)hgt[i]=Math.min(hgt[i],SEA0-0.02*(1-d)-0.001)}}
+  computeDW();
+  for(let i=0;i<N;i++){const x=i%GW,y=(i/GW)|0;moist[i]=clamp(fbm(n2,x/GW*4,y/GH*3,4)*1.2-0.1+o.moist-0.5+(dw[i]<6?0.12*(1-dw[i]/6):0),0,1.4)}
+  wet.fill(0);scar.fill(0);burn.fill(0);computeClimate()}
+
+/* ---------- vegetation ---------- */
+function capOf(T,R){const fT=T<-9?0:T<8?(T+9)/17:T<30?1:T<44?(44-T)/14:0;return fT*Math.min(1,R/0.6)*(1-Math.min(.7,CL.dust/14))}
+function updateVeg(dt){const s=sea();
+  for(let i=0;i<N;i++){
+    if(hgt[i]<s){veg[i]=0;const T=cellT(i),cap=T<1?0.05:T<30?Math.min(1,(s-hgt[i])<0.06?1:0.45):0.5;let a=alg[i];
+      if(a<0.01){a=0.01}a=a<cap?cap/(1+(cap-a)/a*Math.exp(-0.035*dt)):a+(cap-a)*Math.min(1,0.03*dt);alg[i]=a;continue}
+    alg[i]=0;const T=cellT(i),R=rainAt(i),cap=capOf(T,R);let v=veg[i];
+    if(v<0.003){if(cap>0.05){const x=i%GW;const nb=(x>0?veg[i-1]:0)+(x<GW-1?veg[i+1]:0)+(i>=GW?veg[i-GW]:0)+(i<N-GW?veg[i+GW]:0);if(nb>0.25&&rnd()<0.08*dt)v=0.03}}
+    else if(cap>v)v=cap/(1+(cap-v)/v*Math.exp(-0.05*dt));
+    else{const floor=Math.min(v,0.12*capOf(meanT(i),R));v=Math.max(floor,v-(v-cap)*Math.min(1,0.03*dt))}
+    veg[i]=v;if(wet[i]>0)wet[i]=Math.max(0,wet[i]-0.004*dt);if(scar[i]>0)scar[i]=Math.max(0,scar[i]-0.004*dt)}}
+
+/* ---------- spatial hash for animals ---------- */
+// one bucket grid per species, so a fox looking for rabbits never scans the fish
+const BK=8,BW=Math.ceil(GW/BK),BH=Math.ceil(GH/BK);let SB={};
+function rebuildHash(){SB={};SPN={};for(const a of S.animals){if(a.dead)continue;SPN[a.sp]=(SPN[a.sp]||0)+1;const g=SB[a.sp]||(SB[a.sp]=new Array(BW*BH));const b=((a.y/BK)|0)*BW+((a.x/BK)|0);(g[b]||(g[b]=[])).push(a)}}
+function nearSp(sps,x,y,r,fn){const x0=Math.max(0,((x-r)/BK)|0),x1=Math.min(BW-1,((x+r)/BK)|0),y0=Math.max(0,((y-r)/BK)|0),y1=Math.min(BH-1,((y+r)/BK)|0),r2=r*r;
+  for(const sp of sps){const g=SB[sp];if(!g)continue;for(let by=y0;by<=y1;by++)for(let bx=x0;bx<=x1;bx++){const L=g[by*BW+bx];if(!L)continue;for(const a of L){if(a.dead)continue;const dx=a.x-x,dy=a.y-y,d2=dx*dx+dy*dy;if(d2<=r2)fn(a,d2)}}}}
+const near=(x,y,r,fn)=>nearSp(SPK,x,y,r,fn);
+// trees: a coarse bucket grid too
+const TB=6,TBW=Math.ceil(GW/TB),TBH=Math.ceil(GH/TB);let tbuckets=[];
+function rebuildTrees(){tbuckets=new Array(TBW*TBH);for(const t of S.trees){if(t.dead)continue;const b=((t.y/TB)|0)*TBW+((t.x/TB)|0);(tbuckets[b]||(tbuckets[b]=[])).push(t)}}
+function nearTrees(x,y,r,fn){const x0=Math.max(0,((x-r)/TB)|0),x1=Math.min(TBW-1,((x+r)/TB)|0),y0=Math.max(0,((y-r)/TB)|0),y1=Math.min(TBH-1,((y+r)/TB)|0),r2=r*r;
+  for(let by=y0;by<=y1;by++)for(let bx=x0;bx<=x1;bx++){const L=tbuckets[by*TBW+bx];if(!L)continue;for(const t of L){if(t.dead)continue;const dx=t.x-x,dy=t.y-y,d2=dx*dx+dy*dy;if(d2<=r2)fn(t,d2)}}}
+
+/* ---------- animals ---------- */
+const MAXA=3200,MAXT=2400,SPCAP={fish:600,mouse:350,rabbit:420,fox:45,hawk:30,wolf:30,lion:30,otter:40,bear:16};let SPN={};
+function habitatOK(sp,i){if(i<0)return false;const h=SP[sp].hab;if(h==='air')return true;const w=isWater(i);if(h==='water')return w;if(h==='amph')return true;return !w}
+function dwLand(i){// how far a water cell is from land (approx: check neighbours)
+  const x=i%GW,y=(i/GW)|0;for(let r=1;r<5;r++)for(const [dx,dy] of [[r,0],[-r,0],[0,r],[0,-r]]){const j=idx(x+dx,y+dy);if(j>=0&&!isWater(j))return r}return 9}
+function furTint(col,fur){const c=parseInt(col.slice(1),16);let r=c>>16,g=c>>8&255,b=c&255;const t=clamp(fur/30,0,.75);r=lerp(r,236,t);g=lerp(g,236,t);b=lerp(b,232,t);return `rgb(${r|0},${g|0},${b|0})`}
+function newGenes(sp,fur){return{speed:clamp(1+gauss()*0.05,.5,2.2),size:clamp(1+gauss()*0.05,.5,2.2),sense:clamp(1+gauss()*0.05,.5,2.2),fur:clamp((fur||0)+gauss()*1,-10,40)}}
+function mixGenes(a,b){const m=(k,lo,hi,s)=>clamp((a[k]+b[k])/2*(1+gauss()*s),lo,hi);return{speed:m('speed',.5,2.2,.06),size:m('size',.5,2.2,.06),sense:m('sense',.5,2.2,.06),fur:clamp((a.fur+b.fur)/2+gauss()*1.6,-10,40)}}
+function addAnimal(sp,x,y,o={}){if(S.animals.length>=MAXA||o.age===0&&(SPN[sp]||0)>=(SPCAP[sp]||320))return null;SPN[sp]=(SPN[sp]||0)+1;const g=o.genes||newGenes(sp,o.fur);const s=SP[sp];
+  const a={id:S.nextId++,sp,x,y,dir:rnd()*TAU,e:o.e??rr(.55,.85),w:1,age:o.age??rr(s.mature*1.05,s.mature*2.2),sex:o.sex||(rnd()<.5?'f':'m'),genes:g,gen:o.gen||1,kids:0,kills:0,preg:0,pg:null,cd:rr(0,20),
+    life:s.life*rr(.75,1.2),state:'wander',tx:0,ty:0,ttl:0,sick:0,col:furTint(s.col,g.fur),mom:o.mom||0,born:S.t};
+  S.animals.push(a);S.maxGen[sp]=Math.max(S.maxGen[sp]||0,a.gen);return a}
+function kill(a,cause){if(a.dead)return;a.dead=true;a.cause=cause;S.died++;const C=S.causes||(S.causes={});const c=C[a.sp]||(C[a.sp]={});c[cause]=(c[cause]||0)+1;chEv('death',{sp:a.sp,cause});if(S.sel===a){S.selDead=cause}}
+function suitableFur(sp,i){return clamp(SP[sp].tmin-meanT(i)+4,0,30)}
+function spawnAt(sp,x,y,n,adapt,e){let made=0,tries=0;while(made<n&&tries<n*30){tries++;const px=x+(n>1?gauss()*Math.sqrt(n)*0.9:0),py=y+(n>1?gauss()*Math.sqrt(n)*0.9:0),i=idx(px,py);if(!habitatOK(sp,i))continue;
+    const a=addAnimal(sp,px,py,{fur:adapt?suitableFur(sp,i):0,e});if(!a)break;made++}return made}
+function randomCell(test,tries=4000){for(let k=0;k<tries;k++){const x=rnd()*GW,y=rnd()*GH,i=idx(x,y);if(test(i,x,y))return[x,y]}return null}
+
+const SPD_CELLS=1;// movement scale
+function stepAnimal(a,dt){
+  const s=SP[a.sp],g=a.genes,i=idx(a.x,a.y);if(i<0){kill(a,'lost');return}
+  a.age+=dt;if(a.age>a.life){kill(a,'old age');return}
+  const T=s.hab==='water'?Math.max(2,cellT(i)):cellT(i);
+  // energy use: bigger, faster and sharper-sensed bodies cost more to run
+  let use=s.meta*Math.pow(g.size,.75)*(0.55+0.45*g.speed*g.speed)*(0.9+0.1*g.sense*g.sense);
+  const tmin=s.tmin-g.fur-(g.size-1)*4,tmax=s.tmax-g.fur*0.5+(g.size<1?(1-g.size)*3:0);
+  const stress=Math.max(0,tmin-T)+Math.max(0,T-tmax);use+=stress*0.0065;a.stress=stress;
+  if(a.sick>0){use+=.03;a.sick-=dt;if(a.sick<=0&&rnd()<.5)a.sick=0}
+  if(a.preg>0)use*=1.25;
+  a.e-=use*dt;
+  if(s.thirst){a.w-=s.thirst*0.6*dt*(1+Math.max(0,T-24)*0.04);if(dw[i]<=2||(s.hab==='air'&&dw[i]<=4))a.w=1;else if(rainAt(i)>0.45)a.w=Math.min(1,a.w+0.25*dt*Math.min(1,(rainAt(i)-0.4)*3))}
+  if(a.e<=0){kill(a,stress>8?(T<tmin?'cold':'heat'):(a.sick>0?'disease':'starvation'));return}
+  if(a.w<=0){kill(a,'thirst');return}
+  if(s.hab==='water'&&!isWater(i)){a.e-=0.5*dt;if(a.e<=0){kill(a,'stranded');return}}
+  if((s.hab==='land')&&isWater(i)&&(sea()-hgt[i])>0.02){a.e-=0.3*dt;if(a.e<=0){kill(a,'drowned');return}}
+  if(burn[i]>0&&s.hab!=='air'&&s.hab!=='water'){if(rnd()<0.6){kill(a,'fire');return}}
+  if(a.preg>0){a.preg-=dt;if(a.preg<=0)giveBirth(a)}
+  if(a.cd>0)a.cd-=dt;if(a.hc>0)a.hc-=dt;
+  if(a.sick>0&&rnd()<0.25*dt)nearSp([a.sp],a.x,a.y,1.6,b=>{if(b!==a&&b.sp===a.sp&&!b.sick&&rnd()<0.5)b.sick=rr(12,30)});
+  const sense=s.sense*g.sense;let spd=s.spd*g.speed*(a.age<s.mature?0.75:1);
+  if(elevKm(i)>2.5&&s.hab==='land')spd*=0.6;
+  let mode='wander';
+  // young animals stay with their mother and are fed by her until they are old enough
+  const m=a.momRef;if(m&&a.age<s.mature*0.4){if(!m.dead){if(a.e<0.7&&m.e>0.2){const give=Math.min(0.7-a.e,0.15*dt);a.e+=give;m.e-=give*0.15}const d=Math.hypot(m.x-a.x,m.y-a.y);if(d>1.8){a.dir=Math.atan2(m.y-a.y,m.x-a.x);a.state='follow';move(a,Math.min(d,spd*1.4*dt));return}}else a.momRef=null}else if(m)a.momRef=null;
+  // 1. danger: predators and fire
+  let fx=0,fy=0,threat=false;
+  if(PREDS[a.sp].length&&(a.state==='flee'||((a.id+((S.t*2)|0))%2===0))){nearSp(PREDS[a.sp],a.x,a.y,sense*0.55,(b,d2)=>{if(b.state==='hunt'||d2<sense*sense*0.12){const d=Math.sqrt(d2)+.1;fx+=(a.x-b.x)/d;fy+=(a.y-b.y)/d;threat=true}})}
+  if(s.hab!=='water'&&s.hab!=='air'&&S.burning.size){for(let k=0;k<6;k++){const ang=k/6*TAU,j=idx(a.x+Math.cos(ang)*3,a.y+Math.sin(ang)*3);if(j>=0&&burn[j]>0){fx-=Math.cos(ang);fy-=Math.sin(ang);threat=true}}}
+  if(threat){mode='flee';a.dir=Math.atan2(fy,fx)+gauss()*0.25;spd*=1.5;a.e-=0.01*dt}
+  else if(s.thirst&&a.w<0.65&&dw[i]>2){mode='drink';spd*=1.3;let best=dw[i],bj=-1;const x=i%GW;for(const j of [i-1,i+1,i-GW,i+GW,i-GW-1,i-GW+1,i+GW-1,i+GW+1]){if(j<0||j>=N)continue;if(dw[j]<best){best=dw[j];bj=j}}
+    if(bj>=0)a.dir=Math.atan2(((bj/GW)|0)+.5-a.y,bj%GW+.5-a.x)+gauss()*.2}
+  else if(a.e<(s.diet==='carn'?0.62:0.78)){mode=feed(a,s,g,i,sense,dt);if(mode==='eat')spd=0;else if(mode==='hunt')spd*=a.sprint?2.1:1.3;else if(mode==='track')spd*=1.7;else if(mode==='wander')spd*=1.8}
+  else if(a.age>s.mature&&a.cd<=0&&!a.preg&&a.e>s.repE*(a.sex==='m'?0.92:1)){mode=mate(a,s,sense)}
+  if(mode==='wander'){a.dir+=gauss()*0.5*Math.min(1,dt*2);
+    if(s.thirst&&s.hab==='land'&&dw[i]>18&&rainAt(i)<0.6&&rnd()<0.4){// stay within reach of water
+      let best=dw[i],bj=-1;for(const j of [i-1,i+1,i-GW,i+GW]){if(j>=0&&j<N&&dw[j]<best){best=dw[j];bj=j}}if(bj>=0)a.dir=lerpAng(a.dir,Math.atan2(((bj/GW)|0)+.5-a.y,bj%GW+.5-a.x),.5)}
+    if(s.herd&&rnd()<0.3){let cx=0,cy=0,n=0;nearSp([a.sp],a.x,a.y,sense*0.7,b=>{if(b!==a&&n<8){cx+=b.x;cy+=b.y;n++}});if(n){cx/=n;cy/=n;const d=Math.hypot(cx-a.x,cy-a.y);if(d>2.5)a.dir=lerpAng(a.dir,Math.atan2(cy-a.y,cx-a.x),.35)}}
+    spd*=0.45}
+  if(mode==='mate')spd*=0.9;
+  a.state=mode;
+  if(spd>0)move(a,spd*dt*SPD_CELLS)}
+function lerpAng(a,b,t){let d=((b-a+Math.PI)%TAU+TAU)%TAU-Math.PI;return a+d*t}
+function move(a,dist){const steps=Math.max(1,Math.ceil(dist/1.5)),d=dist/steps;
+  for(let k=0;k<steps;k++){let ok=false;for(const off of [0,.6,-.6,1.2,-1.2,2.2,-2.2,Math.PI]){const ang=a.dir+off,nx=a.x+Math.cos(ang)*d,ny=a.y+Math.sin(ang)*d,j=idx(nx,ny);if(j>=0&&habitatOK(a.sp,j)){a.x=nx;a.y=ny;if(off)a.dir=ang;ok=true;break}}if(!ok){a.dir=rnd()*TAU;break}}}
+function feed(a,s,g,i,sense,dt){
+  if(s.diet==='herb'||s.diet==='omni'){
+    if(s.diet==='omni'){// fruit first
+      let best=null,bd=1e9;nearTrees(a.x,a.y,sense,(t,d2)=>{if(TK[t.k].fruit&&t.fruit>0.15&&d2<bd){bd=d2;best=t}});
+      if(best){if(bd<2.5){const take=Math.min(best.fruit,0.5*dt);best.fruit-=take;a.e=Math.min(1,a.e+take*1.2);return 'eat'}a.dir=Math.atan2(best.y-a.y,best.x-a.x);return 'forage'}}
+    if(s.hab==='water'){if(alg[i]>0.12){const take=Math.min(alg[i]-0.05,s.eat*dt);alg[i]-=take;a.e=Math.min(1,a.e+take*s.conv);return 'eat'}}
+    else if(s.diet==='herb'||!s.prey){const thr=s.sparse?0.05:s.mass>1?0.07:0.13;if(veg[i]>thr){const take=Math.min(veg[i]-thr*0.5,s.eat*dt);veg[i]-=take;a.e=Math.min(1,a.e+take*s.conv*(s.sparse&&veg[i]<0.2?1.4:1));return 'eat'}}
+    if(s.mass>1&&s.hab==='land'){let tr=null;nearTrees(a.x,a.y,1.6,t=>{if(t.k!=='cactus'||a.sp==='camel')tr=t});if(tr){a.e=Math.min(1,a.e+0.35*dt);tr.hp-=0.004*dt;return 'eat'}}// browse leaves
+    if(s.diet==='herb'){let bv=-1,bx=0,by=0;const F=s.hab==='water'?alg:veg;
+      if(a.ttl>0&&rnd()<0.8){a.ttl-=dt;a.dir=Math.atan2(a.ty-a.y,a.tx-a.x);return 'graze'}
+      for(let k=0;k<9;k++){const ang=rnd()*TAU,r=rnd()*sense,x=a.x+Math.cos(ang)*r,y=a.y+Math.sin(ang)*r,j=idx(x,y);if(j<0||!habitatOK(a.sp,j))continue;const v=F[j]-r*0.01;if(v>bv){bv=v;bx=x;by=y}}
+      if(bv>0.1){a.tx=bx;a.ty=by;a.ttl=2;a.dir=Math.atan2(by-a.y,bx-a.x);return 'graze'}return 'wander'}}
+  // carnivores (and omnivores without fruit)
+  let prey=null,pd=1e9;const R=sense;
+  nearSp(s.prey,a.x,a.y,R,(b,d2)=>{if(!canCatch(a,b))return;
+    const w=d2*(b.sick?0.5:1)*(b.age<SP[b.sp].mature?0.6:1);if(w<pd){pd=w;prey=b}});
+  if(!prey){if(s.diet==='omni'&&veg[i]>0.15){const take=Math.min(veg[i]-0.07,s.eat*dt);veg[i]-=take;a.e=Math.min(1,a.e+take*s.conv);return 'eat'}
+    if(a.ttl>0){a.ttl-=dt;const d=Math.hypot(a.tx-a.x,a.ty-a.y);if(d>1){a.dir=Math.atan2(a.ty-a.y,a.tx-a.x);return 'track'}a.ttl=0}
+    {let bd=1e9;nearSp(s.prey,a.x,a.y,60,(b,d2)=>{if(d2<bd&&canCatch(a,b)){bd=d2;a.tx=b.x;a.ty=b.y}});if(bd>=1e9&&((a.id+(S.t|0))%5)===0){for(const b of S.animals){if(b.dead||!s.prey.includes(b.sp)||!canCatch(a,b))continue;const d2=(b.x-a.x)**2+(b.y-a.y)**2;if(d2<bd){bd=d2;a.tx=b.x;a.ty=b.y}}}// nothing near: head for the closest prey anywhere
+    if(bd<1e9){a.ttl=bd>3600?15:6;a.dir=Math.atan2(a.ty-a.y,a.tx-a.x);return 'track'}}
+    return 'wander'}
+  const d=Math.hypot(prey.x-a.x,prey.y-a.y);a.dir=Math.atan2(prey.y-a.y,prey.x-a.x);a.prey=prey.id;a.sprint=d<6;
+  if(d<0.9+SP[a.sp].len/12*g.size+s.spd*g.speed*dt*0.9){if(a.hc>0)return 'hunt';
+    const ps=SP[prey.sp].spd*prey.genes.speed*(prey.age<SP[prey.sp].mature?0.7:1),hs=s.spd*g.speed;
+    let p=clamp(0.6+0.6*(hs-ps)/ps+0.15*(g.size-prey.genes.size)+(prey.sick?0.25:0)-(SP[prey.sp].herd&&prey.state!=='flee'?0.05:0),0.08,0.92);
+    if(prey.state!=='flee')p=Math.min(0.95,p+0.2);
+    {const pi=idx(prey.x,prey.y);if(SP[prey.sp].mass<0.5&&pi>=0&&veg[pi]>0.6)p*=0.7;if((SPN[prey.sp]||0)<20)p*=0.5}// small prey hide in thick grass
+    if(rnd()<p){kill(prey,'eaten');a.kills++;S.kills++;chEv('kill',{pred:a.sp,prey:prey.sp});a.e=Math.min(1,a.e+SP[prey.sp].mass/s.mass*1.3);a.hc=0.5;return 'eat'}
+    a.hc=0.6;prey.dir=Math.atan2(prey.y-a.y,prey.x-a.x);return 'hunt'}
+  return 'hunt'}
+// bears only take young deer; land and air hunters only catch fish near the shore
+function canCatch(a,b){if(b===a)return false;if(a.sp==='bear'&&b.sp==='deer'&&b.age>SP.deer.mature)return false;if(b.sp==='fish'&&a.sp!=='otter'){const j=idx(b.x,b.y);if(j<0||dwLand(j)>2)return false}return true}
+function mate(a,s,sense){if(a.sex==='m'){let f=null,fd=1e9;nearSp([a.sp],a.x,a.y,sense,(b,d2)=>{if(b.sex==='f'&&!b.preg&&b.age>s.mature&&b.cd<=0&&b.e>s.repE&&d2<fd){fd=d2;f=b}});
+    if(!f&&((a.id+(S.t|0))%4)===0)nearSp([a.sp],a.x,a.y,45,(b,d2)=>{if(b.sex==='f'&&b.age>s.mature&&d2<fd){fd=d2;f=b}});if(!f)return 'wander';a.dir=Math.atan2(f.y-a.y,f.x-a.x);if(fd>sense*sense)return 'mate';if(fd<2.2){f.preg=s.gest*rr(.9,1.1);f.pg=a.genes;f.pgen=a.gen;f.pdad=a.id;a.cd=s.gest*0.2+5;f.cd=s.gest+10;chEv('mate',{sp:a.sp})}return 'mate'}
+  let m=null,md=1e9;nearSp([a.sp],a.x,a.y,sense,(b,d2)=>{if(b.sex==='m'&&b.age>s.mature&&b.cd<=0&&d2<md){md=d2;m=b}});if(!m)return 'wander';a.dir=Math.atan2(m.y-a.y,m.x-a.x);return 'mate'}
+function giveBirth(a){const s=SP[a.sp];const n=ri(s.litter[0],s.litter[1]);let born=0;
+  for(let k=0;k<n;k++){const g=mixGenes(a.genes,a.pg||a.genes);const b=addAnimal(a.sp,a.x+gauss()*.6,a.y+gauss()*.6,{genes:g,age:0,e:.8,gen:Math.max(a.gen,a.pgen||1)+1,mom:a.id});if(!b)break;if(s.hab!=='water')b.momRef=a;
+    if(!habitatOK(b.sp,idx(b.x,b.y))){b.x=a.x;b.y=a.y}born++;S.born++;const BB=S.births||(S.births={});BB[a.sp]=(BB[a.sp]||0)+1;chEv('birth',{sp:a.sp,gen:b.gen})}
+  a.kids+=born;const dad=a.pdad&&S.animals.find(z=>z.id===a.pdad);if(dad)dad.kids+=born;a.e=Math.max(.3,a.e-0.04*born);a.pg=null}
+
+/* ---------- trees ---------- */
+function addTree(k,x,y,o={}){if(S.trees.length>=MAXT)return null;const t={id:S.nextId++,k,x,y,age:o.age??rr(800,9000),size:o.size??rr(.5,1),hp:1,fruit:rr(0,.6),life:TK[k].life*rr(.7,1.2),rot:rnd()*TAU};S.trees.push(t);return t}
+function treeOK(k,i){if(i<0||isWater(i))return false;const t=TK[k],T=meanT(i),R=rainAt(i);return T>=t.tmin-2&&T<=t.tmax+2&&R>=t.rmin*0.8&&R<=t.rmax&&elevKm(i)<3.2}
+function stepTrees(dt){let crowd;
+  for(const t of S.trees){if(t.dead)continue;const i=idx(t.x,t.y),k=TK[t.k];t.age+=dt;
+    if(i<0||isWater(i)){t.dead=true;t.cause='flooded';continue}
+    const T=meanT(i),R=rainAt(i);const bad=Math.max(0,k.tmin-T)+Math.max(0,T-k.tmax)+Math.max(0,(k.rmin-R)*20)+Math.max(0,(R-k.rmax)*20);
+    if(bad>1)t.hp-=bad*0.0025*dt;else t.hp=Math.min(1,t.hp+0.01*dt);
+    if(t.hp<=0||t.age>t.life){t.dead=true;t.cause=t.hp<=0?'climate':'old age';continue}
+    t.size=Math.min(1,t.size+0.0006*dt*(bad>1?0.2:1));
+    if(k.fruit){const sf=cellT(i)>6?1:0;t.fruit=Math.min(1,t.fruit+0.012*dt*sf*(1-CL.dust/15))}
+    if(t.size>0.55&&bad<1&&rnd()<0.0016*dt){const ang=rnd()*TAU,r=rr(1.5,6),x=t.x+Math.cos(ang)*r,y=t.y+Math.sin(ang)*r,j=idx(x,y);
+      if(treeOK(t.k,j)){let n=0;nearTrees(x,y,1.6,()=>n++);if(n===0)addTree(t.k,x,y,{age:0,size:0.08})}}}}
+
+/* ---------- fire, meteors, events ---------- */
+function ignite(i){if(i<0||isWater(i)||burn[i]>0)return false;burn[i]=rr(1.5,3);S.burning.add(i);return true}
+function stepFire(dt){if(!S.burning.size)return;const done=[];
+  for(const i of S.burning){burn[i]-=dt;veg[i]=Math.max(0,veg[i]-0.8*dt);scar[i]=1;
+    if(rnd()<0.6)S.parts.push({x:i%GW+rnd(),y:((i/GW)|0)+rnd(),vx:gauss()*.3,vy:-rr(.6,1.6),life:rr(1,2.5),max:2.5,k:'smoke'});
+    const x=i%GW,dry=clamp(1.25-rainAt(i)*0.8,0.1,1.2);
+    for(const j of [x>0?i-1:-1,x<GW-1?i+1:-1,i-GW,i+GW]){if(j<0||j>=N||burn[j]>0||isWater(j))continue;let fuel=veg[j];nearTrees(j%GW+.5,((j/GW)|0)+.5,1,()=>fuel+=0.6);if(rnd()<fuel*dry*0.9*dt)ignite(j)}
+    nearTrees(x+.5,((i/GW)|0)+.5,1.2,t=>{if(!t.dead&&rnd()<0.7*dt){t.dead=true;t.cause='fire'}});
+    if(burn[i]<=0){burn[i]=0;done.push(i)}}
+  for(const i of done)S.burning.delete(i)}
+function meteor(x,y,R=10){chEv('meteor',{});for(let yy=-R*1.6;yy<=R*1.6;yy++)for(let xx=-R*1.6;xx<=R*1.6;xx++){const i=idx(x+xx,y+yy);if(i<0)continue;const d=Math.hypot(xx,yy)/R;
+    if(d<1){hgt[i]=Math.max(0.02,hgt[i]-0.14*(1-d*d));veg[i]=0;scar[i]=1}else if(d<1.25){hgt[i]=Math.min(1,hgt[i]+0.03*(1.25-d)*4);veg[i]=0;scar[i]=1}else if(d<1.6&&rnd()<0.5)ignite(i)}
+  for(const a of S.animals)if(Math.hypot(a.x-x,a.y-y)<R*1.3)kill(a,'meteor');for(const t of S.trees)if(Math.hypot(t.x-x,t.y-y)<R*1.3){t.dead=true;t.cause='meteor'}
+  CL.dust=Math.min(14,CL.dust+6);for(let k=0;k<80;k++){const ang=rnd()*TAU,v=rr(2,9);S.parts.push({x,y,vx:Math.cos(ang)*v,vy:Math.sin(ang)*v,life:rr(.6,1.4),max:1.4,k:'spark'})}
+  S.flash={x,y,t:1};terrainChanged()}
+function plague(sp){const L=S.animals.filter(a=>!a.dead&&(!sp||a.sp===sp));if(!L.length)return 0;let n=0;for(const a of L)if(rnd()<0.18){a.sick=rr(15,35);n++}return n}
+
+/* ---------- one simulation step ---------- */
+function simStep(dt){S.t+=dt;SEASON=seasonF();if(CL.dust>0)CL.dust=Math.max(0,CL.dust-CL.dust*dt/420-0.0005*dt);
+  rebuildHash();const L=S.animals;for(let k=0;k<L.length;k++){const a=L[k];if(!a.dead)stepAnimal(a,dt)}
+  stepFire(dt);
+  S.treeAcc=(S.treeAcc||0)+dt;if(S.treeAcc>=2){rebuildTrees();stepTrees(S.treeAcc);S.treeAcc=0;S.trees=S.trees.filter(t=>!t.dead)}
+  if(S.animals.some(a=>a.dead))S.animals=S.animals.filter(a=>!a.dead);
+  if(S.t-S.lastHist>=5){S.lastHist=S.t;sampleHist()}}
+function counts(){const c={};for(const k of SPK)c[k]=0;for(const a of S.animals)if(!a.dead)c[a.sp]++;return c}
+function sampleHist(){const c=counts();c.trees=S.trees.length;c.t=S.t;let v=0,n=0;for(let i=0;i<N;i+=7)if(!isWater(i)){v+=veg[i];n++}c.veg=n?v/n:0;S.hist.push(c);if(S.hist.length>720)S.hist=S.hist.filter((_,k)=>k%2===0)}
+function vegCover(){let v=0,n=0;for(let i=0;i<N;i+=3)if(!isWater(i)){n++;if(veg[i]>0.25)v++}return n?v/n:0}
+function avgGene(sp,k){let s=0,n=0;for(const a of S.animals)if(!a.dead&&a.sp===sp){s+=a.genes[k];n++}return n?s/n:NaN}
+function speciesAlive(){return SPK.filter(k=>S.animals.some(a=>!a.dead&&a.sp===k))}
+
+/* ================= rendering ================= */
+const cv=$('world'),ctx=cv.getContext('2d');let gx=ctx;let W=0,H=0,DPR=1;
+const cam={x:GW*CELL/2,y:GH*CELL/2,z:1,ox:0};
+// terrain is coloured per cell, then drawn at 3x with smooth blending and fine grain for texture
+const UP=3,off=document.createElement('canvas');off.width=GW*UP;off.height=GH*UP;const octx=off.getContext('2d');const big=octx.createImageData(GW*UP,GH*UP);
+const img={data:new Uint8ClampedArray(N*4)};const GRAIN=new Float32Array(GW*UP*GH*UP);{const r=seeded(17);for(let i=0;i<GRAIN.length;i++)GRAIN[i]=0.96+r()*0.08}
+const tex=document.createElement('canvas');tex.width=tex.height=192;{const t=tex.getContext('2d'),d=t.createImageData(192,192),r=seeded(5);for(let i=0;i<d.data.length;i+=4){const v=110+r()*90|0;d.data[i]=d.data[i+1]=d.data[i+2]=v;d.data[i+3]=255}t.putImageData(d,0,0)}
+let texPat=null;
+function resize(){DPR=Math.min(2,devicePixelRatio||1);W=innerWidth;H=innerHeight;cv.width=W*DPR;cv.height=H*DPR;ctx.setTransform(DPR,0,0,DPR,0,0)}
+const sx=wx=>(wx*CELL-cam.x)*cam.z+W/2+cam.ox,sy=wy=>(wy*CELL-cam.y)*cam.z+H/2;
+const wxOf=px=>((px-W/2-cam.ox)/cam.z+cam.x)/CELL,wyOf=py=>((py-H/2)/cam.z+cam.y)/CELL;
+function fitWorld(){cam.z=Math.min(W/(GW*CELL),H/(GH*CELL))*1.02;cam.x=GW*CELL/2;cam.y=GH*CELL/2}
+function zoomAt(f,px,py){const wx=wxOf(px),wy=wyOf(py);cam.z=clamp(cam.z*f,0.25,14);cam.x=wx*CELL-(px-W/2-cam.ox)/cam.z;cam.y=wy*CELL-(py-H/2)/cam.z;S.follow=false}
+function heatCol(t){// -30..45 °C
+  const u=clamp((t+30)/75,0,1);const st=[[40,60,170],[60,150,220],[120,200,140],[240,220,90],[235,120,50],[180,30,40]];const f=u*(st.length-1),k=Math.min(st.length-2,f|0),q=f-k;return st[k].map((c,j)=>c+(st[k+1][j]-c)*q)}
+function paintTerrain(){const d=img.data,s=sea(),v=S.view;
+  for(let i=0;i<N;i++){const x=i%GW,y=(i/GW)|0,h=hgt[i];let r,g,b;
+    const hl=x>0&&y>0?hgt[i-GW-1]:h,hr=x<GW-1&&y<GH-1?hgt[i+GW+1]:h;const shade=1+clamp((hl-hr)*9,-.35,.35);
+    if(v==='temp'){[r,g,b]=heatCol(cellT(i));if(h<s){r*=.7;g*=.7;b*=.8}}
+    else if(v==='rain'){const R=clamp(rainAt(i)/1.4,0,1);r=lerp(200,30,R);g=lerp(170,110,R);b=lerp(110,220,R);if(h<s){r=20;g=40;b=80}}
+    else if(v==='food'){if(h<s){const a=alg[i];r=10;g=30+a*120;b=60+a*80}else{const f=veg[i];r=lerp(60,40,f);g=lerp(45,210,f);b=lerp(35,60,f)}}
+    else if(h<s){const dep=clamp((s-h)/0.12,0,1),T=cellT(i),a=alg[i];r=lerp(62,14,dep);g=lerp(140,48,dep);b=lerp(160,92,dep);g+=a*22*(1-dep*0.5);r-=a*8;
+      if(T<-3){const ice=clamp((-3-T)/6,0,1)*(dep<0.7?1:0.4);r=lerp(r,214,ice);g=lerp(g,228,ice);b=lerp(b,238,ice)}}
+    else{const T=cellT(i),Tm=meanT(i),R=rainAt(i),ek=elevKm(i),f=veg[i];
+      const sand=h<s+0.012||(R<0.22&&Tm>8);let br,bg,bb;if(sand){br=214;bg=192;bb=140}else if(ek>3){br=118;bg=112;bb=104}else if(Tm<-6){br=138;bg=134;bb=118}else{br=116;bg=94;bb=66}
+      let gr,gg,gb;if(Tm>24&&R>0.8){gr=34;gg=104;gb=40}else if(Tm>20&&R<0.55){gr=164;gg=156;gb=74}else if(Tm<2){gr=74;gg=104;gb=60}else if(R>0.75){gr=52;gg=110;gb=44}else{gr=104;gg=146;gb=58}
+      const t=clamp(f*1.15,0,1);r=lerp(br,gr,t);g=lerp(bg,gg,t);b=lerp(bb,gb,t);
+      if(scar[i]>0){const c=scar[i]*0.8;r=lerp(r,34,c);g=lerp(g,30,c);b=lerp(b,26,c)}
+      if(T<-3||ek>3.8){const sn=clamp(Math.max((-3-T)/4,(ek-3.8)*1.5),0,1)*(R>0.12?1:0.4);r=lerp(r,238,sn);g=lerp(g,242,sn);b=lerp(b,246,sn)}
+      r*=shade;g*=shade;b*=shade}
+    const o=i*4;d[o]=r;d[o+1]=g;d[o+2]=b;d[o+3]=255}
+  const B=big.data,BW2=GW*UP,gr=v==='normal';
+  for(let Y=0;Y<GH*UP;Y++){const fy=(Y+.5)/UP-.5,y0=Math.max(0,Math.floor(fy)),y1=Math.min(GH-1,y0+1),ty=clamp(fy-y0,0,1);
+    for(let X=0;X<BW2;X++){const fx=(X+.5)/UP-.5,x0=Math.max(0,Math.floor(fx)),x1=Math.min(GW-1,x0+1),tx=clamp(fx-x0,0,1);
+      const a=(y0*GW+x0)*4,b2=(y0*GW+x1)*4,c=(y1*GW+x0)*4,e=(y1*GW+x1)*4,o=(Y*BW2+X)*4,q=Y*BW2+X,gn=gr?GRAIN[q]:1;
+      for(let k=0;k<3;k++){const top=d[a+k]+(d[b2+k]-d[a+k])*tx,bot=d[c+k]+(d[e+k]-d[c+k])*tx,vv=top+(bot-top)*ty;B[o+k]=vv>200?vv:vv*gn}B[o+3]=255}}
+  octx.putImageData(big,0,0);S.terrainDirty=false}
+function drawTree(t,X,Y,z){const k=TK[t.k],s=(0.45+t.size*0.75)*z*CELL;
+  gx.fillStyle='rgba(0,0,0,.28)';gx.beginPath();gx.ellipse(X+s*0.35,Y+s*0.4,s*1.05,s*0.75,0,0,TAU);gx.fill();
+  if(t.k==='pine'){gx.fillStyle='#1d3a22';gx.beginPath();for(let q=0;q<16;q++){const a=q/16*TAU+t.rot,r=q%2?s*0.55:s*1.05;gx.lineTo(X+Math.cos(a)*r,Y+Math.sin(a)*r)}gx.fill();gx.fillStyle='#2e5a33';gx.beginPath();gx.arc(X-s*.12,Y-s*.12,s*.45,0,TAU);gx.fill()}
+  else if(t.k==='palm'){gx.strokeStyle='#4f7d2c';gx.lineWidth=Math.max(1,s*0.28);gx.lineCap='round';for(let q=0;q<7;q++){const a=q/7*TAU+t.rot;gx.beginPath();gx.moveTo(X,Y);gx.quadraticCurveTo(X+Math.cos(a+.3)*s*.8,Y+Math.sin(a+.3)*s*.8,X+Math.cos(a)*s*1.3,Y+Math.sin(a)*s*1.3);gx.stroke()}gx.fillStyle='#6b5333';gx.beginPath();gx.arc(X,Y,s*.2,0,TAU);gx.fill()}
+  else if(t.k==='cactus'){gx.fillStyle='#5c8a4b';const w=s*.32;gx.beginPath();gx.roundRect(X-w,Y-s*.9,w*2,s*1.8,w);gx.fill();gx.beginPath();gx.roundRect(X-s*.85,Y-s*.25,s*.6,w*1.4,w*.6);gx.fill();gx.beginPath();gx.roundRect(X+s*.25,Y-s*.55,s*.6,w*1.4,w*.6);gx.fill();gx.fillStyle='rgba(255,255,255,.15)';gx.fillRect(X-w*.4,Y-s*.8,w*.3,s*1.5)}
+  else{const g=gx.createRadialGradient(X-s*.35,Y-s*.35,s*.1,X,Y,s*1.05);const c=t.k==='bush'?['#5b8a48','#2c4a27']:['#5f9443','#2c4f25'];g.addColorStop(0,c[0]);g.addColorStop(1,c[1]);gx.fillStyle=g;gx.beginPath();gx.arc(X,Y,s*(t.k==='bush'?.7:1),0,TAU);gx.fill();
+    if(t.k==='bush'&&t.fruit>0.25&&z>0.8){gx.fillStyle='#5560c8';for(let q=0;q<Math.round(t.fruit*6);q++){const a=q*2.4+t.rot;gx.beginPath();gx.arc(X+Math.cos(a)*s*.4,Y+Math.sin(a)*s*.4,Math.max(1,s*.1),0,TAU);gx.fill()}}}
+  if(t.hp<0.6){gx.fillStyle=`rgba(150,120,60,${(0.6-t.hp)*0.9})`;gx.beginPath();gx.arc(X,Y,s*.9,0,TAU);gx.fill()}}
+function drawAnimal(a,X,Y,z,big){const s=SP[a.sp],k=(a.age<s.mature?0.55+0.45*a.age/s.mature:1)*Math.pow(a.genes.size,.6);let L=s.len*k*z*(big||1)*0.9,Wd=L*s.wid;
+  if(L<2.2&&!big){gx.fillStyle=a.col;gx.fillRect(X-1.2,Y-1.2,2.4,2.4);return}
+  gx.save();gx.translate(X,Y);gx.rotate(a.dir);
+  if(s.hab==='air'){const sh=L*0.9;gx.fillStyle='rgba(0,0,0,.2)';gx.save();gx.translate(sh,sh);hawkShape(L);gx.fill();gx.restore();gx.fillStyle=a.col;hawkShape(L);gx.fill();gx.fillStyle='#e8e0d0';gx.beginPath();gx.arc(L*.42,0,L*.1,0,TAU);gx.fill();gx.restore();return}
+  if(s.hab!=='water'){gx.fillStyle='rgba(0,0,0,.25)';gx.beginPath();gx.ellipse(L*.08,L*.12,L*.55,Wd*.6,0,0,TAU);gx.fill()}
+  gx.fillStyle=a.col;
+  if(a.sp==='fish'){gx.globalAlpha=.9;gx.beginPath();gx.ellipse(0,0,L/2,Wd/2,0,0,TAU);gx.fill();gx.beginPath();gx.moveTo(-L*.4,0);gx.lineTo(-L*.75,-Wd*.6);gx.lineTo(-L*.75,Wd*.6);gx.fill();gx.globalAlpha=1;gx.restore();return}
+  // tail
+  if(a.sp==='fox'||a.sp==='wolf'||a.sp==='lion'||a.sp==='otter'){gx.strokeStyle=a.col;gx.lineWidth=Math.max(1,Wd*(a.sp==='fox'?.45:.25));gx.lineCap='round';gx.beginPath();gx.moveTo(-L*.4,0);gx.quadraticCurveTo(-L*.65,Wd*.3*Math.sin(S.t*3+a.id),-L*(a.sp==='fox'?.85:.75),0);gx.stroke()}
+  gx.beginPath();gx.ellipse(0,0,L/2,Wd/2,0,0,TAU);gx.fill();
+  if(a.sp==='zebra'&&L>6){gx.strokeStyle='#222';gx.lineWidth=Math.max(.6,L*.04);for(let q=-3;q<=3;q++){gx.beginPath();gx.moveTo(q*L*.1,-Wd*.45);gx.lineTo(q*L*.1+L*.03,Wd*.45);gx.stroke()}}
+  if(a.sp==='camel'){gx.fillStyle='rgba(120,85,40,.45)';gx.beginPath();gx.arc(-L*.05,0,Wd*.35,0,TAU);gx.fill();gx.fillStyle=a.col}
+  const hx=L*.5,hr=Wd*.42;gx.fillStyle=shadeCol(a.col,-18);gx.beginPath();gx.arc(hx,0,hr,0,TAU);gx.fill();
+  if(a.sp==='rabbit'){gx.beginPath();gx.ellipse(hx-hr*.4,-hr*.7,hr*1,hr*.32,-.5,0,TAU);gx.ellipse(hx-hr*.4,hr*.7,hr*1,hr*.32,.5,0,TAU);gx.fill()}
+  if(a.sp==='deer'&&a.sex==='m'&&a.age>s.mature){gx.strokeStyle='#d8c6a0';gx.lineWidth=Math.max(.6,L*.04);gx.beginPath();gx.moveTo(hx,-hr*.5);gx.lineTo(hx-hr,-hr*1.8);gx.moveTo(hx,hr*.5);gx.lineTo(hx-hr,hr*1.8);gx.stroke()}
+  if(a.sp==='lion'&&a.sex==='m'&&a.age>s.mature){gx.fillStyle='#8a5a28';gx.beginPath();gx.arc(hx-hr*.2,0,hr*1.45,0,TAU);gx.fill();gx.fillStyle=shadeCol(a.col,-10);gx.beginPath();gx.arc(hx+hr*.1,0,hr*.9,0,TAU);gx.fill()}
+  if(a.sick>0&&big!==2){gx.fillStyle='rgba(140,220,90,.55)';gx.beginPath();gx.arc(0,0,L*.3,0,TAU);gx.fill()}
+  gx.restore()}
+function hawkShape(L){gx.beginPath();gx.moveTo(L*.5,0);gx.lineTo(L*.05,-L*.12);gx.lineTo(-L*.1,-L*.9);gx.lineTo(-L*.3,-L*.85);gx.lineTo(-L*.2,-L*.1);gx.lineTo(-L*.55,-L*.18);gx.lineTo(-L*.55,L*.18);gx.lineTo(-L*.2,L*.1);gx.lineTo(-L*.3,L*.85);gx.lineTo(-L*.1,L*.9);gx.lineTo(L*.05,L*.12);gx.closePath()}
+function shadeCol(c,d){const m=c.match(/\d+/g);if(m)return`rgb(${clamp(+m[0]+d,0,255)},${clamp(+m[1]+d,0,255)},${clamp(+m[2]+d,0,255)})`;const n=parseInt(c.slice(1),16);return`rgb(${clamp((n>>16)+d,0,255)},${clamp((n>>8&255)+d,0,255)},${clamp((n&255)+d,0,255)})`}
+let lastPaint=0;
+function render(now){ctx.fillStyle='#08100c';ctx.fillRect(0,0,W,H);
+  if(S.terrainDirty||now-lastPaint>320){paintTerrain();lastPaint=now}
+  const x0=sx(0),y0=sy(0),ww=GW*CELL*cam.z,hh=GH*CELL*cam.z;ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';ctx.drawImage(off,x0,y0,ww,hh);
+  if(cam.z>1.4&&S.view==='normal'){if(!texPat)texPat=ctx.createPattern(tex,'repeat');ctx.save();ctx.globalAlpha=Math.min(.16,(cam.z-1.4)*.08);ctx.globalCompositeOperation='soft-light';ctx.translate(x0,y0);ctx.scale(cam.z/2,cam.z/2);ctx.fillStyle=texPat;ctx.fillRect(0,0,ww*2/cam.z,hh*2/cam.z);ctx.restore()}
+  const z=cam.z,vx0=wxOf(-40),vx1=wxOf(W+40),vy0=wyOf(-40),vy1=wyOf(H+40);
+  // fire
+  if(S.burning.size){for(const i of S.burning){const x=i%GW,y=(i/GW)|0;if(x<vx0||x>vx1||y<vy0||y>vy1)continue;const f=.6+.4*Math.sin(performance.now()/90+i);ctx.fillStyle=`rgba(255,${120+60*f|0},40,${.55+.3*f})`;ctx.fillRect(sx(x)-1,sy(y)-1,CELL*z+2,CELL*z+2)}}
+  // trees, sorted by y for a little depth
+  const vis=[];for(const t of S.trees)if(!t.dead&&t.x>vx0&&t.x<vx1&&t.y>vy0&&t.y<vy1)vis.push(t);vis.sort((a,b)=>a.y-b.y);
+  if(z<0.55){for(const t of vis){ctx.fillStyle=t.k==='pine'?'#1f3d24':t.k==='cactus'?'#5c8a4b':'#2f5527';const r=Math.max(1.2,(0.6+t.size)*z*CELL*0.8);ctx.fillRect(sx(t.x)-r/2,sy(t.y)-r/2,r,r)}}else for(const t of vis)drawTree(t,sx(t.x),sy(t.y),z);
+  // animals (birds last)
+  const air=[];for(const a of S.animals){if(a.dead||a.x<vx0||a.x>vx1||a.y<vy0||a.y>vy1)continue;if(SP[a.sp].hab==='air'){air.push(a);continue}drawAnimal(a,sx(a.x),sy(a.y),z)}for(const a of air)drawAnimal(a,sx(a.x),sy(a.y),z);
+  // particles
+  for(const p of S.parts){const X=sx(p.x),Y=sy(p.y),u=p.life/p.max;if(p.k==='smoke'){ctx.fillStyle=`rgba(70,70,70,${u*.35})`;ctx.beginPath();ctx.arc(X,Y,(1-u)*10*z+2,0,TAU);ctx.fill()}else{ctx.fillStyle=`rgba(255,${180*u|0},60,${u})`;ctx.fillRect(X-1.5,Y-1.5,3,3)}}
+  if(S.flash&&S.flash.t>0){const X=sx(S.flash.x),Y=sy(S.flash.y),r=(1-S.flash.t)*160*z+20;const g=ctx.createRadialGradient(X,Y,0,X,Y,r);g.addColorStop(0,`rgba(255,240,200,${S.flash.t})`);g.addColorStop(1,'rgba(255,120,40,0)');ctx.fillStyle=g;ctx.beginPath();ctx.arc(X,Y,r,0,TAU);ctx.fill()}
+  if(S.falling){const f=S.falling,u=f.t;const X=sx(f.x)+(1-u)*-300,Y=sy(f.y)+(1-u)*-300;ctx.strokeStyle='rgba(255,200,120,.8)';ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(X-60,Y-60);ctx.lineTo(X,Y);ctx.stroke();ctx.fillStyle='#fff3d0';ctx.beginPath();ctx.arc(X,Y,5,0,TAU);ctx.fill()}
+  // dust dims the world after a meteor
+  if(CL.dust>0.3){ctx.fillStyle=`rgba(60,45,30,${Math.min(.45,CL.dust/30)})`;ctx.fillRect(0,0,W,H)}
+  // selection and brush
+  const sel=S.sel;if(sel&&!sel.dead){const X=sx(sel.x),Y=sy(sel.y),r=Math.max(10,(SP[sel.sp]?SP[sel.sp].len:6)*z*0.9);ctx.strokeStyle='#ffc35a';ctx.lineWidth=1.5;ctx.beginPath();ctx.arc(X,Y,r,0,TAU);ctx.stroke()}
+  if(ptr.in&&BRUSH_TOOLS.has(S.tool)){ctx.strokeStyle='rgba(255,255,255,.5)';ctx.setLineDash([4,4]);ctx.beginPath();ctx.arc(ptr.x,ptr.y,S.brush*CELL*z,0,TAU);ctx.stroke();ctx.setLineDash([])}}
+
+/* ================= input ================= */
+const TOOLS=[['select','Select','🖐','Tools'],
+ ['grass','Grass','🌱','Plants'],['oak','Oak','🌳'],['pine','Pine','🌲'],['palm','Palm','🌴'],['cactus','Cactus','🌵'],['bush','Berries','🫐'],['algae','Algae','🌿'],
+ ...SPK.map((k,j)=>[k,SP[k].n,SP[k].ic,j===0?'Animals':0]),
+ ['raise','Raise','⛰','Land'],['lower','Lower','🕳'],['water','Water','💧'],['rain','Rain','🌧'],['fire','Fire','🔥'],['meteor','Meteor','☄'],['plague','Disease','🦠'],['remove','Remove','✖']];
+const BRUSH_TOOLS=new Set(['grass','algae','raise','lower','water','rain','fire','plague','remove']);
+function buildRail(){const r=$('rail');r.textContent='';for(const [id,label,ic,grp] of TOOLS){if(grp){const h=document.createElement('h3');h.textContent=grp;r.appendChild(h)}
+  const b=document.createElement('button');b.className='tool';b.dataset.tool=id;b.setAttribute('aria-pressed','false');b.title=toolTip(id);b.innerHTML='<span class="ico"></span><span></span>';b.children[0].textContent=ic;b.children[1].textContent=label;b.onclick=()=>setTool(id);r.appendChild(b)}}
+function toolTip(id){if(SP[id])return`${SP[id].n}: click to release ${SP[id].pl.toLowerCase()} (${SP[id].diet==='herb'?'plant eater':SP[id].diet==='carn'?'hunter':'eats anything'})`;if(TK[id])return`${TK[id].n}: click to plant (grows where the climate suits it)`;
+  return{select:'Select, inspect and look around (1)',grass:'Paint grass seeds',algae:'Seed algae in water (fish food)',raise:'Raise the land (makes hills and mountains)',lower:'Lower the land',water:'Flood an area to make lakes',rain:'Make an area wetter',fire:'Start a fire',meteor:'Drop a meteor',plague:'Spread a disease',remove:'Remove life in an area'}[id]||id}
+function setTool(t){S.tool=t;document.querySelectorAll('.tool').forEach(b=>b.setAttribute('aria-pressed',b.dataset.tool===t?'true':'false'));cv.classList.toggle('place',t!=='select');
+  $('placeopts').hidden=t==='select';$('cntK').hidden=$('cntSeg').hidden=!SP[t];
+  $('hint').textContent=t==='select'?'Drag to look around · scroll to zoom · click an animal to inspect it':SP[t]?`Click to release ${SP[t].pl.toLowerCase()} · right-drag or WASD to move the camera`:TK[t]?'Click or drag to plant · it only grows in a suitable climate':t==='meteor'?'Click where the meteor should hit':'Drag to paint · change the brush size at the bottom'}
+const ptr={x:0,y:0,in:false,down:false,pan:false,lx:0,ly:0,moved:0,id:null,pts:new Map(),pinch:0,lastPaint:{x:-99,y:-99}};
+cv.addEventListener('contextmenu',e=>e.preventDefault());
+cv.addEventListener('pointerdown',e=>{cv.setPointerCapture(e.pointerId);ptr.pts.set(e.pointerId,{x:e.clientX,y:e.clientY});if(ptr.pts.size===2){const [a,b]=[...ptr.pts.values()];ptr.pinch=Math.hypot(a.x-b.x,a.y-b.y);ptr.down=false;return}
+  ptr.down=true;ptr.moved=0;ptr.lx=e.clientX;ptr.ly=e.clientY;ptr.pan=e.button===2||e.button===1||S.tool==='select';ptr.btn=e.button;
+  if(!ptr.pan)applyTool(e.clientX,e.clientY,true)});
+cv.addEventListener('pointermove',e=>{ptr.x=e.clientX;ptr.y=e.clientY;ptr.in=true;if(ptr.pts.has(e.pointerId))ptr.pts.set(e.pointerId,{x:e.clientX,y:e.clientY});
+  if(ptr.pts.size===2){const [a,b]=[...ptr.pts.values()],d=Math.hypot(a.x-b.x,a.y-b.y);if(ptr.pinch)zoomAt(d/ptr.pinch,(a.x+b.x)/2,(a.y+b.y)/2);ptr.pinch=d;return}
+  if(!ptr.down)return;const dx=e.clientX-ptr.lx,dy=e.clientY-ptr.ly;ptr.moved+=Math.abs(dx)+Math.abs(dy);ptr.lx=e.clientX;ptr.ly=e.clientY;
+  if(ptr.pan){cam.x-=dx/cam.z;cam.y-=dy/cam.z;if(ptr.moved>4)S.follow=false;CAMMOVED+=Math.abs(dx)+Math.abs(dy)}else if(BRUSH_TOOLS.has(S.tool)||TK[S.tool])applyTool(e.clientX,e.clientY,false)});
+const endPtr=e=>{ptr.pts.delete(e.pointerId);if(ptr.pts.size<2)ptr.pinch=0;if(!ptr.down)return;ptr.down=false;if(ptr.pan&&ptr.btn===0&&ptr.moved<5&&S.tool==='select')pick(e.clientX,e.clientY)};
+cv.addEventListener('pointerup',endPtr);cv.addEventListener('pointercancel',endPtr);cv.addEventListener('pointerleave',()=>ptr.in=false);
+cv.addEventListener('dblclick',e=>{if(S.tool!=='select')return;pick(e.clientX,e.clientY);if(S.sel){S.follow=true;cam.z=Math.max(cam.z,3.5);toast(`Following ${S.sel.k?TK[S.sel.k].n.toLowerCase():nameOf(S.sel)}`)}});
+cv.addEventListener('wheel',e=>{e.preventDefault();zoomAt(Math.exp(-e.deltaY*(e.ctrlKey?0.012:0.0022)),e.clientX,e.clientY);ZOOMED++},{passive:false});
+let CAMMOVED=0,ZOOMED=0;
+function pick(px,py){const wx=wxOf(px),wy=wyOf(py),r=Math.max(1.4,12/(cam.z*CELL));let best=null,bd=r*r;
+  for(const a of S.animals){if(a.dead)continue;const d=(a.x-wx)**2+(a.y-wy)**2;if(d<bd){bd=d;best=a}}
+  if(!best){let td=(r*1.2)**2;for(const t of S.trees){if(t.dead)continue;const d=(t.x-wx)**2+(t.y-wy)**2;if(d<td){td=d;best=t}}}
+  select(best)}
+function select(o){S.sel=o;S.selDead=null;if(!o)S.follow=false;buildInspector();if(o)showTab('insp')}
+function applyTool(px,py,first){const x=wxOf(px),y=wyOf(py),t=S.tool,i=idx(x,y);if(i<0)return;
+  if(SP[t]){if(!first)return;const n=spawnAt(t,x,y,S.count,false);if(!n)toast(SP[t].hab==='water'?`${SP[t].pl} need water: click on a lake or the sea`:SP[t].hab==='land'||SP[t].hab==='amph'?`${SP[t].pl} need land`:'No room');else{PLACED[t]=(PLACED[t]||0)+n;chEv('place',{sp:t,n})}return}
+  if(TK[t]){if(!first&&Math.hypot(x-ptr.lastPaint.x,y-ptr.lastPaint.y)<1.6)return;ptr.lastPaint={x,y};if(isWater(i)){if(first)toast('Trees need land');return}
+    let crowd=0;nearTrees(x,y,1.2,()=>crowd++);if(crowd&&!first)return;rebuildTreesSoon();const tr=addTree(t,x,y,{age:0,size:0.18});if(tr){PLACED[t]=(PLACED[t]||0)+1;if(first&&!treeOK(t,i))toast(`${TK[t].n} trees struggle here: ${meanT(i)<TK[t].tmin?'too cold':meanT(i)>TK[t].tmax?'too hot':rainAt(i)<TK[t].rmin?'too dry':'too wet'}`)}return}
+  if(t==='meteor'){if(!first||S.falling)return;S.falling={x,y,t:0};return}
+  const R=S.brush;let changed=false;
+  for(let yy=-R;yy<=R;yy++)for(let xx=-R;xx<=R;xx++){const d=Math.hypot(xx,yy);if(d>R)continue;const j=idx(x+xx,y+yy);if(j<0)continue;const f=1-d/(R+1);
+    if(t==='grass'){if(!isWater(j))veg[j]=Math.max(veg[j],0.25*f+0.05)}
+    else if(t==='algae'){if(isWater(j))alg[j]=Math.max(alg[j],0.5)}
+    else if(t==='raise'){hgt[j]=Math.min(1,hgt[j]+0.012*f);changed=true}
+    else if(t==='lower'){hgt[j]=Math.max(0.01,hgt[j]-0.012*f);changed=true}
+    else if(t==='water'){if(!isWater(j)){hgt[j]=sea()-0.006-0.02*f;changed=true;WATERED++}}
+    else if(t==='rain'){wet[j]=Math.min(1.2,wet[j]+0.15*f);RAINED++}
+    else if(t==='fire'){if(rnd()<0.5&&ignite(j))chEv('fire',{})}
+    else if(t==='remove'){veg[j]*=0.5}}
+  if(t==='plague')near(x,y,R,a=>{if(rnd()<.6)a.sick=rr(15,35)});
+  if(t==='remove'){near(x,y,R,a=>kill(a,'removed'));for(const tr of S.trees)if(Math.hypot(tr.x-x,tr.y-y)<R){tr.dead=true;tr.cause='removed'}S.trees=S.trees.filter(q=>!q.dead);S.animals=S.animals.filter(q=>!q.dead)}
+  if(changed)terrainChangedSoon();S.terrainDirty=true}
+let PLACED={},WATERED=0,RAINED=0,tcTimer=0,rtTimer=0;
+function terrainChangedSoon(){clearTimeout(tcTimer);tcTimer=setTimeout(terrainChanged,120)}
+function rebuildTreesSoon(){clearTimeout(rtTimer);rtTimer=setTimeout(rebuildTrees,50)}
+const KEYS=new Set();
+addEventListener('keydown',e=>{if(['INPUT','TEXTAREA','SELECT'].includes(e.target.tagName))return;
+  if(!$('acct').hidden){if(e.key==='Escape')$('acct').hidden=true;return}
+  if(!$('home').hidden||!$('chDone').hidden){if(e.key==='Escape'&&!$('home').hidden)homeView('hMain');return}
+  if(document.body.classList.contains('mDemo')){if(e.key==='Escape')stopDemo();return}
+  const k=e.key.toLowerCase();if('wasd'.includes(k)&&k.length===1||e.key.startsWith('Arrow')){KEYS.add(k);e.preventDefault();return}
+  if(e.key===' '){e.preventDefault();setPaused(!S.paused)}else if(e.key==='Escape'){if(S.sel)select(null);else if(S.tool!=='select')setTool('select');$('scen').hidden=true}
+  else if(k==='1')setTool('select');else if(e.key==='+'||e.key==='=')zoomAt(1.3,W/2,H/2);else if(e.key==='-')zoomAt(1/1.3,W/2,H/2)});
+addEventListener('keyup',e=>KEYS.delete(e.key.toLowerCase()));
+function camKeys(dt){let dx=0,dy=0;if(KEYS.has('w')||KEYS.has('arrowup'))dy--;if(KEYS.has('s')||KEYS.has('arrowdown'))dy++;if(KEYS.has('a')||KEYS.has('arrowleft'))dx--;if(KEYS.has('d')||KEYS.has('arrowright'))dx++;
+  if(dx||dy){const v=500*dt/cam.z;cam.x+=dx*v;cam.y+=dy*v;S.follow=false;CAMMOVED+=v*cam.z}}
+$('zIn').onclick=()=>{zoomAt(1.4,W/2,H/2);ZOOMED++};$('zOut').onclick=()=>{zoomAt(1/1.4,W/2,H/2);ZOOMED++};$('zFit').onclick=()=>{fitWorld();S.follow=false};
+
+/* ================= panels ================= */
+function toast(msg){const box=$('toasts');const d=document.createElement('div');d.className='toast';d.textContent=msg;box.appendChild(d);while(box.children.length>3)box.firstChild.remove();setTimeout(()=>d.remove(),3200)}
+const SPEEDS=[[1,'1 day'],[7,'1 wk'],[30,'1 mo'],[182,'6 mo'],[365,'1 yr']];
+function buildSpeeds(){const b=$('spds');b.textContent='';for(const [v,l] of SPEEDS){const x=document.createElement('button');x.className='spd';x.textContent=l;x.dataset.v=v;x.onclick=()=>{setSpeed(v);setPaused(false)};b.appendChild(x)}}
+function setSpeed(v){S.speed=v;document.querySelectorAll('.spd').forEach(b=>b.setAttribute('aria-pressed',+b.dataset.v===v?'true':'false'))}
+function setPaused(p){S.paused=p;$('pauseBtn').textContent=p?'▶':'⏸';$('pauseBtn').setAttribute('aria-label',p?'Resume':'Pause')}
+$('pauseBtn').onclick=()=>setPaused(!S.paused);
+const fmtRate=d=>d>=365?`${(d/365).toFixed(d>=730?0:1)} yr / s`:d>=28?`${Math.round(d/30)} mo / s`:d>=7?`${Math.round(d/7)} wk / s`:`${d.toFixed(d<1?2:0)} day / s`;
+function dateTxt(){const y=Math.floor(S.t/365)+1,d=S.t%365;const se=['winter','spring','summer','autumn'][Math.floor(((d+10)%365)/91.25)];return`Year ${y}, ${se}`}
+function showTab(t){document.querySelectorAll('.tab').forEach(b=>b.setAttribute('aria-selected',b.dataset.tab===t?'true':'false'));for(const p of ['world','life','insp'])$('pane-'+p).hidden=p!==t;if(t==='life')LIFEOPEN++;if(t==='insp'&&S.sel&&!S.sel.k)INSPOPEN++}
+let LIFEOPEN=0,INSPOPEN=0;
+document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>showTab(b.dataset.tab));
+function syncClimateUI(){$('tempS').value=CL.temp;$('rainS').value=Math.round(CL.rain*100);$('seaS').value=CL.seaM;$('tempV').textContent=(CL.temp>=0?'+':'')+CL.temp+' °C';$('rainV').textContent=Math.round(CL.rain*100)+'%';$('seaV').textContent=(CL.seaM>=0?'+':'')+CL.seaM+' m';$('seasonBtn').setAttribute('aria-pressed',CL.seasons);$('seasonBtn').textContent=CL.seasons?'On':'Off'}
+$('tempS').oninput=e=>{CL.temp=+e.target.value;syncClimateUI();CLIMCH++};$('rainS').oninput=e=>{CL.rain=e.target.value/100;syncClimateUI();CLIMCH++};
+$('seaS').oninput=e=>{CL.seaM=+e.target.value;syncClimateUI();terrainChangedSoon();CLIMCH++};$('seasonBtn').onclick=()=>{CL.seasons=!CL.seasons;syncClimateUI()};
+let CLIMCH=0;
+function climateEvent(ev){chEv('event',{ev});EVN++;const vis=()=>{const c=[wxOf(W/2),wyOf(H/2)];return c};
+  if(ev==='ice'){CL.temp=-10;toast('An ice age begins: −10 °C')}else if(ev==='heat'){CL.temp=8;toast('A heat wave: +8 °C')}else if(ev==='drought'){CL.rain=0.3;toast('Drought: rainfall falls to 30%')}
+  else if(ev==='flood'){CL.seaM=60;terrainChanged();toast('The seas rise 60 m')}else if(ev==='normal'){CL.temp=0;CL.rain=1;CL.seaM=0;CL.dust=0;terrainChanged();toast('Climate back to normal')}
+  else if(ev==='plague'){const c=counts();const sp=SPK.slice().sort((a,b)=>c[b]-c[a])[0];const n=plague(sp);toast(n?`A plague strikes the ${SP[sp].pl.toLowerCase()}: ${n} sick`:'Nobody to infect')}
+  else if(ev==='meteor'){const p=randomCell(i=>!isWater(i))||[GW/2,GH/2];S.falling={x:p[0],y:p[1],t:0};toast('A meteor is coming!')}
+  else if(ev==='fire'){let n=0;for(let k=0;k<400&&n<4;k++){const p=randomCell(i=>!isWater(i)&&veg[i]>0.4);if(p&&ignite(idx(p[0],p[1])))n++}toast(n?'Wildfire!':'Nothing dry enough to burn');if(n)chEv('fire',{})}
+  syncClimateUI()}
+document.querySelectorAll('[data-ev]').forEach(b=>b.onclick=()=>climateEvent(b.dataset.ev));
+document.querySelectorAll('[data-view]').forEach(b=>b.onclick=()=>setView(b.dataset.view));
+function setView(v){S.view=v;S.terrainDirty=true;document.querySelectorAll('[data-view]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.view===v?'true':'false'));VIEWCH++}
+let VIEWCH=0;
+$('brush').oninput=e=>{S.brush=+e.target.value;$('brushV').textContent=S.brush};
+document.querySelectorAll('#cntSeg button').forEach(b=>b.onclick=()=>{S.count=+b.dataset.n;document.querySelectorAll('#cntSeg button').forEach(x=>x.setAttribute('aria-pressed',x===b?'true':'false'))});
+$('dockBtn').onclick=()=>document.body.classList.toggle('dockOpen');
+
+/* species list and graph */
+const SPCOL={rabbit:'#d8b48a',mouse:'#a99886',deer:'#c98a52',bison:'#8a6346',zebra:'#e9e5dc',camel:'#e0bd7a',fox:'#ff8a3d',wolf:'#a9a6a2',lion:'#f0c36a',bear:'#9c6a44',hawk:'#c9a070',fish:'#8fd0ff',otter:'#7ea0b8',trees:'#5fbf5f'};
+function renderLife(){const c=counts(),L=$('splist');if(!L.children.length){for(const k of [...SPK,'trees']){const r=document.createElement('button');r.className='sprow';r.dataset.k=k;r.innerHTML='<i></i><span></span><b></b>';r.children[0].style.background=SPCOL[k];r.onclick=()=>k==='trees'?flyTree():flyTo(k);L.appendChild(r)}}
+  for(const r of L.children){const k=r.dataset.k;const n=k==='trees'?S.trees.length:c[k];r.classList.toggle('zero',!n);
+    r.children[1].textContent=k==='trees'?'🌳 Trees':`${SP[k].ic} ${SP[k].pl}`+(n?` · speed ${avgGene(k,'speed').toFixed(2)} · fur ${avgGene(k,'fur').toFixed(0)}°`:'');r.children[2].textContent=n}
+  drawGraph()}
+function drawGraph(){const g=$('graph'),r=g.getBoundingClientRect();if(!r.width)return;const d=Math.min(2,devicePixelRatio||1);if(g.width!==Math.round(r.width*d)){g.width=r.width*d;g.height=r.height*d}const c=g.getContext('2d');c.setTransform(d,0,0,d,0,0);c.clearRect(0,0,r.width,r.height);
+  const Hh=S.hist;if(Hh.length<2)return;const keys=[...SPK,'trees'].filter(k=>Hh.some(h=>h[k]>0));let mx=1;for(const h of Hh)for(const k of keys)mx=Math.max(mx,h[k]);
+  const t0=Hh[0].t,t1=Hh[Hh.length-1].t||1;c.strokeStyle='rgba(150,210,170,.12)';c.lineWidth=1;for(let q=1;q<4;q++){c.beginPath();c.moveTo(0,r.height*q/4);c.lineTo(r.width,r.height*q/4);c.stroke()}
+  for(const k of keys){c.strokeStyle=SPCOL[k];c.lineWidth=k==='trees'?1:1.6;c.globalAlpha=k==='trees'?.6:1;c.beginPath();Hh.forEach((h,j)=>{const x=(h.t-t0)/Math.max(1,t1-t0)*r.width,y=r.height-4-(h[k]||0)/mx*(r.height-12);j?c.lineTo(x,y):c.moveTo(x,y)});c.stroke()}
+  c.globalAlpha=1;c.fillStyle='rgba(230,240,233,.6)';c.font='10px IBM Plex Mono, monospace';c.fillText('max '+Math.round(mx),4,11);c.fillText(`${((t1-t0)/365).toFixed(1)} years`,r.width-64,r.height-4)}
+function flyTo(sp){const L=S.animals.filter(a=>!a.dead&&a.sp===sp);if(!L.length){toast(`No ${SP[sp].pl.toLowerCase()} alive. Pick ${SP[sp].n} in the toolbar to release some.`);return false}
+  const cx=wxOf(W/2),cy=wyOf(H/2);L.sort((a,b)=>Math.hypot(a.x-cx,a.y-cy)-Math.hypot(b.x-cx,b.y-cy));select(L[0]);S.follow=true;cam.z=Math.max(cam.z,3.2);FOUND[sp]=(FOUND[sp]||0)+1;return true}
+function flyTree(){const t=S.trees[0];if(t){select(t);S.follow=true;cam.z=Math.max(cam.z,3)}}
+let FOUND={};
+
+/* inspector */
+const NAMES=['Ash','Bree','Cleo','Dax','Echo','Fern','Gus','Hazel','Iris','Juno','Kit','Luna','Milo','Nell','Oak','Pip','Quill','Rue','Sage','Tilly','Uma','Vex','Wren','Yara','Zed','Basil','Clover','Dusty','Ember','Flint','Ginger','Hops','Ivy','Jasper','Koda','Lark','Maple','Nova','Olive','Pepper','Rowan','Sky','Thistle','Willow'];
+const nameOf=a=>NAMES[a.id%NAMES.length]+(a.id>NAMES.length?' '+'IVXLC'[Math.floor(a.id/NAMES.length)%5]:'');
+const STATE={wander:'Wandering',eat:'Eating',graze:'Looking for food',forage:'Foraging for fruit',hunt:'Hunting',track:'Tracking prey',follow:'Following its mother',flee:'Fleeing!',drink:'Going to drink',mate:'Looking for a mate'};
+let inspRefs={};
+function buildInspector(){const o=S.sel,B=$('inspBody');B.textContent='';$('inspEmpty').hidden=!!o;B.hidden=!o;if(!o)return;inspRefs={};
+  const h=document.createElement('h2');h.className='ititle';const sub=document.createElement('div');sub.className='isub';B.append(h,sub);inspRefs.sub=sub;inspRefs.h=h;
+  const pic=document.createElement('canvas');pic.id='iPic';B.appendChild(pic);inspRefs.pic=pic;
+  const kv=document.createElement('div');kv.className='kv';B.appendChild(kv);inspRefs.kv=kv;
+  if(!o.k){h.textContent=`${SP[o.sp].ic} ${nameOf(o)}`;
+    const gk=document.createElement('span');gk.className='k';gk.textContent='Genes (edit to experiment)';B.appendChild(gk);
+    for(const [g,lab,lo,hi,st] of [['speed','Speed',.5,2.2,.01],['size','Size',.5,2.2,.01],['sense','Senses',.5,2.2,.01],['fur','Fur (cold °C)',-10,40,.5]]){const row=document.createElement('label');row.className='gene';row.innerHTML='<span></span><input type="range"><span class="v"></span>';row.children[0].textContent=lab;const inp=row.children[1];inp.min=lo;inp.max=hi;inp.step=st;inp.value=o.genes[g];
+      inp.oninput=()=>{o.genes[g]=+inp.value;if(g==='fur')o.col=furTint(SP[o.sp].col,o.genes.fur);GENEDIT++};inspRefs['g_'+g]=row.children[2];B.appendChild(row)}
+    const n=document.createElement('p');n.className='note';n.textContent=`Speed helps catch food or escape, but costs energy. Size resists cold and wins fights but needs more food. Fur lets it live in the cold but overheats in the heat. Babies inherit a mix of both parents' genes with small random changes.`;B.appendChild(n)}
+  else{h.textContent=`${TK[o.k].ic} ${TK[o.k].n}`;const n=document.createElement('p');n.className='note';n.textContent=`Grows from ${TK[o.k].tmin} to ${TK[o.k].tmax} °C${TK[o.k].rmax<9?', only where it is dry':''}${TK[o.k].fruit?'. Its fruit feeds bears.':'.'} Mature trees spread seeds nearby.`;B.appendChild(n)}
+  const act=document.createElement('div');act.className='actions';B.appendChild(act);
+  const mk=(t,f,cls)=>{const b=document.createElement('button');b.className='btn'+(cls?' '+cls:'');b.textContent=t;b.onclick=f;act.appendChild(b);return b};
+  mk('Follow',()=>{S.follow=true;cam.z=Math.max(cam.z,3.5)});
+  if(!o.k){mk('Feed',()=>{o.e=1;o.w=1});mk('Clone',()=>{const c=addAnimal(o.sp,o.x+0.6,o.y+0.6,{genes:{...o.genes},age:o.age,gen:o.gen});if(c)toast(`Cloned ${nameOf(o)}`)})}
+  mk('Remove',()=>{if(o.k){o.dead=true;S.trees=S.trees.filter(t=>!t.dead)}else{kill(o,'removed');S.animals=S.animals.filter(a=>!a.dead)}select(null)},'danger');
+  updateInspector()}
+function updateInspector(){const o=S.sel;if(!o||$('pane-insp').hidden)return;const R=inspRefs;if(!R.kv)return;
+  if(o.dead){R.sub.textContent=`Died: ${o.cause||S.selDead}`;return}
+  const i=idx(o.x,o.y),T=cellT(i);let rows;
+  if(!o.k){const s=SP[o.sp];R.sub.textContent=`${s.n}, ${o.sex==='f'?'female':'male'} · ${(o.age/365).toFixed(1)} years · generation ${o.gen}${o.preg>0?' · pregnant':''}${o.sick>0?' · sick':''}`;
+    const tmin=s.tmin-o.genes.fur-(o.genes.size-1)*4,tmax=s.tmax-o.genes.fur*0.5;
+    rows=[['Energy',Math.round(o.e*100)+'%'],['Water',s.thirst?Math.round(o.w*100)+'%':'—'],['Doing',STATE[o.state]||o.state],['Children',o.kids],['Kills',o.kills],['Eats',s.diet==='herb'?(s.hab==='water'?'Algae':'Plants'):s.diet==='omni'?'Fruit, fish, small animals, plants':(s.prey||[]).map(k=>SP[k].pl).join(', ')],['Comfort',`${tmin.toFixed(0)} to ${tmax.toFixed(0)} °C`],['Here',`${T.toFixed(0)} °C${o.stress>1?' (stressed)':''}`]];
+    for(const g of ['speed','size','sense'])R['g_'+g].textContent=o.genes[g].toFixed(2);R.g_fur.textContent=o.genes.fur.toFixed(1)}
+  else rows=[['Age',(o.age/365).toFixed(0)+' years'],['Size',Math.round(o.size*100)+'%'],['Health',Math.round(o.hp*100)+'%'],['Fruit',TK[o.k].fruit?Math.round(o.fruit*100)+'%':'—'],['Here',`${meanT(i).toFixed(0)} °C average`],['Rain',Math.round(rainAt(i)*100)+'%']];
+  if(R.kv.children.length!==rows.length){R.kv.textContent='';for(const r of rows){const d=document.createElement('div');d.innerHTML='<span class="k"></span><span class="v"></span>';R.kv.appendChild(d)}}
+  rows.forEach((r,j)=>{R.kv.children[j].children[0].textContent=r[0];R.kv.children[j].children[1].textContent=r[1]});
+  // portrait
+  const c=R.pic,d=Math.min(2,devicePixelRatio||1),w=c.clientWidth||300,hh=c.clientHeight||120;if(c.width!==w*d){c.width=w*d;c.height=hh*d}const p=c.getContext('2d');p.setTransform(d,0,0,d,0,0);
+  const px=img.data,o4=i*4;p.fillStyle=`rgb(${px[o4]},${px[o4+1]},${px[o4+2]})`;p.fillRect(0,0,w,hh);
+  const old=gx;gx=p;try{if(o.k)drawTree(o,w/2,hh/2,5.5);else drawAnimal({...o,dir:-0.35},w/2,hh/2,1,o.sp==='mouse'?7:o.sp==='fish'?6:SP[o.sp].len>10?2.6:4)}finally{gx=old}}
+let GENEDIT=0;
+
+/* search */
+let findItems=[],findSel=0;
+const lev=(a,b)=>{const m=a.length,n=b.length,d=Array.from({length:m+1},(_,i)=>[i]);for(let j=1;j<=n;j++)d[0][j]=j;for(let i=1;i<=m;i++)for(let j=1;j<=n;j++)d[i][j]=Math.min(d[i-1][j]+1,d[i][j-1]+1,d[i-1][j-1]+(a[i-1]===b[j-1]?0:1));return d[m][n]};
+function findMatches(q){q=q.toLowerCase().trim();if(!q)return[];const out=[];
+  const all=[...SPK.map(k=>({k,t:'sp',names:[SP[k].n,SP[k].pl]})),...Object.keys(TK).map(k=>({k,t:'tree',names:[TK[k].n]})),...SCEN.map(s=>({k:s.id,t:'world',names:[s.n]}))];
+  for(const it of all){let best=9;for(const n of it.names){const nl=n.toLowerCase();if(nl.startsWith(q))best=0;else if(nl.includes(q))best=Math.min(best,1);else best=Math.min(best,lev(q,nl.slice(0,Math.max(q.length,3)))+1)}if(best<=2)out.push({...it,score:best})}
+  return out.sort((a,b)=>a.score-b.score).slice(0,6)}
+function renderFind(){const q=$('find').value,L=$('findList');L.textContent='';findItems=[];findSel=0;const ms=findMatches(q);
+  for(const m of ms){if(m.t==='sp'){const n=S.animals.filter(a=>!a.dead&&a.sp===m.k).length;if(n)findItems.push({label:`${SP[m.k].ic} Find a ${SP[m.k].n.toLowerCase()}`,sm:`${n} alive`,go:()=>flyTo(m.k)});findItems.push({label:`${SP[m.k].ic} Release ${SP[m.k].pl.toLowerCase()} here`,sm:'6 at the centre of the view',go:()=>{const c=nearestHab(m.k);if(c){spawnAt(m.k,c[0],c[1],6,true);PLACED[m.k]=(PLACED[m.k]||0)+6;toast(`Released ${SP[m.k].pl.toLowerCase()}`)}else toast('No suitable place in view')}})}
+    else if(m.t==='tree')findItems.push({label:`${TK[m.k].ic} Plant ${TK[m.k].n.toLowerCase()}s`,sm:'pick the tool',go:()=>setTool(m.k)});else findItems.push({label:`🌍 World: ${SCEN.find(s=>s.id===m.k).n}`,sm:'load it',go:()=>loadScen(m.k)})}
+  if(q&&!findItems.length){const e=document.createElement('div');e.className='note';e.style.padding='6px 8px';e.textContent='No match. Try rabbit, wolf, oak…';L.appendChild(e)}
+  findItems.forEach((it,j)=>{const b=document.createElement('button');b.textContent=it.label;const s=document.createElement('small');s.textContent=it.sm;b.appendChild(s);b.className=j===0?'on':'';b.onmousedown=e=>{e.preventDefault();pickFind(j)};L.appendChild(b)});
+  L.hidden=!q}
+function nearestHab(sp){const cx=wxOf(W/2),cy=wyOf(H/2);for(let r=0;r<60;r+=2)for(let k=0;k<12;k++){const a=k/12*TAU,x=cx+Math.cos(a)*r,y=cy+Math.sin(a)*r;if(habitatOK(sp,idx(x,y)))return[x,y]}return null}
+function pickFind(j){const it=findItems[j];if(!it)return;$('find').value='';$('findList').hidden=true;$('find').blur();it.go()}
+$('find').addEventListener('input',renderFind);$('find').addEventListener('blur',()=>setTimeout(()=>$('findList').hidden=true,150));
+$('find').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();pickFind(findSel)}else if(e.key==='ArrowDown'||e.key==='ArrowUp'){e.preventDefault();findSel=clamp(findSel+(e.key==='ArrowDown'?1:-1),0,findItems.length-1);[...$('findList').children].forEach((b,j)=>b.className=j===findSel?'on':'')}else if(e.key==='Escape'){$('find').value='';renderFind();$('find').blur()}});
+
+/* ================= worlds ================= */
+const SCEN=[
+ {id:'meadow',n:'Temperate meadow',d:'Woods, grassland and lakes: rabbits, deer, foxes, wolves, bears and hawks.',ter:{seed:11,freq:3.2,land:.62,mount:.35,edge:3,center:.2,moist:.62,peak:1.6,lakes:[[.42,.5,6],[.6,.38,4],[.3,.62,4]]},t0:0,trees:{oak:220,pine:60,bush:80},an:{rabbit:220,mouse:180,deer:80,fox:8,wolf:3,bear:3,hawk:4,fish:250,otter:5}},
+ {id:'savanna',n:'Savanna',d:'Hot dry grassland with herds of zebras and bison, prides of lions and a few waterholes.',ter:{seed:23,freq:2.6,land:.72,mount:.4,edge:3,center:.25,moist:.42,lakes:[[.35,.45,6],[.62,.55,6],[.5,.3,4],[.25,.65,5],[.75,.35,5],[.5,.72,5],[.15,.35,4],[.85,.6,4]]},t0:8,trees:{palm:60,bush:30,cactus:20,oak:20},an:{zebra:110,bison:50,lion:6,mouse:150,hawk:4,fish:150,rabbit:60}},
+ {id:'arctic',n:'Arctic',d:'A frozen land: only the thickest fur survives. Wolves hunt deer and bears fish the coast.',ter:{seed:37,freq:3,land:.6,mount:1,edge:3,center:.2,moist:.55},t0:-7,trees:{pine:180},an:{rabbit:160,deer:90,wolf:3,bear:3,fox:5,fish:200,otter:4},adapt:1},
+ {id:'rainforest',n:'Rainforest',d:'Hot, wet and packed with life. Palms and oaks crowd the rivers.',ter:{seed:41,freq:3.4,land:.64,mount:.6,edge:3,center:.2,moist:.98},t0:10,trees:{palm:300,oak:80,bush:100},an:{deer:60,mouse:180,rabbit:120,bear:3,hawk:5,fish:250,otter:6,lion:4}},
+ {id:'desert',n:'Desert',d:'Scorching dunes, cactus and rare oases. Camels go weeks without water.',ter:{seed:53,freq:2.4,land:.86,mount:.5,edge:3,center:.1,moist:.12,lakes:[[.3,.4,4],[.7,.6,4],[.5,.7,3]]},t0:12,trees:{cactus:160,palm:24},an:{camel:30,mouse:150,fox:5,hawk:3,rabbit:50,fish:60}},
+ {id:'islands',n:'Archipelago',d:'Dozens of islands in a warm sea, full of fish and otters.',ter:{seed:67,freq:5.2,land:.36,mount:.5,edge:2,center:0,moist:.72},t0:8,trees:{palm:100,oak:40,bush:50},an:{fish:400,otter:10,rabbit:120,deer:25,hawk:5,mouse:100}},
+ {id:'pangaea',n:'Supercontinent',d:'One huge continent from the frozen north to the hot south: every species finds its place.',ter:{seed:79,freq:2.2,land:.7,mount:1,edge:3,center:.35,moist:.6,lakes:[[.5,.5,5]]},t0:0,tc:27,latK:40,trees:{oak:160,pine:120,palm:100,cactus:40,bush:80},an:{rabbit:200,mouse:180,deer:70,bison:40,zebra:50,camel:15,fox:7,wolf:3,lion:3,bear:3,hawk:5,fish:300,otter:5},adapt:1},
+ {id:'barren',n:'Barren land',d:'Bare soil and empty lakes, with a mild climate. Bring it to life yourself.',ter:{seed:91,freq:3,land:.62,mount:.7,edge:3,center:.2,moist:.62,lakes:[[.45,.5,6]]},t0:0,trees:{},an:{},bare:1},
+];
+function loadScen(id,opts={}){const sc=SCEN.find(s=>s.id===id)||SCEN[0];RNG=seeded((sc.ter.seed*977+(opts.seed||0))>>>0);
+  S.scen=sc.id;CL.tc=sc.tc??16;CL.latK=sc.latK??20;S.animals=[];S.trees=[];S.t=90;S.hist=[];S.lastHist=0;S.sel=null;S.follow=false;S.burning.clear();S.parts=[];S.maxGen={};S.born=S.died=S.kills=0;S.falling=null;S.flash=null;
+  CL.temp=0;CL.rain=1;CL.seaM=0;CL.dust=0;CL.seasons=true;CL.t0=sc.t0;PLACED={};WATERED=0;RAINED=0;
+  genTerrain(sc.ter);SEASON=seasonF();
+  // grow the vegetation in for a while so the world starts lush
+  if(!sc.bare){for(let i=0;i<N;i++)veg[i]=isWater(i)?0:capOf(meanT(i),rainAt(i))*rr(.5,.9);for(let k=0;k<8;k++)updateVeg(10)}else{veg.fill(0)}
+  for(let i=0;i<N;i++)alg[i]=isWater(i)?(sc.bare?0.02:0.5):0;
+  for(const [k,n] of Object.entries(sc.trees)){let made=0;for(let q=0;q<n*20&&made<n;q++){const p=randomCell(i=>treeOK(k,i),50);if(!p)continue;let c=0;nearTrees(p[0],p[1],1.2,()=>c++);if(c)continue;addTree(k,p[0],p[1]);made++;if(made%20===0)rebuildTrees()}rebuildTrees()}
+  for(const [k,n] of Object.entries(sc.an).sort((x,y)=>(SP[x[0]].diet==='herb'?0:1)-(SP[y[0]].diet==='herb'?0:1))){let made=0;const s=SP[k];
+    const grp=Math.max(s.herd?5:3,Math.ceil(n/18));for(let g=0;g<n+30&&made<n;g++){const pr=s.prey&&S.animals.filter(z=>s.prey.includes(z.sp));if(pr&&pr.length){const z=pr[Math.floor(rnd()*pr.length)];made+=spawnAt(k,z.x,z.y,Math.min(n-made,s.herd?4:2),true,0.92);continue}const p=randomCell(i=>habitatOK(k,i)&&(s.hab==='water'||s.hab==='air'||(meanT(i)>s.tmin-14&&meanT(i)<s.tmax+2))&&(s.hab!=='amph'||dw[i]<=1),400);if(!p)continue;made+=spawnAt(k,p[0],p[1],Math.min(n-made,grp),true)}}
+  RNG=Math.random;rebuildHash();rebuildTrees();sampleHist();S.terrainDirty=true;syncClimateUI();select(null);if(!opts.keepCam)fitWorld();setView('normal');VIEWCH=0}
+function buildScen(){const g=$('scgrid');g.textContent='';for(const s of SCEN){const b=document.createElement('button');b.className='scb';b.innerHTML='<b></b><span></span>';b.children[0].textContent=s.n;b.children[1].textContent=s.d;b.onclick=()=>{loadScen(s.id);$('scen').hidden=true;toast(s.n)};g.appendChild(b)}}
+$('scenBtn').onclick=()=>{$('scen').hidden=!$('scen').hidden};$('scenClose').onclick=()=>$('scen').hidden=true;
+
+/* ================= home, accounts, challenges, tutorial, demo ================= */
+const lsGet=k=>{try{return JSON.parse(localStorage.getItem(k)||'null')}catch(e){return null}};
+const lsSet=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}};
+// accounts are shared with Barycenter (same storage key); each game keeps its own progress per account
+const ACC_KEY='barycenter.accounts',PROG_KEY='biosphere.progress';
+let ACC=lsGet(ACC_KEY);if(!ACC||!Array.isArray(ACC.list))ACC={list:[],cur:'guest',devicePlays:0};if(ACC.cur!=='guest'&&!ACC.list.some(a=>a.id===ACC.cur))ACC.cur='guest';
+let ACCN=0;
+const progKey=id=>id==='guest'?PROG_KEY:PROG_KEY+'.'+id;
+const blankProg=()=>({stars:{},plays:0,secs:0});
+let PROG=blankProg();
+function loadProg(){const v=lsGet(progKey(ACC.cur));PROG=Object.assign(blankProg(),v&&typeof v.stars==='object'?v:{})}
+function saveProg(){lsSet(progKey(ACC.cur),PROG)}
+function saveAcc(){const cur=lsGet(ACC_KEY);if(cur&&Array.isArray(cur.list)){/* keep fields Barycenter added */for(const a of ACC.list){const o=cur.list.find(x=>x.id===a.id);if(o)Object.keys(o).forEach(k=>{if(!(k in a))a[k]=o[k]})}if(cur.devicePlays>ACC.devicePlays)ACC.devicePlays=cur.devicePlays}lsSet(ACC_KEY,ACC)}
+const curAcc=()=>ACC.list.find(a=>a.id===ACC.cur);
+const accName=()=>(curAcc()||{name:'Guest'}).name;
+const pinHash=p=>{let h=5381;for(const c of 'bary:'+p)h=((h*33)^c.charCodeAt(0))>>>0;return h.toString(36)};
+const GCOUNT='https://abacus.jasoncameron.dev',GPATH='barycenter-sandbox/biosphere-plays';let GLOBAL=null;
+function gCount(op){try{const ctl=new AbortController();setTimeout(()=>ctl.abort(),6000);fetch(`${GCOUNT}/${op}/${GPATH}`,{signal:ctl.signal,cache:'no-store'}).then(r=>r.ok?r.json():null).then(j=>{if(j&&Number.isFinite(+j.value)){GLOBAL=Math.max(GLOBAL||0,+j.value);updateAcctUI()}}).catch(()=>{})}catch(e){}}
+function countPlay(){PROG.plays++;ACC.devicePlays=(ACC.devicePlays||0)+1;saveProg();saveAcc();if(GLOBAL!=null)GLOBAL++;updateAcctUI();gCount('hit')}
+function updateAcctUI(){$('hAcctName').textContent=curAcc()?accName():'Guest · make an account';$('hPlaysN').textContent=(GLOBAL!=null?GLOBAL:PROG.plays).toLocaleString();$('hPlaysL').textContent=GLOBAL!=null?'plays by everyone':'plays';$('acctBtn').title=`Account: ${accName()} (saved on this device)`}
+function switchAcc(id,quiet){if(id===ACC.cur)return;saveProg();ACC.cur=id;saveAcc();loadProg();ACCN++;updateAcctUI();if(!$('home').hidden)homeView($('hChalView').hidden?'hMain':'hChalView');if(!quiet)toast(`Signed in as ${accName()}`);renderAcct()}
+let acctPend=null;
+function renderAcct(msg){const L=$('acctList');L.textContent='';$('acctMsg').textContent=msg||'';
+  for(const a of [{id:'guest',name:'Guest',guest:1},...ACC.list]){const pr=a.id===ACC.cur?PROG:(lsGet(progKey(a.id))||{stars:{},plays:0}),cur=a.id===ACC.cur,r=document.createElement('div');r.className='arow'+(cur?' cur':'');
+    const nm=document.createElement('div');nm.className='an';nm.innerHTML='<div></div><div class="as"></div>';nm.children[0].textContent=(a.pin?'🔒 ':'')+a.name+(cur?' (signed in)':'');nm.children[1].textContent=`★ ${Object.values(pr.stars||{}).reduce((x,y)=>x+y,0)} in Biosphere · ${pr.plays||0} plays`;r.appendChild(nm);
+    if(!cur){if(acctPend===a.id){const inp=document.createElement('input');inp.placeholder='PIN';inp.maxLength=4;inp.className='apin';const go=document.createElement('button');go.className='btn primary';go.textContent='OK';const t=()=>{if(pinHash(inp.value)===a.pin){acctPend=null;switchAcc(a.id)}else renderAcct('Wrong PIN')};go.onclick=t;inp.onkeydown=e=>{if(e.key==='Enter')t()};r.append(inp,go);setTimeout(()=>inp.focus(),0)}
+      else{const b=document.createElement('button');b.className='btn';b.textContent=a.guest?'Use guest':'Sign in';b.onclick=()=>{if(a.pin){acctPend=a.id;renderAcct()}else switchAcc(a.id)};r.appendChild(b)}}
+    else if(!a.guest){const so=document.createElement('button');so.className='btn';so.textContent='Sign out';so.onclick=()=>switchAcc('guest');r.appendChild(so)}
+    L.appendChild(r)}}
+function openAcct(){acctPend=null;$('acct').hidden=false;renderAcct()}
+$('acctForm').addEventListener('submit',e=>{e.preventDefault();const name=$('acctNew').value.trim().replace(/\s+/g,' ').slice(0,20),pin=$('acctPin').value.trim();
+  if(!name)return renderAcct('Type a name first');if(/^guest$/i.test(name)||ACC.list.some(a=>a.name.toLowerCase()===name.toLowerCase()))return renderAcct('That name is taken on this device');if(pin&&!/^\d{4}$/.test(pin))return renderAcct('A PIN is 4 digits (or leave it empty)');
+  const fromGuest=ACC.cur==='guest'&&(PROG.plays||Object.keys(PROG.stars).length);const a={id:'a'+Date.now().toString(36)+Math.floor(Math.random()*1e4).toString(36),name,created:Date.now()};if(pin)a.pin=pinHash(pin);
+  if(fromGuest){lsSet(progKey(a.id),PROG);lsSet(PROG_KEY,blankProg())}ACC.list.push(a);saveAcc();$('acctNew').value='';$('acctPin').value='';switchAcc(a.id,true);toast(`Account ${name} created`);renderAcct(fromGuest?'Your guest progress moved into this account.':'')});
+$('hAcctBtn').onclick=openAcct;$('acctBtn').onclick=openAcct;$('acctClose').onclick=()=>$('acct').hidden=true;$('acct').addEventListener('click',e=>{if(e.target.id==='acct')$('acct').hidden=true});
+$('hPlays').onclick=()=>{gCount('get');toast(GLOBAL!=null?`${GLOBAL.toLocaleString()} plays by everyone · ${PROG.plays} by you`:`${PROG.plays} plays by you on this device`)};
+
+/* challenges */
+const CH={active:null,idx:-1,events:[],hold:{},t0:0,real0:0,done:false,failed:'',loading:false,ref:{}};
+function chEv(k,d){if(CH.active&&!CH.done&&!CH.loading)CH.events.push({k,...(d||{}),t:S.t})}
+const cnt=sp=>{let n=0;for(const a of S.animals)if(!a.dead&&a.sp===sp)n++;return n};
+const cntBorn=sp=>{let n=0;for(const a of S.animals)if(!a.dead&&a.sp===sp&&a.born>CH.t0)n++;return n};
+function hold(key,cond,years){if(!cond){CH.hold[key]=null;return 0}if(CH.hold[key]==null)CH.hold[key]=S.t;return Math.min(1,(S.t-CH.hold[key])/(years*365))}
+const holdTxt=(p,Y)=>p>0?`holding: ${(p*Y).toFixed(1)} of ${Y} years`:'';
+const realSecs=()=>(performance.now()-CH.real0)/1000;
+const byTime=(t3,t2)=>()=>{const s=realSecs();return s<=t3?3:s<=t2?2:1};
+const evN=k=>CH.events.filter(e=>e.k===k).length;
+const scn=(id,f)=>()=>{loadScen(id);if(f)f()};
+const CHALS=[];const CC=(diff,o)=>CHALS.push({diff,...o});
+const yrs=()=>(S.t-CH.t0)/365;
+const snowCells=()=>{let n=0;for(let i=0;i<N;i++)if(!isWater(i)&&meanT(i)<-2)n++;return n};
+// find and inspect
+[['fox',1],['wolf',1.1],['bear',1.2],['hawk',1.3],['otter',1.4]].forEach(([k,d])=>CC(d,{t:`Find a ${SP[k].n.toLowerCase()}`,g:`Find a ${SP[k].n.toLowerCase()} and follow it with the camera.`,hint:`Type ${SP[k].n.toLowerCase()} in the search bar and press Enter.`,setup:scn('meadow'),
+  check:()=>{const ok=S.sel&&S.sel.sp===k;return[ok&&S.follow,ok?1:0,ok?'Found one':'Not found yet']},stars:byTime(20,45)}));
+CC(1.15,{t:'Fast forward',g:'Run time at 1 year per second.',hint:'Press the “1 yr” button next to the pause button.',setup:scn('meadow'),check:()=>{const ok=!S.paused&&S.speed>=365;return[ok,ok?1:0,'']},stars:byTime(10,30)});
+CC(1.5,{t:'Read the genes',g:'Select a deer and look at its genes in the Inspect tab.',hint:'Click a deer (or search for deer), then open Inspect.',setup:scn('meadow'),check:()=>{const ok=S.sel&&S.sel.sp==='deer'&&!$('pane-insp').hidden;return[ok,ok?1:0,'']},stars:byTime(25,60)});
+CC(1.6,{t:'Stock the lake',g:'Release at least 12 fish into the water.',hint:'Pick Fish in the toolbar and click on a lake or the sea.',setup:scn('meadow'),check:()=>{const n=PLACED.fish||0;return[n>=12,n/12,`${n} of 12 released`]},stars:byTime(20,50)});
+CC(1.7,{t:'Plant a grove',g:'Plant 15 trees of any kind.',hint:'Pick Oak or Pine and click or drag across grassland.',setup:scn('meadow'),check:()=>{const n=Object.keys(TK).reduce((s,k)=>s+(PLACED[k]||0),0);return[n>=15,n/15,`${n} of 15 planted`]},stars:byTime(25,60)});
+CC(2.2,{t:'Make it yours',g:'Create an account (👤 at the top) or sign in to one, then release 10 animals of any kind.',hint:'Click 👤, type a name, press Create account. Then pick an animal and click on the land.',setup:()=>{loadScen('meadow');CH.ref.n=ACCN},
+  check:()=>{const acc=ACCN>CH.ref.n,n=SPK.reduce((s,k)=>s+(PLACED[k]||0),0);return[acc&&n>=10,(acc?.5:0)+Math.min(.5,n/20),acc?`Signed in as ${accName()} · ${n} of 10 released`:'Create or sign in to an account first']},stars:byTime(60,150)});
+// grow populations by breeding (only animals born during the challenge count)
+[['rabbit','meadow',120,2],['mouse','meadow',150,2.4],['fish','meadow',250,2.6],['deer','meadow',40,3.4],['rabbit','meadow',300,4.2],['zebra','savanna',50,4.4],['bison','savanna',35,4.6],['wolf','meadow',12,5],['lion','savanna',12,5.4],['camel','desert',20,5.6],['bear','meadow',6,6.4],['otter','islands',14,5.2],['hawk','meadow',8,5.8],['fish','islands',500,4]].forEach(([k,sc,n,d])=>
+  CC(d,{t:`${n} ${SP[k].pl.toLowerCase()} born`,g:`Grow the ${SP[k].pl.toLowerCase()}: have ${n} alive that were born during this challenge.`,hint:`They need food, water and a bearable climate. Speed up time; give them more food or fewer predators. Releasing more parents helps too.`,setup:scn(sc),
+   check:()=>{const c=cntBorn(k);return[c>=n,c/n,`${c} of ${n} born and alive · ${cnt(k)} in total`]},fail:()=>cnt(k)?'':`The ${SP[k].pl.toLowerCase()} died out`,stars:byTime(n>100?60:90,n>100?150:220)}));
+// coexistence of predator and prey
+[['rabbit','fox','meadow',5,2.8],['deer','wolf','meadow',5,3.2],['zebra','lion','savanna',5,3.6],['fish','otter','islands',5,3],['rabbit','fox','meadow',15,5],['deer','wolf','meadow',15,5.6],['zebra','lion','savanna',15,6],['fish','otter','islands',15,5.3],['rabbit','fox','meadow',40,7.5]].forEach(([p,q,sc,Y,d])=>
+  CC(d,{t:`${SP[p].pl} and ${SP[q].pl.toLowerCase()}, ${Y} years`,g:`Keep both ${SP[p].pl.toLowerCase()} and ${SP[q].pl.toLowerCase()} alive for ${Y} years in a row.`,hint:`If the hunters eat too much, the prey vanishes and then the hunters starve. Plant food, add prey, or remove a few hunters to keep the balance.`,setup:scn(sc),
+   check:()=>{const a=cnt(p),b=cnt(q),pr=hold('c',a>0&&b>0,Y);return[pr>=1,pr,`${a} ${SP[p].pl.toLowerCase()} · ${b} ${SP[q].pl.toLowerCase()} · ${holdTxt(pr,Y)}`]},fail:()=>!cnt(p)?`The ${SP[p].pl.toLowerCase()} died out`:!cnt(q)?`The ${SP[q].pl.toLowerCase()} died out`:'',stars:byTime(Y*8,Y*20)}));
+// evolution
+[['rabbit','fur',6,'meadow',-9,4.6],['rabbit','fur',12,'meadow',-12,6.6],['deer','fur',8,'meadow',-11,5.8],['rabbit','speed',1.12,'meadow',0,5],['rabbit','speed',1.25,'meadow',0,7],['deer','sense',1.12,'meadow',0,6.2],['bison','size',1.12,'arctic',0,6.8],['fish','speed',1.15,'islands',0,6]].forEach(([k,g,v,sc,T,d])=>
+  CC(d,{t:`Evolve ${g==='fur'?'thicker fur':g==='speed'?'faster':g==='sense'?'sharper senses':'bigger'} ${SP[k].pl.toLowerCase()}${v>1.2||v>=12?' II':''}`,g:`Through natural selection, raise the average ${g==='fur'?'cold tolerance (fur)':g} of the ${SP[k].pl.toLowerCase()} to ${g==='fur'?v+' °C':v.toFixed(2)}. Editing genes by hand does not count.`,
+   hint:g==='fur'?'It is cold: animals with thicker fur survive and pass it on. Keep them fed and let generations pass at high speed.':g==='speed'?'Hunters catch the slowest. Keep enough hunters around (but not too many) and let time run.':g==='sense'?'Wolves catch the deer that notice them too late. Keep wolves around and let time run.':'In the cold, bigger bodies keep warm. Keep them alive and let time run.',
+   setup:()=>{loadScen(sc);if(T){CL.temp=T;syncClimateUI()}if(k==='bison'){const p=randomCell(i=>habitatOK('bison',i)&&meanT(i)>-25);if(p)spawnAt('bison',p[0],p[1],24,false)}CH.ref.ge=GENEDIT},
+   check:()=>{const a=avgGene(k,g),ok=a>=v&&GENEDIT===CH.ref.ge;const base=g==='fur'?0:1;return[ok,clamp((a-base)/(v-base),0,1),isNaN(a)?'None left':`Average ${g}: ${g==='fur'?a.toFixed(1)+' °C':a.toFixed(3)} · ${cnt(k)} alive${GENEDIT!==CH.ref.ge?' · gene edits do not count':''}`]},
+   fail:()=>cnt(k)?'':`The ${SP[k].pl.toLowerCase()} died out`,stars:byTime(90,240)}));
+[[15,4],[30,5.5],[60,7]].forEach(([n,d])=>CC(d,{t:`Generation ${n}`,g:`Breed any species to generation ${n}.`,hint:'Small animals like mice and rabbits breed fastest. Speed up time and keep them fed.',setup:scn('meadow'),check:()=>{const m=Math.max(0,...Object.values(S.maxGen));return[m>=n,m/n,`Highest generation: ${m}`]},stars:byTime(n*3,n*8)}));
+// plants and land
+[[.3,3],[.55,4.4],[.8,6]].forEach(([f,d])=>CC(d,{t:`Green ${Math.round(f*100)}% of the land`,g:`Bring the barren land to life: cover ${Math.round(f*100)}% of it with plants.`,hint:'Paint grass with the Grass brush; it spreads by itself where it is warm and wet. Rain and the climate sliders help.',setup:scn('barren'),check:()=>{const v=vegCover();return[v>=f,v/f,`${Math.round(v*100)}% covered`]},stars:byTime(f*120,f*300)}));
+CC(4.8,{t:'Desert bloom',g:'Cover 30% of the desert with plants.',hint:'Raise the rainfall, use the Rain brush, or cool the climate a little.',setup:scn('desert'),check:()=>{const v=vegCover();return[v>=.3,v/.3,`${Math.round(v*100)}% covered`]},stars:byTime(40,120)});
+CC(4,{t:'Arctic thaw',g:'Warm the Arctic until half of the land is covered with plants.',hint:'Use the Global temperature slider in the World tab.',setup:scn('arctic'),check:()=>{const v=vegCover();return[v>=.5,v/.5,`${Math.round(v*100)}% covered`]},stars:byTime(30,90)});
+[[700,3.4],[1400,5.2]].forEach(([n,d])=>CC(d,{t:`A forest of ${n}`,g:`Have ${n} trees growing in the meadow.`,hint:'Plant trees in suitable places; grown trees spread their own seeds. Fires and bad climate kill them.',setup:scn('meadow'),check:()=>{const c=S.trees.length;return[c>=n,c/n,`${c} of ${n} trees`]},stars:byTime(n/6,n/2)}));
+CC(3,{t:'Dig a lake',g:'Make a new lake of at least 150 squares with the Water tool, then put 20 fish in the world.',hint:'Pick Water and paint on dry land. Then release fish into it.',setup:scn('savanna'),check:()=>{const w=Math.min(1,WATERED/150),f=cnt('fish');return[WATERED>=150&&f>=20,w*.6+Math.min(.4,f/50),`${Math.min(WATERED,150)} of 150 squares · ${f} fish`]},stars:byTime(60,150)});
+CC(3.8,{t:'Snow on the mountain',g:'Raise a new mountain on the warm islands high enough to have snow all year (25 new snowy squares).',hint:'Pick Raise and paint the same spot again and again. It gets colder 6.5 °C for every kilometre up.',setup:scn('islands',()=>{CH.ref.c0=snowCells()}),check:()=>{const c=snowCells()-CH.ref.c0;return[c>=25,clamp(c/25,0,1),`New snowy squares: ${Math.max(0,c)} of 25`]},stars:byTime(40,100)});
+// events
+CC(4.2,{t:'Survive the ice age',g:'It is 10 °C colder. Keep at least 15 deer alive for 5 years.',hint:'Animals with thick fur survive and pass it on. Food is scarce: keep wolves in check.',setup:scn('meadow',()=>{CL.temp=-10;syncClimateUI()}),check:()=>{const n=cnt('deer'),p=hold('h',n>=15,5);return[p>=1,p,`${n} deer · ${holdTxt(p,5)}`]},fail:()=>cnt('deer')?'':'The deer died out',stars:byTime(45,120)});
+CC(4.6,{t:'Heat wave',g:'It is 8 °C hotter. Keep 30 rabbits alive for 5 years.',hint:'Water and shade matter. Thin-furred rabbits cope with heat best.',setup:scn('meadow',()=>{CL.temp=8;syncClimateUI()}),check:()=>{const n=cnt('rabbit'),p=hold('h',n>=30,5);return[p>=1,p,`${n} rabbits · ${holdTxt(p,5)}`]},fail:()=>cnt('rabbit')?'':'The rabbits died out',stars:byTime(45,120)});
+CC(5,{t:'Drought',g:'Rain falls to 30%. Keep 20 zebras alive for 3 years.',hint:'Use the Rain brush near the waterholes to grow grass, or dig more lakes.',setup:scn('savanna',()=>{CL.rain=.3;syncClimateUI()}),check:()=>{const n=cnt('zebra'),p=hold('h',n>=20,3);return[p>=1,p,`${n} zebras · ${holdTxt(p,3)}`]},fail:()=>cnt('zebra')?'':'The zebras died out',stars:byTime(45,120)});
+CC(4.4,{t:'Stop the plague',g:'A disease spreads through the rabbits. Have 60 rabbits alive after 2 years.',hint:'Sick animals infect their neighbours. Spread healthy rabbits out, or remove the sick ones (they glow green).',setup:scn('meadow',()=>{for(const a of S.animals)if(a.sp==='rabbit'&&rnd()<.5)a.sick=rr(15,35)}),check:()=>{const n=cnt('rabbit'),y=yrs();return[y>=2&&n>=60,Math.min(1,y/2)*.6+Math.min(.4,n/150),`${n} rabbits · year ${y.toFixed(1)} of 2`]},fail:()=>cnt('rabbit')?'':'The rabbits died out',stars:byTime(40,100)});
+CC(5.2,{t:'Firefighter',g:'A wildfire breaks out. Keep at least 70% of the trees alive for a year.',hint:'Pause, then paint water or remove dry grass in a line ahead of the flames to make firebreaks.',setup:scn('meadow',()=>{CH.ref.t0=S.trees.length;for(let k=0;k<5;k++){const p=randomCell(i=>!isWater(i)&&veg[i]>.5);if(p)ignite(idx(p[0],p[1]))}}),check:()=>{const f=S.trees.length/(CH.ref.t0||1),y=yrs();return[y>=1&&f>=.7,Math.min(1,y),`${Math.round(f*100)}% of trees left · ${(y*12).toFixed(0)} of 12 months`]},fail:()=>S.trees.length<CH.ref.t0*.7?'Too many trees burned':'',stars:byTime(40,100)});
+CC(6,{t:'After the meteor',g:'A meteor strikes. Have 6 species alive 4 years later.',hint:'The dust cools the world for a few years. Keep the survivors fed; you can release new animals too.',setup:scn('pangaea',()=>{meteor(GW*.5,GH*.5,14)}),check:()=>{const n=speciesAlive().length,y=yrs();return[y>=4&&n>=6,Math.min(1,y/4)*.7+Math.min(.3,n/20),`${n} species · year ${y.toFixed(1)} of 4`]},stars:byTime(60,150)});
+CC(5.6,{t:'Rising seas',g:'The seas rise 60 m. Keep 5 land species alive for 3 years.',hint:'Raise land for the animals, or move them to the hills.',setup:scn('meadow',()=>{CL.seaM=60;syncClimateUI();terrainChanged()}),check:()=>{const n=speciesAlive().filter(k=>SP[k].hab==='land').length,p=hold('h',n>=5,3);return[p>=1,p,`${n} land species · ${holdTxt(p,3)}`]},stars:byTime(45,120)});
+// biodiversity and rewilding
+[[8,4.8],[10,6.2],[13,8]].forEach(([n,d])=>CC(d,{t:`${n} species at once`,g:`Have ${n} different species alive at the same time for 2 years.`,hint:'Each species needs its own climate and food. Use different regions of the supercontinent.',setup:scn('pangaea'),check:()=>{const c=speciesAlive().length,p=hold('b',c>=n,2);return[p>=1,p*.8+Math.min(.2,c/n*.2),`${c} species · ${holdTxt(p,2)}`]},stars:byTime(40,120)}));
+[[3,3.6],[6,5.8]].forEach(([n,d])=>CC(d,{t:`Rewild with ${n} species`,g:`On the barren land, have ${n} species with at least 6 animals each, for 2 years.`,hint:'Grow plants first, then plant eaters, then hunters. Seed algae before releasing fish.',setup:scn('barren'),check:()=>{const c=SPK.filter(k=>cnt(k)>=6).length,p=hold('r',c>=n,2);return[p>=1,p*.8+Math.min(.2,c/n*.2),`${c} species with 6+ · ${holdTxt(p,2)}`]},stars:byTime(90,240)}));
+CC(4.2,{t:'Food chain',g:'On barren land, have grass, 30 rabbits and 4 foxes alive at once for 3 years.',hint:'Grow grass first, release rabbits, and only add foxes when there are plenty of rabbits.',setup:scn('barren'),check:()=>{const r=cnt('rabbit'),f=cnt('fox'),p=hold('f',r>=30&&f>=4&&vegCover()>.1,3);return[p>=1,p,`${r} rabbits · ${f} foxes · ${holdTxt(p,3)}`]},stars:byTime(90,240)});
+CC(4.4,{t:'Ocean food chain',g:'On barren land, have 60 fish and 4 otters alive at once for 3 years.',hint:'Seed algae in the water first: fish eat algae, otters eat fish.',setup:scn('barren'),check:()=>{const r=cnt('fish'),f=cnt('otter'),p=hold('f',r>=60&&f>=4,3);return[p>=1,p,`${r} fish · ${f} otters · ${holdTxt(p,3)}`]},stars:byTime(90,240)});
+CC(5,{t:'Save the wolves',g:'Only two wolves are left. Grow them to 15.',hint:'Wolves need plenty of deer. Release deer and protect the pair.',setup:()=>{loadScen('meadow');for(const a of S.animals)if(a.sp==='wolf')kill(a,'removed');S.animals=S.animals.filter(a=>!a.dead);const p=randomCell(i=>habitatOK('wolf',i)&&veg[i]>.3);if(p){addAnimal('wolf',p[0],p[1],{sex:'f',e:.9});addAnimal('wolf',p[0]+.5,p[1],{sex:'m',e:.9})}},check:()=>{const n=cnt('wolf');return[n>=15,n/15,`${n} of 15 wolves`]},fail:()=>cnt('wolf')?'':'The wolves died out',stars:byTime(60,160)});
+CC(6.6,{t:'Ice world',g:'Set the world to −15 °C and keep 5 species alive for 3 years.',hint:'Pick hardy species: wolves, bears, bison, fish. Thick fur evolves over time.',setup:scn('pangaea'),check:()=>{const c=speciesAlive().length,p=hold('i',CL.temp<=-15&&c>=5,3);return[p>=1,p,CL.temp>-15?'Set the temperature to −15 °C first':`${c} species · ${holdTxt(p,3)}`]},stars:byTime(45,120)});
+CC(4.9,{t:'Overgrazing',g:'Keep 40 bison alive for 4 years without the plants dropping below 20% cover.',hint:'Too many grazers strip the land. Lions or wolves keep herds moving and smaller.',setup:scn('savanna'),check:()=>{const n=cnt('bison'),v=vegCover(),p=hold('o',n>=40&&v>=.2,4);return[p>=1,p,`${n} bison · ${Math.round(v*100)}% plants · ${holdTxt(p,4)}`]},stars:byTime(60,150)});
+// records
+CC(5.4,{t:'Old timer',g:'Have an animal live to 12 years old.',hint:'Big animals like bears and camels live longest. Keep one fed and safe.',setup:scn('meadow'),check:()=>{let m=0;for(const a of S.animals)if(!a.dead)m=Math.max(m,a.age);return[m>=12*365,m/(12*365),`Oldest: ${(m/365).toFixed(1)} years`]},stars:byTime(40,100)});
+CC(4.6,{t:'Big family',g:'Have one animal with 20 children.',hint:'Mice and rabbits have big litters. Follow one and keep it fed.',setup:scn('meadow'),check:()=>{let m=0;for(const a of S.animals)if(!a.dead)m=Math.max(m,a.kids);return[m>=20,m/20,`Most children: ${m}`]},stars:byTime(40,100)});
+CC(5,{t:'Top predator',g:'Have one hunter make 25 kills.',hint:'Foxes in a world full of rabbits hunt often.',setup:scn('meadow'),check:()=>{let m=0;for(const a of S.animals)if(!a.dead)m=Math.max(m,a.kills);return[m>=25,m/25,`Most kills: ${m}`]},stars:byTime(40,100)});
+CC(3.2,{t:'Rainmaker',g:'Use the Rain brush to green the driest part of the savanna: paint 400 squares.',hint:'Pick Rain and paint over dry yellow land.',setup:scn('savanna'),check:()=>{const n=Math.min(RAINED,400);return[RAINED>=400,n/400,`${n} of 400 squares`]},stars:byTime(30,80)});
+CHALS.sort((a,b)=>a.diff-b.diff);
+loadProg();
+const NCH=CHALS.length;
+const starsOf=i=>(CHALS[i]&&PROG.stars[CHALS[i].t])||0;
+const unlocked=i=>{if(i===0||starsOf(i-1)||starsOf(i))return true;for(let j=i+1;j<NCH;j++)if(starsOf(j))return true;return false};
+function totalStars(){let n=0;for(let i=0;i<NCH;i++)n+=starsOf(i);return n}
+const doneCount=()=>CHALS.filter((c,i)=>starsOf(i)>0).length;
+function setMode(m){document.body.classList.toggle('mHome',m==='home');document.body.classList.toggle('mDemo',m==='demo')}
+function homeView(v){for(const id of ['hMain','hChalView','hDemoView'])$(id).hidden=id!==v;if(v==='hChalView')renderGrid();const d=doneCount();$('hChalSub').textContent=d?`${d} of ${NCH} complete · ${totalStars()} of ${NCH*3} stars`:`${NCH} goals, from easy to fiendish`;updateAcctUI()}
+function showHome(){stopDemo(true);if(CH.active)endChallenge();if(TUT.on)endTutorial();$('chDone').hidden=true;$('scen').hidden=true;
+  CH.loading=true;loadScen('meadow');CH.loading=false;setSpeed(7);setPaused(false);setTool('select');
+  cam.z=Math.min(W/(GW*CELL),H/(GH*CELL))*1.5;cam.ox=innerWidth>900?innerWidth*0.18:0;setMode('home');$('home').hidden=false;homeView('hMain')}
+function leaveHome(){cam.ox=0;$('home').hidden=true;setMode('');fitWorld()}
+$('homeBtn').onclick=showHome;document.querySelectorAll('.hback').forEach(b=>b.onclick=()=>homeView('hMain'));
+$('hChal').onclick=()=>homeView('hChalView');$('hDemo').onclick=()=>homeView('hDemoView');
+$('hFree').onclick=()=>{leaveHome();loadScen('meadow');countPlay()};
+function renderGrid(){const g=$('hGrid');g.textContent='';let next=-1;
+  CHALS.forEach((c,i)=>{const st=starsOf(i),un=unlocked(i);if(un&&!st&&next<0)next=i;const b=document.createElement('button');b.className='ct'+(i===next?' next':'');b.disabled=!un;b.title=un?`${c.t}: ${c.g}`:'Finish the previous challenge to unlock';
+    b.innerHTML='<span class="cn"></span><span class="ctt"></span><span class="cs"></span>';b.children[0].textContent=`#${i+1}`;b.children[1].textContent=un?c.t:'Locked';b.children[2].textContent=un?(st?'★'.repeat(st)+'☆'.repeat(3-st):'☆☆☆'):'🔒';b.onclick=()=>startChallenge(i);g.appendChild(b)});
+  $('hStars').textContent=`★ ${totalStars()} / ${NCH*3}`;if(next>=0)setTimeout(()=>{const el=g.children[next];if(el)el.scrollIntoView({block:'nearest'})},30)}
+function startChallenge(i){const c=CHALS[i];if(!c||!unlocked(i))return;leaveHome();countPlay();$('chDone').hidden=true;
+  CH.active=c;CH.idx=i;CH.events=[];CH.hold={};CH.ref={};CH.done=false;CH.failed='';CH.loading=true;try{c.setup()}finally{CH.loading=false}
+  CH.t0=S.t;CH.real0=performance.now();setPaused(false);setTool('select');
+  $('chHud').hidden=false;$('chNum').textContent=`Challenge ${i+1} of ${NCH}`;$('chTitle').textContent=c.t;$('chGoal').textContent=c.g;$('chProg').textContent='';$('chBar').style.width='0%';$('chHint').hidden=!c.hint;$('chRestart').textContent='Restart'}
+function endChallenge(){CH.active=null;$('chHud').hidden=true}
+function chTick(){if(TUT.on)tutTick();if(!CH.active||CH.done)return;const c=CH.active;let r;try{r=c.check()}catch(e){r=[false,0,'']}
+  const [done,p,txt]=r;$('chProg').textContent=txt||'';$('chBar').style.width=Math.round(clamp(p||0,0,1)*100)+'%';const t=realSecs();$('chTime').textContent=`${Math.floor(t/60)}:${String(Math.floor(t%60)).padStart(2,'0')}`;
+  if(done){CH.done=true;const st=clamp(c.stars(),1,3),prev=starsOf(CH.idx);if(st>prev)PROG.stars[c.t]=st;saveProg();
+    $('dStars').innerHTML='★'.repeat(st)+'<span class="off">'+'★'.repeat(3-st)+'</span>';$('dTitle').textContent=`Challenge ${CH.idx+1} complete!`;$('dText').textContent=`${c.t} · ${Math.floor(t/60)}:${String(Math.floor(t%60)).padStart(2,'0')}${st<3?' · Faster solutions earn more stars.':' · Perfect!'}${prev>st?` Your best is still ${prev} ★.`:''}`;
+    $('dNext').hidden=CH.idx>=NCH-1;$('dNext').textContent='Next challenge';$('dRetry').hidden=false;$('dList').textContent='All challenges';$('chDone').hidden=false;$('chHud').hidden=true;return}
+  const f=c.fail&&c.fail();if(f){CH.done=true;$('dStars').innerHTML='<span class="off">★★★</span>';$('dTitle').textContent='Not this time';$('dText').textContent=f+'. Try again?';$('dNext').hidden=true;$('dRetry').hidden=false;$('dList').textContent='All challenges';$('chDone').hidden=false;$('chHud').hidden=true}}
+$('chRestart').addEventListener('click',e=>{if(TUT.on){TUT.i++;tutStep();return}startChallenge(CH.idx)});
+$('chExit').addEventListener('click',()=>{if(TUT.on){endTutorial();showHome();homeView('hDemoView');return}endChallenge();showHome();homeView('hChalView')});
+$('chHint').onclick=()=>{if(CH.active)toast('Hint: '+CH.active.hint)};
+$('dNext').onclick=()=>{if(TUT.finished){TUT.finished=false;showHome();homeView('hChalView');return}startChallenge(CH.idx+1)};
+$('dRetry').onclick=()=>{if(TUT.finished){TUT.finished=false;startTutorial();return}startChallenge(CH.idx)};
+$('dList').onclick=()=>{if(TUT.finished){TUT.finished=false;$('chDone').hidden=true;leaveHome();loadScen('meadow');countPlay();return}endChallenge();showHome();homeView('hChalView')};
+
+/* tutorial: every feature gets a step */
+const TUT={on:false,i:0,ref:{},finished:false};
+const TSTEPS=[
+ ['Look around','Drag with the mouse (or one finger) to move across the world. W, A, S and D work too.',r=>CAMMOVED>r.m+120,r=>{r.m=CAMMOVED}],
+ ['Zoom','Scroll (or pinch) to zoom in. Zoom goes toward wherever your pointer is.',r=>ZOOMED>r.z+2,r=>{r.z=ZOOMED}],
+ ['Pause time','Press Space or the ⏸ button to pause.',()=>S.paused],
+ ['Speed up','Resume, then press “1 mo” to run a month every second.',()=>!S.paused&&S.speed>=30],
+ ['Find an animal','Type fox in the search bar and press Enter.',()=>S.sel&&S.sel.sp==='fox'],
+ ['Its genes','The Inspect tab shows its energy, what it is doing and its genes. Drag one of the gene sliders.',r=>GENEDIT>r.g,r=>{r.g=GENEDIT}],
+ ['Let go','Press Esc to stop following it.',()=>!S.sel],
+ ['Plant a tree','Pick Oak in the toolbar on the left and click on green land.',r=>(PLACED.oak||0)>r.n,r=>{r.n=PLACED.oak||0}],
+ ['Release animals','Pick Rabbit and click on the land to release some.',r=>(PLACED.rabbit||0)>r.n,r=>{r.n=PLACED.rabbit||0}],
+ ['Make it rain','Pick Rain under Land and paint over some dry ground.',r=>RAINED>r.n,r=>{r.n=RAINED}],
+ ['Change the climate','In the World tab, drag the Global temperature slider.',r=>CLIMCH>r.n,r=>{r.n=CLIMCH}],
+ ['Cause an event','Press one of the events, such as 🔥 Wildfire or ☄ Meteor.',r=>EVN>r.n,r=>{r.n=EVN}],
+ ['Watch the populations','Open the Life tab to see every species and the population graph.',r=>LIFEOPEN>r.n,r=>{r.n=LIFEOPEN}],
+ ['Views','In the World tab, switch to the Temperature or Food view.',r=>VIEWCH>r.n,r=>{r.n=VIEWCH}],
+ ['Save your progress','Click 👤 in the top bar and create an account (a PIN is optional). Your stars save on this device.',r=>ACCN>r.n,r=>{r.n=ACCN}],
+];
+let EVN=0;
+function startTutorial(){leaveHome();countPlay();$('chDone').hidden=true;CH.loading=true;loadScen('meadow');CH.loading=false;setSpeed(7);setPaused(false);TUT.on=true;TUT.i=0;TUT.finished=false;tutStep()}
+function tutStep(){const st=TSTEPS[TUT.i];if(!st){TUT.on=false;TUT.finished=true;$('chHud').hidden=true;$('dStars').innerHTML='★★★';$('dTitle').textContent='Tutorial complete!';$('dText').textContent='You know all the controls. Try the challenges, or build any world in free play.';$('dNext').hidden=false;$('dNext').textContent='Challenges';$('dRetry').hidden=false;$('dList').textContent='Free play';$('chDone').hidden=false;$('chRestart').textContent='Restart';return}
+  TUT.ref={};if(st[3])st[3](TUT.ref);$('chHud').hidden=false;$('chNum').textContent=`Tutorial · step ${TUT.i+1} of ${TSTEPS.length}`;$('chTitle').textContent=st[0];$('chGoal').textContent=st[1];$('chProg').textContent='';$('chTime').textContent='';$('chBar').style.width=Math.round(TUT.i/TSTEPS.length*100)+'%';$('chHint').hidden=true;$('chRestart').textContent='Skip step'}
+function tutTick(){const st=TSTEPS[TUT.i];if(st&&st[2](TUT.ref)){TUT.i++;toast('✓ '+st[0]);tutStep()}}
+function endTutorial(){TUT.on=false;$('chHud').hidden=true;$('chRestart').textContent='Restart'}
+$('hTut').onclick=startTutorial;
+
+/* demo */
+const DEMO=[
+ ['meadow','A living meadow','Rabbits graze, foxes hunt, deer roam in herds and grass regrows with the seasons.',()=>{setSpeed(7);setTimeout(()=>flyTo('fox')&&(cam.z=3.2),300)}],
+ ['savanna','The hunt','Lions stalk zebras across the savanna. The slowest are caught first, so the herd evolves to be faster.',()=>{setSpeed(3);setTimeout(()=>flyTo('lion')&&(cam.z=2.6),300)}],
+ ['arctic','Life in the cold','Only animals with thick fur survive here. Their white coats are the result of generations of selection.',()=>{setSpeed(7);setTimeout(()=>flyTo('rabbit')&&(cam.z=3),300)}],
+ ['meadow','Wildfire','A dry summer and a spark. Fire races through the grass and forest; life returns afterwards.',()=>{setSpeed(3);for(let k=0;k<6;k++){const p=randomCell(i=>!isWater(i)&&veg[i]>.5);if(p)ignite(idx(p[0],p[1]))}}],
+ ['pangaea','Meteor strike','An impact blasts a crater and fills the sky with dust. The world cools for years.',()=>{setSpeed(30);setTimeout(()=>{S.falling={x:GW*.5,y:GH*.5,t:0}},1500)}],
+ ['islands','The archipelago','Fish thrive on algae in the shallows; otters dive for them from the shore.',()=>{setSpeed(7);setTimeout(()=>flyTo('otter')&&(cam.z=2.8),300)}],
+ ['desert','The desert','Camels survive weeks without water; cactus stores what little rain falls.',()=>{setSpeed(7);setTimeout(()=>flyTo('camel')&&(cam.z=2.4),300)}],
+ ['rainforest','A year per second','Speed up time and watch populations boom and crash in the rainforest.',()=>{setSpeed(365);setView('food')}],
+];
+let demoI=-1,demoTimer=0;
+function startDemo(){leaveHome();countPlay();setMode('demo');$('demoCap').hidden=false;demoI=-1;nextDemo()}
+function nextDemo(){clearTimeout(demoTimer);demoI=(demoI+1)%DEMO.length;const [id,t,x,f]=DEMO[demoI];CH.loading=true;loadScen(id);CH.loading=false;setPaused(false);f();
+  $('demoStep').textContent=`Demo · ${demoI+1} of ${DEMO.length}`;$('demoTitle').textContent=t;$('demoText').textContent=x;demoTimer=setTimeout(nextDemo,12000)}
+function stopDemo(quiet){clearTimeout(demoTimer);if(demoI<0&&quiet)return;demoI=-1;$('demoCap').hidden=true;setMode('');setView('normal');if(!quiet)showHome()}
+$('hWatch').onclick=startDemo;$('demoExit').onclick=()=>stopDemo();$('demoNext').onclick=nextDemo;
+
+/* ================= main loop ================= */
+let last=performance.now(),uiT=0,achAcc=0,achT=0;
+function frame(now){const dtR=Math.min(0.1,(now-last)/1000);last=now;camKeys(dtR);
+  try{
+  if(!S.paused){const want=S.speed*dtR,step=Math.min(S.speed>=180?1:0.5,Math.max(0.04,S.speed/150)),t0=performance.now();let done=0;
+    while(done<want-1e-9&&performance.now()-t0<11){const d=Math.min(step,want-done);simStep(d);done+=d}
+    if(done>0)updateVeg(done);achAcc+=done}
+  achT+=dtR;if(achT>=0.5){S.achieved=achAcc/achT;achAcc=0;achT=0}
+  if(S.falling){S.falling.t+=dtR*1.4;if(S.falling.t>=1){const f=S.falling;S.falling=null;meteor(f.x,f.y,12);EVN++}}
+  if(S.flash){S.flash.t-=dtR*1.2;if(S.flash.t<=0)S.flash=null}
+  for(const p of S.parts){p.x+=p.vx*dtR;p.y+=p.vy*dtR;p.life-=dtR}if(S.parts.length)S.parts=S.parts.filter(p=>p.life>0);if(S.parts.length>1500)S.parts.splice(0,S.parts.length-1500);
+  if(S.follow&&S.sel&&!S.sel.dead){cam.x=lerp(cam.x,S.sel.x*CELL,Math.min(1,dtR*6));cam.y=lerp(cam.y,S.sel.y*CELL,Math.min(1,dtR*6))}
+  render(now);
+  uiT+=dtR;if(uiT>0.25){uiT=0;updateHud()}
+  }catch(err){console.error('[Biosphere]',err)}
+  requestAnimationFrame(frame)}
+function updateHud(){const c=counts();let n=0,sp=0;for(const k of SPK){n+=c[k];if(c[k])sp++}$('nAnimals').textContent=n;$('nTrees').textContent=S.trees.length;$('nSpecies').textContent=sp;
+  $('dateTxt').textContent=dateTxt();const ci=idx(wxOf(W/2),wyOf(H/2));$('tempTxt').textContent=ci>=0?`${cellT(ci).toFixed(0)} °C at the centre${CL.dust>0.5?' · dusty sky':''}`:'';
+  $('rateTxt').textContent=S.paused?'Paused':fmtRate(S.speed)+(S.achieved<S.speed*0.85&&S.speed>30?` (running ${fmtRate(Math.max(0.01,S.achieved))})`:'');
+  if(!$('pane-life').hidden)renderLife();updateInspector();chTick();
+  if(document.visibilityState==='visible'&&$('home').hidden){PROG.secs=(PROG.secs||0)+0.25}}
+addEventListener('resize',()=>{resize()});addEventListener('pagehide',saveProg);
+
+/* ================= start ================= */
+resize();buildRail();buildSpeeds();buildScen();setSpeed(7);setTool('select');updateAcctUI();gCount('get');showHome();requestAnimationFrame(frame);
+
+</script>
+
+</body>
+</html>
