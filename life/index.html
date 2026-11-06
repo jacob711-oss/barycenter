@@ -367,8 +367,11 @@ function genTerrain(o){const n1=makeNoise(o.seed),n2=makeNoise(o.seed+7),n3=make
 
 /* ---------- vegetation ---------- */
 function capOf(T,R){const fT=T<-9?0:T<8?(T+9)/17:T<30?1:T<44?(44-T)/14:0;return fT*Math.min(1,R/0.6)*(1-Math.min(.7,CL.dust/14))}
-function updateVeg(dt){const s=sea();
-  for(let i=0;i<N;i++){
+// plants grow in four bands of rows, one band per frame, each catching up on the time since its last turn
+const VEG_PARTS=4,vegAcc=new Float32Array(VEG_PARTS);let vegTurn=0;
+function updateVegSliced(dt){for(let k=0;k<VEG_PARTS;k++)vegAcc[k]+=dt;const k=vegTurn++%VEG_PARTS,d=vegAcc[k];vegAcc[k]=0;if(d>0)updateVeg(d,Math.floor(N*k/VEG_PARTS),Math.floor(N*(k+1)/VEG_PARTS))}
+function updateVeg(dt,i0=0,i1=N){const s=sea();
+  for(let i=i0;i<i1;i++){
     if(hgt[i]<s){veg[i]=0;const T=cellT(i),cap=T<1?0.05:T<30?Math.min(1,(s-hgt[i])<0.06?1:0.45):0.5;let a=alg[i];
       if(a<0.01){a=0.01}a=a<cap?cap/(1+(cap-a)/a*Math.exp(-0.035*dt)):a+(cap-a)*Math.min(1,0.03*dt);alg[i]=a;continue}
     alg[i]=0;const T=cellT(i),R=wetAt(i),cap=capOf(T,R);let v=veg[i];
@@ -380,7 +383,9 @@ function updateVeg(dt){const s=sea();
 /* ---------- spatial hash for animals ---------- */
 // one bucket grid per species, so a fox looking for rabbits never scans the fish
 const BK=8,BW=Math.ceil(GW/BK),BH=Math.ceil(GH/BK);let SB={};
-function rebuildHash(){SB={};SPN={};for(const a of S.animals){if(a.dead)continue;SPN[a.sp]=(SPN[a.sp]||0)+1;const g=SB[a.sp]||(SB[a.sp]=new Array(BW*BH));const b=((a.y/BK)|0)*BW+((a.x/BK)|0);(g[b]||(g[b]=[])).push(a)}}
+const SBUSED={};// bucket arrays are reused between steps instead of re-created
+function rebuildHash(){for(const sp in SBUSED){const g=SB[sp];for(const b of SBUSED[sp])g[b].length=0;SBUSED[sp].length=0}SPN={};
+  for(const a of S.animals){if(a.dead)continue;const sp=a.sp;SPN[sp]=(SPN[sp]||0)+1;const g=SB[sp]||(SB[sp]=new Array(BW*BH));const b=((a.y/BK)|0)*BW+((a.x/BK)|0);let L=g[b];if(!L)L=g[b]=[];if(!L.length)(SBUSED[sp]||(SBUSED[sp]=[])).push(b);L.push(a)}}
 function nearSp(sps,x,y,r,fn){const x0=Math.max(0,((x-r)/BK)|0),x1=Math.min(BW-1,((x+r)/BK)|0),y0=Math.max(0,((y-r)/BK)|0),y1=Math.min(BH-1,((y+r)/BK)|0),r2=r*r;
   for(const sp of sps){const g=SB[sp];if(!g)continue;for(let by=y0;by<=y1;by++)for(let bx=x0;bx<=x1;bx++){const L=g[by*BW+bx];if(!L)continue;for(const a of L){if(a.dead)continue;const dx=a.x-x,dy=a.y-y,d2=dx*dx+dy*dy;if(d2<=r2)fn(a,d2)}}}}
 const near=(x,y,r,fn)=>nearSp(SPK,x,y,r,fn);
@@ -549,11 +554,17 @@ function tileNoise(seed,blur,passes){const r=seeded(seed),T=new Float32Array(655
     for(let y=0;y<256;y++)for(let x=0;x<256;x++){let s=0;for(let k=-blur;k<=blur;k++)s+=tmp[((y+k)&255)*256+x];T[y*256+x]=s/(2*blur+1)}}
   let mn=1,mx=0;for(const v of T){if(v<mn)mn=v;if(v>mx)mx=v}for(let i=0;i<65536;i++)T[i]=(T[i]-mn)/(mx-mn);return T}
 const WARPX=tileNoise(3,6,2),WARPY=tileNoise(4,6,2),DET1=tileNoise(5,2,1),DET2=tileNoise(6,1,1);
-const tv=document.createElement('canvas'),tvx=tv.getContext('2d');let tvImg=null,tvInfo=null,tvStill=0;
-function renderTerrainView(RS){const w=Math.max(1,Math.ceil(W*RS)),h=Math.max(1,Math.ceil(H*RS));if(tv.width!==w||tv.height!==h||!tvImg){tv.width=w;tv.height=h;tvImg=tvx.createImageData(w,h)}
-  const D=tvImg.data,C=img.data,inv=1/(cam.z*RS*CELL),wx0=wxOf(0),wy0=wyOf(0),nat=S.view==='normal';
+// The ground is redrawn as a background job a few rows at a time, over an area a little larger than the screen.
+// Every frame just shows the latest finished picture, shifted and scaled to the current camera, so moving stays smooth.
+const tvFront=document.createElement('canvas'),tvfx=tvFront.getContext('2d'),tvBack=document.createElement('canvas'),tvbx=tvBack.getContext('2d');
+let tvInfo=null,tvJob=null,tvStill=0,tvLastFull=0;
+function startTerrainJob(RS){const M=0.18,w=Math.max(1,Math.ceil(W*(1+2*M)*RS)),h=Math.max(1,Math.ceil(H*(1+2*M)*RS));
+  if(tvBack.width!==w||tvBack.height!==h){tvBack.width=w;tvBack.height=h}
+  const inv=1/(cam.z*RS*CELL);tvJob={w,h,RS,inv,wx0:wxOf(-W*M),wy0:wyOf(-H*M),row:0,img:tvbx.createImageData(w,h),cam:{z:cam.z,x:cam.x,y:cam.y,ox:cam.ox,W,H}}}
+function stepTerrainJob(budget){const J=tvJob;if(!J)return;const t0=performance.now(),D=J.img.data,C=img.data,inv=J.inv,wx0=J.wx0,wy0=J.wy0,w=J.w,nat=S.view==='normal';
   const a1=nat?0.10*clamp(1-inv*5,0,1):0,a2=nat?0.08*clamp(1-inv*24,0,1):0,wa=clamp(1-inv*2,0,1),sl=sea(),edge=Math.max(0.0015,inv*0.012);
-  let q=0;for(let py=0;py<h;py++){const wy=wy0+py*inv;
+  let py=J.row,q=py*w*4;
+  for(;py<J.h;py++){const wy=wy0+py*inv;
     for(let px=0;px<w;px++,q+=4){const wx=wx0+px*inv;
       if(wx<0||wy<0||wx>=GW||wy>=GH){D[q]=10;D[q+1]=36;D[q+2]=66;D[q+3]=255;continue}
       const fx=wx-.5,fy=wy-.5,x0=fx<0?0:fx|0,y0=fy<0?0:fy|0,x1=x0<GW-1?x0+1:x0,y1=y0<GH-1?y0+1:y0,tx=fx-x0<0?0:fx-x0>1?1:fx-x0,ty=fy-y0<0?0:fy-y0>1?1:fy-y0;
@@ -567,13 +578,20 @@ function renderTerrainView(RS){const w=Math.max(1,Math.ceil(W*RS)),h=Math.max(1,
       const fw=nat?1+(DET1[(((wy*3)|0)&255)*256+(((wx*3)|0)&255)]-.5)*0.08*wa:1;
       const j00=i00*3,j10=i10*3,j01=i01*3,j11=i11*3;
       for(let k=0;k<3;k++){const l=(LC[j00+k]*w00+LC[j10+k]*w10+LC[j01+k]*w01+LC[j11+k]*w11)*f,wv=(WC[j00+k]*w00+WC[j10+k]*w10+WC[j01+k]*w01+WC[j11+k]*w11)*fw;D[q+k]=l+(wv-l)*wt}
-      D[q+3]=255}}
-  tvx.putImageData(tvImg,0,0);tvInfo={wx0,wy0,inv,z:cam.z,x:cam.x,y:cam.y,ox:cam.ox,W,H,RS}}
-function drawTerrain(now){const hi=Math.min(DPR,Math.sqrt(750000/(W*H))),lo=Math.min(hi,Math.sqrt(160000/(W*H)));
-  const moved=!tvInfo||tvInfo.z!==cam.z||tvInfo.x!==cam.x||tvInfo.y!==cam.y||tvInfo.ox!==cam.ox||tvInfo.W!==W||tvInfo.H!==H;
-  if(moved){renderTerrainView(lo);tvStill=now;S.tvDirty=false}
-  else if((tvInfo.RS<hi&&now-tvStill>140)||S.tvDirty){renderTerrainView(hi);S.tvDirty=false}
-  const k=tvInfo.inv*CELL*cam.z;ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';ctx.drawImage(tv,sx(tvInfo.wx0),sy(tvInfo.wy0),tv.width*k,tv.height*k)}
+      D[q+3]=255}
+    if((py&7)===7&&performance.now()-t0>budget){py++;break}}
+  J.row=py;if(py>=J.h){tvbx.putImageData(J.img,0,0);if(tvFront.width!==J.w||tvFront.height!==J.h){tvFront.width=J.w;tvFront.height=J.h}tvfx.drawImage(tvBack,0,0);
+    tvInfo={wx0:J.wx0,wy0:J.wy0,inv:J.inv,RS:J.RS,...J.cam};tvJob=null}}
+function drawTerrain(now){const hi=Math.min(DPR,Math.sqrt(800000/(W*H))),lo=Math.min(hi,Math.sqrt(150000/(W*H)));
+  const c=tvInfo,moved=!c||c.z!==cam.z||c.x!==cam.x||c.y!==cam.y||c.ox!==cam.ox||c.W!==W||c.H!==H;
+  if(moved)tvStill=now;
+  if(!c){startTerrainJob(lo);stepTerrainJob(1e9)}
+  else{// how stale is what we have?
+    const k=cam.z/c.z,gone=k>1.7||k<0.6||Math.abs(wxOf(W/2)-(c.wx0+tvFront.width*c.inv/2))>tvFront.width*c.inv*0.3||Math.abs(wyOf(H/2)-(c.wy0+tvFront.height*c.inv/2))>tvFront.height*c.inv*0.3;
+    if(!tvJob){if(moved&&gone)startTerrainJob(lo);else if(!moved&&now-tvStill>90&&(c.RS<hi||c.z!==cam.z||c.x!==cam.x||c.y!==cam.y))startTerrainJob(hi);else if(S.tvDirty&&now-tvLastFull>2500&&!moved){startTerrainJob(hi);S.tvDirty=false;tvLastFull=now}}
+    else if(moved&&tvJob.RS>lo&&gone){startTerrainJob(lo)}
+    stepTerrainJob(tvJob&&tvJob.RS<=lo+1e-9?8:4)}
+  const ci=tvInfo,k=ci.inv*CELL*cam.z;ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality=ci.RS<hi?'low':'high';ctx.drawImage(tvFront,sx(ci.wx0),sy(ci.wy0),tvFront.width*k,tvFront.height*k)}
 let texPat=null;
 function resize(){DPR=Math.min(2,devicePixelRatio||1);W=innerWidth;H=innerHeight;cv.width=W*DPR;cv.height=H*DPR;ctx.setTransform(DPR,0,0,DPR,0,0)}
 const sx=wx=>(wx*CELL-cam.x)*cam.z+W/2+cam.ox,sy=wy=>(wy*CELL-cam.y)*cam.z+H/2;
@@ -629,6 +647,8 @@ function drawAnimal(a,X,Y,z,big){const s=SP[a.sp],k=(a.age<s.mature?0.55+0.45*a.
   if(a.sp==='lion'&&a.sex==='m'&&a.age>s.mature){gx.fillStyle='#8a5a28';gx.beginPath();gx.arc(hx-hr*.2,0,hr*1.45,0,TAU);gx.fill();gx.fillStyle=shadeCol(a.col,-10);gx.beginPath();gx.arc(hx+hr*.1,0,hr*.9,0,TAU);gx.fill()}
   if(a.sick>0&&big!==2){gx.fillStyle='rgba(140,220,90,.55)';gx.beginPath();gx.arc(0,0,L*.3,0,TAU);gx.fill()}
   gx.restore()}
+const BADGES={};
+function badge(sp){let c=BADGES[sp];if(c)return c;c=document.createElement('canvas');c.width=c.height=36;const g=c.getContext('2d');g.fillStyle='rgba(8,14,11,.62)';g.beginPath();g.arc(18,18,16,0,TAU);g.fill();g.font='22px system-ui,"Apple Color Emoji","Segoe UI Emoji"';g.textAlign='center';g.textBaseline='middle';g.fillStyle='#fff';g.fillText(SP[sp].ic,18,20);BADGES[sp]=c;return c}
 function hawkShape(L){gx.beginPath();gx.moveTo(L*.5,0);gx.lineTo(L*.05,-L*.12);gx.lineTo(-L*.1,-L*.9);gx.lineTo(-L*.3,-L*.85);gx.lineTo(-L*.2,-L*.1);gx.lineTo(-L*.55,-L*.18);gx.lineTo(-L*.55,L*.18);gx.lineTo(-L*.2,L*.1);gx.lineTo(-L*.3,L*.85);gx.lineTo(-L*.1,L*.9);gx.lineTo(L*.05,L*.12);gx.closePath()}
 function shadeCol(c,d){const m=c.match(/\d+/g);if(m)return`rgb(${clamp(+m[0]+d,0,255)},${clamp(+m[1]+d,0,255)},${clamp(+m[2]+d,0,255)})`;const n=parseInt(c.slice(1),16);return`rgb(${clamp((n>>16)+d,0,255)},${clamp((n>>8&255)+d,0,255)},${clamp((n&255)+d,0,255)})`}
 let lastPaint=0;
@@ -643,10 +663,7 @@ function render(now){ctx.fillStyle='#08100c';ctx.fillRect(0,0,W,H);
   if(z<0.55){for(const t of vis){ctx.fillStyle=t.k==='pine'?'#1f3d24':t.k==='cactus'?'#5c8a4b':'#2f5527';const r=Math.max(1.2,(0.6+t.size)*z*CELL*0.8);ctx.fillRect(sx(t.x)-r/2,sy(t.y)-r/2,r,r)}}else for(const t of vis)drawTree(t,sx(t.x),sy(t.y),z);
   // animals (birds last)
   const air=[];for(const a of S.animals){if(a.dead||a.x<vx0||a.x>vx1||a.y<vy0||a.y>vy1)continue;if(SP[a.sp].hab==='air'){air.push(a);continue}drawAnimal(a,sx(a.x),sy(a.y),z)}for(const a of air)drawAnimal(a,sx(a.x),sy(a.y),z);
-  if(S.labels&&z>=1.8){let n=0;ctx.font='12px system-ui,"Apple Color Emoji","Segoe UI Emoji"';ctx.textAlign='center';ctx.textBaseline='bottom';
-    for(const a of S.animals){if(a.dead||a.x<vx0||a.x>vx1||a.y<vy0||a.y>vy1)continue;if(++n>350)break;const X=sx(a.x),Y=sy(a.y)-Math.max(7,SP[a.sp].len*z*0.55);
-      ctx.fillStyle='rgba(8,14,11,.6)';ctx.beginPath();ctx.arc(X,Y-7,8,0,TAU);ctx.fill();ctx.fillStyle='#fff';ctx.fillText(SP[a.sp].ic,X,Y-0.5)}
-    ctx.textAlign='start';ctx.textBaseline='alphabetic'}
+  if(S.labels&&z>=1.8){let n=0;for(const a of S.animals){if(a.dead||a.x<vx0||a.x>vx1||a.y<vy0||a.y>vy1)continue;if(++n>400)break;const X=sx(a.x),Y=sy(a.y)-Math.max(7,SP[a.sp].len*z*0.55);ctx.drawImage(badge(a.sp),X-9,Y-16,18,18)}}
   // particles
   for(const p of S.parts){const X=sx(p.x),Y=sy(p.y),u=p.life/p.max;if(p.k==='smoke'){ctx.fillStyle=`rgba(70,70,70,${u*.35})`;ctx.beginPath();ctx.arc(X,Y,(1-u)*10*z+2,0,TAU);ctx.fill()}else{ctx.fillStyle=`rgba(255,${180*u|0},60,${u})`;ctx.fillRect(X-1.5,Y-1.5,3,3)}}
   if(S.flash&&S.flash.t>0){const X=sx(S.flash.x),Y=sy(S.flash.y),r=(1-S.flash.t)*160*z+20;const g=ctx.createRadialGradient(X,Y,0,X,Y,r);g.addColorStop(0,`rgba(255,240,200,${S.flash.t})`);g.addColorStop(1,'rgba(255,120,40,0)');ctx.fillStyle=g;ctx.beginPath();ctx.arc(X,Y,r,0,TAU);ctx.fill()}
@@ -1057,18 +1074,20 @@ function stopDemo(quiet){clearTimeout(demoTimer);if(demoI<0&&quiet)return;demoI=
 $('hWatch').onclick=startDemo;$('demoExit').onclick=()=>stopDemo();$('demoNext').onclick=nextDemo;
 
 /* ================= main loop ================= */
-let last=performance.now(),uiT=0,achAcc=0,achT=0;
+let last=performance.now(),uiT=0,achAcc=0,achT=0,renderMs=4,stepMs=1;
 function frame(now){const dtR=Math.min(0.1,(now-last)/1000);last=now;camKeys(dtR);
   try{
-  if(!S.paused){const want=S.speed*dtR,step=Math.min(S.speed>=180?1:0.5,Math.max(0.04,S.speed/150)),t0=performance.now();let done=0;
-    while(done<want-1e-9&&performance.now()-t0<11){const d=Math.min(step,want-done);simStep(d);done+=d}
-    if(done>0)updateVeg(done);achAcc+=done}
+  if(!S.paused){const want=S.speed*dtR,step=Math.min(S.speed>=180?1:0.5,Math.max(0.04,S.speed/55)),t0=performance.now();let done=0;
+    // the simulation gets whatever time is left in a 60 fps frame after drawing
+    const budget=clamp(12.5-renderMs,2.5,9);
+    while(done<want-1e-9){const el=performance.now()-t0;if(el+stepMs*0.9>budget&&done>0)break;const s0=performance.now(),d=Math.min(step,want-done);simStep(d);done+=d;stepMs=stepMs*0.8+(performance.now()-s0)*0.2}
+    if(done>0)updateVegSliced(done);achAcc+=done}
   achT+=dtR;if(achT>=0.5){S.achieved=achAcc/achT;achAcc=0;achT=0}
   if(S.falling){S.falling.t+=dtR*1.4;if(S.falling.t>=1){const f=S.falling;S.falling=null;meteor(f.x,f.y,12);EVN++}}
   if(S.flash){S.flash.t-=dtR*1.2;if(S.flash.t<=0)S.flash=null}
   for(const p of S.parts){p.x+=p.vx*dtR;p.y+=p.vy*dtR;p.life-=dtR}if(S.parts.length)S.parts=S.parts.filter(p=>p.life>0);if(S.parts.length>1500)S.parts.splice(0,S.parts.length-1500);
   if(S.follow&&S.sel&&!S.sel.dead){cam.x=lerp(cam.x,S.sel.x*CELL,Math.min(1,dtR*6));cam.y=lerp(cam.y,S.sel.y*CELL,Math.min(1,dtR*6))}
-  render(now);
+  const r0=performance.now();render(now);renderMs=renderMs*0.85+(performance.now()-r0)*0.15;
   uiT+=dtR;if(uiT>0.25){uiT=0;updateHud()}
   }catch(err){console.error('[Biosphere]',err)}
   requestAnimationFrame(frame)}
