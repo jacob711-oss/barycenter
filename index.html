@@ -287,6 +287,10 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--cool);outline-o
   <button class="kind" data-kind="giant"><span class="dot star" style="--c:#ff8a50;--s:20px"></span>Red giant</button>
   <button class="kind" data-kind="white"><span class="dot star" style="--c:#eef3ff;--s:7px"></span>White dwarf</button>
   <button class="kind" data-kind="neutron"><span class="dot star" style="--c:#cfe0ff;--s:5px"></span>Neutron star</button>
+  <button class="kind" data-kind="orange"><span class="dot star" style="--c:#ffb070;--s:11px"></span>Orange dwarf</button>
+  <button class="kind" data-kind="hyper"><span class="dot star" style="--c:#ff7a40;--s:24px"></span>Hypergiant</button>
+  <button class="kind" data-kind="brown"><span class="dot" style="--c:#9c4a32;--s:9px"></span>Brown dwarf</button>
+  <button class="kind" data-kind="black"><span class="dot" style="--c:#2a2a33;--s:7px;box-shadow:0 0 0 1px rgba(160,170,200,.5)"></span>Black dwarf</button>
 </div>
 
 <aside id="insp" class="insp panel" hidden aria-label="Selected body">
@@ -376,7 +380,7 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--cool);outline-o
       <label class="fl">Name<input id="eName" type="text" maxlength="40"></label>
       <div class="row2"><label class="fl">Mass<input id="eMass" type="number" step="any" min="0"></label>
         <label class="fl">Unit<select id="eUnit"><option value="earth">Earth masses</option><option value="jup">Jupiter masses</option><option value="sun">Solar masses</option></select></label></div>
-      <label class="fl" id="eKindL">Star type<select id="eKind"><option value="red">Red dwarf</option><option value="sun">Sun-like</option><option value="blue">Blue giant</option><option value="giant">Red giant</option><option value="white">White dwarf</option><option value="neutron">Neutron star</option><option value="bh">Black hole</option></select></label>
+      <label class="fl" id="eKindL">Star type<select id="eKind"><option value="red">Red dwarf</option><option value="sun">Sun-like</option><option value="blue">Blue giant</option><option value="giant">Red giant</option><option value="white">White dwarf</option><option value="orange">Orange dwarf</option><option value="hyper">Hypergiant</option><option value="brown">Brown dwarf</option><option value="neutron">Neutron star</option><option value="black">Black dwarf</option><option value="bh">Black hole</option></select></label>
       <div class="row2"><label class="fl">Colour<input id="eColor" type="color"></label><label class="fl">Size <output id="eSizeO">1.0×</output><input id="eSize" type="range" min="0.2" max="5" step="0.1"></label></div>
     </div></details>
     <details class="grp" id="gSurf" open><summary>Surface and texture</summary><div class="ef">
@@ -508,8 +512,9 @@ function exagRadius(b){
     default:return RREF*(b.rScale||1)*Math.pow(b.m/ME,0.28);
   }
 }
-function tempColor(T){return T<3500?'#ff8a50':T<4500?'#ffb070':T<5300?'#ffcf8a':T<6200?'#ffe8b8':T<7500?'#f6f6ff':T<15000?'#cddaff':'#9fbcff'}
+function tempColor(T){return T<3700?'#ff8a50':T<4500?'#ffb070':T<5300?'#ffcf8a':T<6200?'#ffe8b8':T<7500?'#f6f6ff':T<15000?'#cddaff':'#9fbcff'}
 function colorFor(b){
+  if(b.black)return '#16161c';if(b.bd)return '#9c4a32';
   if(b.Teff&&(b.type==='star'||b.type==='dwarf'))return tempColor(b.Teff);
   if(b.type==='star')return b.giant?'#ff8a50':starColor(b.m);
   if(b.type==='neutron')return '#cfe0ff';
@@ -527,7 +532,10 @@ function classify(b){
   const e=b.m/ME;
   return e>=50?'Gas giant':e>=10?'Ice giant':e>=0.1?'Rocky planet':e>=0.001?'Moon':'Asteroid';
 }
-function catalogName(type){
+function catalogName(type,o){
+  if(o&&o.bd)return 'WISE J'+Math.floor(rnd(1000,2399))+(Math.random()<0.5?'+':'−')+Math.floor(rnd(10,89));
+  if(o&&o.black)return 'Black dwarf '+Math.floor(rnd(100,999));
+  if(type==='dwarf')return 'WD '+Math.floor(rnd(1000,2399))+(Math.random()<0.5?'+':'−')+Math.floor(rnd(100,899));
   const n=Math.floor(rnd(100,9999));
   if(type==='star')return 'HD '+n;
   if(type==='blackhole')return 'BH-'+n;
@@ -546,11 +554,11 @@ function orient(v,inc,node){
 let uid=1;
 function addBody(o){
   const b={id:uid++,type:o.type,m:o.m,x:o.x||0,y:o.y||0,z:o.z||0,vx:o.vx||0,vy:o.vy||0,vz:o.vz||0,ax:0,ay:0,az:0,
-    giant:!!o.giant,name:o.name||(o.anon?'':catalogName(o.type)),anon:!!o.anon,color:o.color,trail:[],dead:false};
+    giant:!!o.giant,name:o.name||(o.anon?'':catalogName(o.type,o)),anon:!!o.anon,color:o.color,trail:[],dead:false};
   b.tint=o.tint||0;b.comet=!!o.comet;b.tailLen=o.tail||0.4;b.act=0;
   if(!b.axis)b.axis=norm(orient([0,0,1],rnd(0,0.5),rnd(0,Math.PI*2)));
   b.rScale=o.rScale||1;b.kindLabel=o.kindLabel||'';b.style=o.style||'';b.style0=b.style;
-  if(o.rTrue)b.rTrue=o.rTrue;if(o.Lsun)b.Lsun=o.Lsun;if(o.Teff)b.Teff=o.Teff;if(o.cat)b.cat=o.cat;
+  if(o.rTrue)b.rTrue=o.rTrue;if(o.Lsun)b.Lsun=o.Lsun;if(o.Teff)b.Teff=o.Teff;if(o.cat)b.cat=o.cat;if(o.bd)b.bd=1;if(o.black)b.black=1;
   b.r=radiusFor(b); if(!b.color)b.color=colorFor(b);
   if(b.type==='rock'){
     const e=b.m/ME;
@@ -772,7 +780,8 @@ function typeRules(b){
   if(b.type==='dwarf'&&b.m>1.44){toast(`${b.name} passed the Chandrasekhar limit: Type Ia supernova`);supernova(b,false);return}
   if(b.type==='star'&&b.m>=40&&!(b.cat&&b.m<b.cat*1.3)){b.type='blackhole';toast(`${b.name} collapsed into a black hole`);flash(b.x,b.y,b.z,b.r*6,'#c9a2ff')}
   if(b.type==='neutron'&&b.m>2.3){b.type='blackhole';toast(`${b.name} collapsed past the neutron-star limit into a black hole`);flash(b.x,b.y,b.z,0.1,'#c9a2ff')}
-  if(b.type==='star')b.color=b.giant?'#ff8a50':starColor(b.m);
+  if(b.bd&&b.m>=0.08){b.bd=0;b.Lsun=b.Teff=b.rTrue=undefined;b.kindLabel='';toast(`${b.name||'The brown dwarf'} gained enough mass to start fusion: it is now a red dwarf star`);flash(b.x,b.y,b.z,hitR(b)*4,'#ffb080')}
+  if(b.type==='star')b.color=b.bd?'#9c4a32':colorFor(b);
   if(b.type==='blackhole')b.color='#b48cff';
   b.r=radiusFor(b);S.dirty=true;
 }
@@ -1161,6 +1170,9 @@ function drawBody(b,X,Y,s,now){
     const gr2=10+toward*40,g2=ctx.createRadialGradient(X,Y,0,X,Y,gr2);g2.addColorStop(0,`rgba(220,235,255,${0.8+0.2*toward})`);g2.addColorStop(1,'rgba(150,190,255,0)');
     ctx.fillStyle=g2;ctx.beginPath();ctx.arc(X,Y,gr2,0,7);ctx.fill();ctx.globalCompositeOperation='source-over';
     ctx.fillStyle='#ffffff';ctx.beginPath();ctx.arc(X,Y,Math.max(2,px),0,7);ctx.fill();
+  }else if(b.black){
+    const g=ctx.createRadialGradient(X-px*0.35,Y-px*0.35,0,X,Y,Math.max(2,px));g.addColorStop(0,'#2c2c36');g.addColorStop(1,'#07070a');ctx.fillStyle=g;ctx.beginPath();ctx.arc(X,Y,Math.max(2,px),0,7);ctx.fill();
+    ctx.strokeStyle='rgba(150,160,190,.45)';ctx.lineWidth=1;ctx.beginPath();ctx.arc(X,Y,Math.max(2,px)+1.5,0,7);ctx.stroke();
   }else if(b.type==='star'||b.type==='dwarf'){
     // photographic rendering: tight bloom and diffraction spikes from afar, limb-darkened granulated disk up close
     const L=lum(b),base=hexRGB(b.color),dwarf=b.type==='dwarf';
@@ -1791,7 +1803,7 @@ function orbitGuide(p,w,n,m,X,Y){
   const T=2*Math.PI*Math.sqrt(r*r*r/(G*(p.m+(m||0)))),v=Math.sqrt(G*(p.m+(m||0))/r)*KMS;
   orbitLabel(X,Y,[`${fmtDist(r)} from ${p.name||classify(p)}`,`period ${fmtTime(T)} · ${v.toFixed(1)} km/s`]);
 }
-function ghost(w,t){const P=proj(w.x,w.y,w.z);if(!P)return;const px=Math.max(3,radiusFor({type:t.type,m:t.m*(S.pmf||1),giant:t.giant,rScale:S.psz||1})*P[2]);ctx.strokeStyle='rgba(255,180,84,.8)';ctx.lineWidth=1.2;ctx.beginPath();ctx.arc(P[0],P[1],px+2,0,7);ctx.stroke()}
+function ghost(w,t){const P=proj(w.x,w.y,w.z);if(!P)return;const px=Math.max(3,radiusFor({...(t.extra||{}),type:t.type,m:t.m*(S.pmf||1),giant:t.giant,rScale:S.psz||1})*P[2]);ctx.strokeStyle='rgba(255,180,84,.8)';ctx.lineWidth=1.2;ctx.beginPath();ctx.arc(P[0],P[1],px+2,0,7);ctx.stroke()}
 function spawnVel(w,w2,dpx){
   const dom=dominant(w.x,w.y,w.z),m=TOOLS[S.tool].m*(S.pmf||1);
   if(dpx<6){if(!dom)return{vx:0,vy:0,vz:0};
@@ -1803,8 +1815,8 @@ function spawnVel(w,w2,dpx){
 }
 function doSpawn(d){
   const t=TOOLS[S.tool],w=rayPlane(d.sx,d.sy,cam.tz),w2=rayPlane(d.ex,d.ey,cam.tz),dpx=Math.hypot(d.ex-d.sx,d.ey-d.sy),v=spawnVel(w,w2,dpx);
-  const nb=addBody({type:t.type,m:t.m*(S.pmf||1),rScale:t.type==='blackhole'?1:S.psz||1,giant:t.giant,x:w.x,y:w.y,z:w.z,...v,color:t.comet?'#3a3632':t.pal?pick(PAL[t.pal]):undefined,anon:t.anon,comet:t.comet,shape:S.tool==='asteroid'?[rnd(1.2,1.9),1,rnd(0.6,0.9)]:undefined,tail:0.4,water:t.comet?0:undefined,atm:t.comet?0:undefined,
-    name:t.comet?'C/2026 '+String.fromCharCode(65+Math.floor(Math.random()*26))+Math.floor(rnd(1,9)):undefined,kindLabel:t.comet?'Comet':undefined});ensureTimestep(nb);
+  const nb=addBody({...(t.extra||{}),type:t.type,m:t.m*(S.pmf||1),rScale:t.type==='blackhole'?1:S.psz||1,giant:t.giant,x:w.x,y:w.y,z:w.z,...v,color:t.comet?'#3a3632':t.pal?pick(PAL[t.pal]):undefined,anon:t.anon,comet:t.comet,shape:S.tool==='asteroid'?[rnd(1.2,1.9),1,rnd(0.6,0.9)]:undefined,tail:0.4,water:t.comet?0:undefined,atm:t.comet?0:undefined,
+    name:t.comet?'C/2026 '+String.fromCharCode(65+Math.floor(Math.random()*26))+Math.floor(rnd(1,9)):undefined,kindLabel:t.comet?'Comet':t.extra&&t.extra.kindLabel});ensureTimestep(nb);
 }
 
 /* ---------- formatting ---------- */
@@ -1828,7 +1840,13 @@ $('play').addEventListener('click',()=>setPaused(!S.paused));
 
 const HINTS={orbit:'Orbit tool: click the body you want to move, then click the body it should orbit · Esc to cancel',measure:'Click anywhere (an object or empty space) to start, then anywhere else to measure · Esc clears',select:'Drag to orbit · right-drag to pan · W A S D to move, Q E to rotate, R F up and down · scroll or pinch to zoom · double-click a body to follow',
   spawn:'Click to drop it into orbit · drag to throw it along the grid · right-drag to orbit the camera'};
-const STARKINDS={red:{type:'star',m:0.2},sun:{type:'star',m:1},blue:{type:'star',m:18},giant:{type:'star',m:1.2,giant:true},white:{type:'dwarf',m:0.6},neutron:{type:'neutron',m:1.4}};
+const STARKINDS={red:{type:'star',m:0.2},sun:{type:'star',m:1},blue:{type:'star',m:18},giant:{type:'star',m:1.2,giant:true},white:{type:'dwarf',m:0.6},neutron:{type:'neutron',m:1.4},
+  // real typical values: orange (K-type) dwarf; red hypergiant like VY Canis Majoris; brown dwarf (failed star, glows faintly in infrared); black dwarf (a white dwarf cooled to darkness, none exist yet)
+  orange:{type:'star',m:0.75,extra:{Teff:4600,Lsun:0.3,rTrue:0.003255329,kindLabel:'Orange dwarf'}},
+  hyper:{type:'star',m:25,giant:true,extra:{Teff:3500,Lsun:300000,rTrue:6.510658,kindLabel:'Hypergiant'}},
+  brown:{type:'star',m:0.05,extra:{bd:1,Teff:1300,Lsun:1e-5,rTrue:0.00046504700000000006,kindLabel:'Brown dwarf',color:'#9c4a32'}},
+  black:{type:'dwarf',m:0.6,extra:{black:1,Teff:5,Lsun:1e-9,kindLabel:'Black dwarf',color:'#16161c'}}};
+const KIND_FIELDS=['Teff','Lsun','rTrue','kindLabel','bd','black'];
 document.querySelectorAll('.kind').forEach(k=>k.addEventListener('click',()=>{TOOLS.star={...STARKINDS[k.dataset.kind]};document.querySelectorAll('.kind').forEach(x=>x.setAttribute('aria-pressed',x===k))}));
 function fmtMassAny(m){return m>=0.01?sig(m)+' M☉':m>=1e-6?sig(m/ME)+' M⊕':(m*1.989e30).toExponential(1)+' kg'}
 function syncPlace(){const t=TOOLS[S.tool];if(!t)return;S.pmf=Math.pow(10,+$('pMass').value);S.psz=+$('pSize').value;
@@ -1973,7 +1991,10 @@ const GEN=[
  ['Neutron star','Dead star','city-sized pulsar',{type:'neutron',m:1.4}],
  ['Black hole','Black hole','10 solar masses',{type:'blackhole',m:10}],
  ['Supermassive black hole','Black hole','4 million solar masses',{type:'blackhole',m:4e6}],
- ['Brown dwarf','Failed star','50 Jupiters, too light to shine',{type:'rock',m:0.05,color:'#8a4a3a',ring:false,mag:2,gases:{H2:85,He:14,CH4:1}}],
+ ['Orange dwarf','Star','cooler, longer-lived than the Sun',{type:'star',m:0.75,Teff:4600,Lsun:0.3,rTrue:0.003255329}],
+ ['Hypergiant','Star','one of the biggest, brightest stars',{type:'star',m:25,giant:true,Teff:3500,Lsun:300000,rTrue:6.510658}],
+ ['Brown dwarf','Failed star','too light to fuse hydrogen, glows faintly',{type:'star',m:0.05,bd:1,Teff:1300,Lsun:1e-5,rTrue:0.00046504700000000006,color:'#9c4a32'}],
+ ['Black dwarf','Dead star','a white dwarf cooled to darkness',{type:'dwarf',m:0.6,black:1,Teff:5,Lsun:1e-9,color:'#16161c'}],
  ['Earth-like planet','Planet','oceans, air and land',{type:'rock',m:ME,surf:'earth',water:0.7,atm:1,mag:0.5,gases:{N2:78,O2:21,Ar:1},color:'#6fa8dc',ring:false}],
  ['Super-Earth','Planet','5 Earth masses, rocky',{type:'rock',m:5*ME,water:0.4,atm:3,mag:0.8,color:'#8fb3c9',ring:false}],
  ['Ocean world','Planet','covered in deep water',{type:'rock',m:2*ME,surf:'ocean',water:0.97,atm:2,mag:0.4,color:'#2c63a8',ring:false}],
@@ -1987,7 +2008,7 @@ const GEN=[
  ['Icy moon','Moon','frozen shell over an ocean',{type:'rock',m:0.008*ME,style:'europa',water:0.9,atm:0,color:'#d8cfc0',ring:false}],
  ['Asteroid','Small body','lumpy rock',{type:'rock',m:1e-10,water:0,atm:0,shape:[1.6,1,0.75],color:'#9c8f80',ring:false}],
  ['Comet','Small body','icy nucleus that grows a tail',{type:'rock',m:1e-16,comet:true,tail:0.4,water:0,atm:0,rScale:20,shape:[1.5,1,0.8],color:'#3a3632',ring:false}],
-].map(([n,lab,about,o])=>({n,lab,about,al:'',keepName:true,gen:true,mk:()=>({...o,kindLabel:o.type==='rock'&&lab!=='Planet'?lab:undefined})}));
+].map(([n,lab,about,o])=>({n,lab,about,al:'',keepName:true,gen:true,mk:()=>({...o,kindLabel:o.bd||o.black||n==='Orange dwarf'||n==='Hypergiant'?n:o.type==='rock'&&lab!=='Planet'?lab:undefined})}));
 function copyItem(src){const o=snapBody(src);for(const k of ['x','y','z','vx','vy','vz','name','anon','axis'])delete o[k];
   return{n:(src.name||classify(src))+' (copy)',lab:classify(src),about:'copy of something in this scene',al:'',mk:()=>{const q={...o};if(q.ring&&typeof q.ring==='object'){q.ringObj={...q.ring};delete q.ring}if(q.tail)q.tail=o.tail;return q}}}
 function renderRepl(){const raw=$('eRepl').value.trim(),q=normQ(raw),el=$('eReplList');el.textContent='';if(!S.sel)return;
@@ -2020,7 +2041,7 @@ function fillEdit(b){
   $('eName').value=b.name||classify(b);
   const unit=b.type!=='rock'?'sun':b.m>=95*ME?'jup':'earth';$('eUnit').value=unit;$('eMass').value=+(b.m/UNITS[unit]).toPrecision(4);
   const star=b.type!=='rock';$('eKindL').hidden=!star;
-  if(star)$('eKind').value=b.type==='blackhole'?'bh':b.type==='neutron'?'neutron':b.type==='dwarf'?'white':b.giant?'giant':b.m<0.45?'red':b.m<5?'sun':'blue';
+  if(star)$('eKind').value=b.black?'black':b.bd?'brown':b.kindLabel==='Orange dwarf'?'orange':b.kindLabel==='Hypergiant'?'hyper':b.type==='blackhole'?'bh':b.type==='neutron'?'neutron':b.type==='dwarf'?'white':b.giant?'giant':b.m<0.45?'red':b.m<5?'sun':'blue';
   $('eColor').value=/^#[0-9a-f]{6}$/i.test(b.color)?b.color:'#ffffff';$('eSize').value=b.rScale||1;$('eSizeO').textContent=(b.rScale||1).toFixed(1)+'×';
   $('eRotRow').hidden=b.type!=='rock';
   if(b.type==='rock'){$('eRot').value=+(2*Math.PI*365.25*24/Math.abs(b.w)).toPrecision(4);const p=parentOf(b);const n=p?orbitFrame(b,p).n:[0,0,1];$('eTilt').value=(Math.acos(Math.max(-1,Math.min(1,dot(b.axis,n))))/DEG).toFixed(1)}
@@ -2059,7 +2080,9 @@ $('eMass').addEventListener('change',edited(b=>{const v=parseFloat($('eMass').va
   if(b.type==='star'&&b.m<0.08){b.type='rock';b.color=pick(PAL.giant)}typeRules(b);b.r=radiusFor(b);if(b.tex)b.tex.key='';cleanup();fillEdit(b)}));
 $('eUnit').addEventListener('change',()=>{const b=S.sel;if(b)$('eMass').value=+(b.m/UNITS[$('eUnit').value]).toPrecision(4)});
 $('eKind').addEventListener('change',edited(b=>{const k=$('eKind').value;
-  if(k==='bh'){b.type='blackhole';b.giant=false;if(b.m<3)b.m=3}else{const sk=STARKINDS[k];b.type=sk.type;b.giant=!!sk.giant;if(k==='white'||k==='neutron'||(k==='red'&&b.m>0.6)||(k==='blue'&&b.m<8))b.m=sk.m}
+  for(const f of KIND_FIELDS)b[f]=undefined;b.cat=undefined;
+  if(k==='bh'){b.type='blackhole';b.giant=false;if(b.m<3)b.m=3}else{const sk=STARKINDS[k];b.type=sk.type;b.giant=!!sk.giant;if(sk.extra)for(const f of KIND_FIELDS)if(sk.extra[f]!==undefined)b[f]=sk.extra[f];
+    if(k==='white'||k==='neutron'||k==='brown'||k==='black'||k==='hyper'||k==='orange'||(k==='red'&&b.m>0.6)||(k==='blue'&&b.m<8))b.m=sk.m}
   b.color=colorFor(b);typeRules(b);b.r=radiusFor(b);fillEdit(b)}));
 $('eColor').addEventListener('input',edited(b=>{b.color=$('eColor').value;if(b.tex)b.tex.key='';if(b.ring)b.ring.prof=null}));
 $('eSize').addEventListener('input',edited(b=>{b.rScale=parseFloat($('eSize').value);$('eSizeO').textContent=b.rScale.toFixed(1)+'×';b.r=radiusFor(b)}));
@@ -2107,7 +2130,7 @@ $('eDup').addEventListener('click',edited(b=>{const p=parentOf(b),o=snapBody(b);
   const c=restoreBody({...o,x:pos[0],y:pos[1],z:pos[2],vx:vel[0],vy:vel[1],vz:vel[2],name:(b.name||classify(b))+' II'});select(c);toast(`Placed ${c.name} on the opposite side of the orbit`)}));
 /* ---------- saving and sharing ---------- */
 const NUMK=['m','x','y','z','vx','vy','vz','rScale','water','atm','heat','tint','tail','w','spin'];
-function snapBody(b){return{rTrue:b.rTrue,Lsun:b.Lsun,Teff:b.Teff,cat:b.cat,type:b.type,m:b.m,x:b.x,y:b.y,z:b.z,vx:b.vx,vy:b.vy,vz:b.vz,name:b.name,anon:b.anon,color:b.color,rScale:b.rScale,kindLabel:b.kindLabel,style:b.style,giant:b.giant,
+function snapBody(b){return{bd:b.bd,black:b.black,rTrue:b.rTrue,Lsun:b.Lsun,Teff:b.Teff,cat:b.cat,type:b.type,m:b.m,x:b.x,y:b.y,z:b.z,vx:b.vx,vy:b.vy,vz:b.vz,name:b.name,anon:b.anon,color:b.color,rScale:b.rScale,kindLabel:b.kindLabel,style:b.style,giant:b.giant,
   water:b.water,atm:b.atm,heat:b.heat,tint:b.tint,gases:b.gases,mag:b.mag,magTilt:b.magTilt,veg:b.veg,cities:b.cities,contrast:b.contrast,surf:b.surf,gasLook:b.gasLook,texSeed:b.texSeed,forceLock:b.forceLock,showField:b.showField,comet:b.comet,tail:b.tailLen,shape:b.shape,axis:b.axis,w:b.w,spin:b.spin,locked:b.locked,
   ring:b.ring?{kind:b.ring.kind,inner:b.ring.inner,outer:b.ring.outer,seed:b.ring.seed,radii:b.ring.radii,w:b.ring.w}:null}}
 function restoreBody(o){
@@ -2115,7 +2138,7 @@ function restoreBody(o){
   for(const k of NUMK)if(o[k]!=null&&!Number.isFinite(o[k]))delete o[k];
   const ax=Array.isArray(o.axis)&&o.axis.length===3&&o.axis.every(Number.isFinite)?norm(o.axis):undefined;
   const rg=o.ring&&typeof o.ring==='object'&&['saturn','thin','icy','narrow'].includes(o.ring.kind)?{kind:o.ring.kind,inner:+o.ring.inner||1.3,outer:+o.ring.outer||2.2,seed:+o.ring.seed||1,radii:Array.isArray(o.ring.radii)?o.ring.radii.map(Number).filter(Number.isFinite):undefined,w:+o.ring.w||0.03}:null;
-  const b=addBody({rTrue:+o.rTrue>0?+o.rTrue:undefined,Lsun:+o.Lsun>0?+o.Lsun:undefined,Teff:+o.Teff>0?+o.Teff:undefined,cat:+o.cat>0?+o.cat:undefined,type:o.type,m:o.m,x:o.x,y:o.y,z:o.z,vx:o.vx,vy:o.vy,vz:o.vz,name:String(o.name||'').slice(0,40),anon:!!o.anon,color:/^#[0-9a-f]{6}$/i.test(o.color)?o.color:undefined,
+  const b=addBody({bd:!!o.bd,black:!!o.black,rTrue:+o.rTrue>0?+o.rTrue:undefined,Lsun:+o.Lsun>0?+o.Lsun:undefined,Teff:+o.Teff>0?+o.Teff:undefined,cat:+o.cat>0?+o.cat:undefined,type:o.type,m:o.m,x:o.x,y:o.y,z:o.z,vx:o.vx,vy:o.vy,vz:o.vz,name:String(o.name||'').slice(0,40),anon:!!o.anon,color:/^#[0-9a-f]{6}$/i.test(o.color)?o.color:undefined,
     rScale:o.rScale,kindLabel:String(o.kindLabel||'').slice(0,30),style:String(o.style||'').slice(0,16),giant:!!o.giant,water:o.water,atm:o.atm,heat:o.heat,tint:o.tint,comet:!!o.comet,tail:o.tail,
     shape:Array.isArray(o.shape)&&o.shape.length===3&&o.shape.every(Number.isFinite)?o.shape:undefined,axisN:ax,ringObj:rg||undefined,ring:rg?undefined:false});
   if(b.type==='rock'){
@@ -2219,6 +2242,7 @@ function drawPortrait(b){
       pctx.strokeStyle='rgba(255,236,210,.9)';pctx.lineWidth=1.5;pctx.beginPath();pctx.arc(X,Y,px*1.04,0,7);pctx.stroke();
       pctx.save();pctx.beginPath();pctx.rect(0,Y,N,N);pctx.clip();pctx.globalCompositeOperation='lighter';pctx.translate(X,Y);pctx.scale(1,0.28);pctx.fillStyle=gd;pctx.beginPath();pctx.arc(0,0,px*3.6,0,7);pctx.fill();pctx.restore();
     }else{
+      if(b.black){const px=N*0.22,g=pctx.createRadialGradient(X-px*0.4,Y-px*0.4,0,X,Y,px);g.addColorStop(0,'#3a3a46');g.addColorStop(1,'#060608');pctx.fillStyle=g;pctx.beginPath();pctx.arc(X,Y,px,0,7);pctx.fill();pctx.strokeStyle='rgba(150,160,190,.35)';pctx.lineWidth=2;pctx.beginPath();pctx.arc(X,Y,px+2,0,7);pctx.stroke();return}
       const base=hexRGB(b.color),px=b.type==='neutron'?N*0.06:b.type==='dwarf'?N*0.18:N*0.32;
       pctx.globalCompositeOperation='lighter';const gl=pctx.createRadialGradient(X,Y,px*0.9,X,Y,N*0.5);gl.addColorStop(0,rgba(b.color,0.55));gl.addColorStop(0.4,rgba(b.color,0.12));gl.addColorStop(1,rgba(b.color,0));
       pctx.fillStyle=gl;pctx.fillRect(0,0,N,N);pctx.globalCompositeOperation='source-over';
@@ -2415,6 +2439,8 @@ const CAT_ROCKS=[
  ['ʻOumuamua','oumuamua,1i/2017 u1,1i','Interstellar object',1e-14,0.000018,'Sun',4,{color:'#9a6a50',water:0,atm:0,rScale:40,shape:[6,1,1],vf:1.9}],
 ];
 const CAT=[];
+for(const [n,al,m,R,T,about] of [['Luhman 16A','luhman 16,luhman 16 a',0.034,0.1,1350,'Nearest brown dwarf to the Sun'],['Luhman 16B','luhman 16 b',0.028,0.1,1210,'Luhman 16A’s partner'],['Gliese 229B','gl 229b,gliese 229 b',0.07,0.1,900,'First brown dwarf ever confirmed'],['Teide 1','',0.055,0.1,2600,'First brown dwarf found in a star cluster']])
+  CAT.push({n,al,lab:'Brown dwarf',about,m,R:R*0.00465047,mk:()=>({type:'star',m,bd:1,Teff:T,Lsun:3e-5*Math.pow(T/1300,4),rTrue:R*0.00465047,kindLabel:'Brown dwarf',color:'#9c4a32',cat:m})});
 for(const [n,al,lab,m,R,L,T,about] of CAT_STARS)CAT.push({n,al,lab,about,mk:()=>({type:'star',m,rTrue:R*RSUN,Lsun:L,Teff:T,giant:T<5000&&R>10,cat:m,kindLabel:lab}),R:R*RSUN,m});
 for(const [n,al,type,lab,m,about] of CAT_COMPACT)CAT.push({n,al,lab,about,mk:()=>({type,m,cat:m,kindLabel:lab,...(type==='dwarf'?{rTrue:0.0084*RSUN,Teff:25200,Lsun:0.056}:{})}),m});
 for(const [n,al,lab,me,R,parent,a,x] of CAT_ROCKS)CAT.push({n,al,lab,about:parent==='Sun'?`Orbits the Sun at ${a} AU`:`Orbits ${parent}`,parent,a,x,mk:()=>{const o={type:'rock',m:me*ME,rTrue:R*REARTH,kindLabel:lab,name:n,ring:x.ring??false,...x};delete o.lock;delete o.dir;delete o.vf;return o},m:me*ME});
