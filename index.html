@@ -6,6 +6,7 @@
 <meta name="description" content="Barycenter: a 3D gravity sandbox. Build star systems, add famous stars and black holes, collide worlds and run time up to 100 years per second.">
 <style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html,body{height:100%}body{margin:0;font:14px system-ui,-apple-system,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>
 <title>Barycenter Sandbox</title>
+<title>Barycenter Sandbox</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -203,11 +204,23 @@ body.mDemo .rail,body.mDemo .campad,body.mDemo .hint,body.mDemo .insp,body.mDemo
 .chtop{display:flex;justify-content:space-between}.chtitle{font-family:var(--f-display);font-weight:500;font-size:17px}.chgoal{font-size:13px;line-height:1.45;color:#cfd6e6}
 .chbarw{height:6px;border-radius:3px;background:rgba(127,178,255,.12);overflow:hidden}#chBar{display:block;height:100%;width:0;background:var(--flare);transition:width .25s}
 .chrow{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}.chprog{font-family:var(--f-mono);font-size:11.5px;color:var(--dim)}.chbtns{display:flex;gap:6px}
+.hacct{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+.chip{display:inline-flex;align-items:center;gap:6px;font-family:var(--f-mono);font-size:12px;padding:7px 12px;border-radius:99px;border:1px solid var(--line-strong);background:rgba(9,12,24,.82);color:var(--ink)}
+.chip:hover{border-color:var(--cool)}.chip b{color:var(--flare);font-weight:600}
+.ovl{position:fixed;inset:0;z-index:30;display:grid;place-items:center;background:rgba(4,6,12,.6)}
+.obox{width:min(460px,calc(100% - 32px));max-height:min(80vh,640px);overflow:auto;padding:18px;display:flex;flex-direction:column;gap:12px}
+.obox h2{font-family:var(--f-display);font-weight:500;font-size:22px;margin:0;flex:1}
+.arow{display:flex;align-items:center;gap:8px;padding:9px 10px;border:1px solid var(--line);border-radius:8px}.arow.cur{border-color:rgba(255,180,84,.6);background:rgba(40,28,12,.5)}
+.arow .an{flex:1;min-width:0}.arow .an div{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.arow .as{font-family:var(--f-mono);font-size:11px;color:var(--dim)}
+.arow input,.aform input{font:inherit;font-size:13px;padding:7px 9px;border-radius:7px;border:1px solid var(--line-strong);background:rgba(0,0,0,.35);color:var(--ink);min-width:0}
+.arow input{width:80px}.aform{display:flex;gap:6px;flex-wrap:wrap}.aform input{flex:1 1 120px}
+.pbig{font-family:var(--f-display);font-size:54px;line-height:1;color:var(--flare)}.pgrid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.pgrid div{border:1px solid var(--line);border-radius:8px;padding:8px 10px}.pgrid .k{display:block;font-family:var(--f-mono);font-size:10.5px;color:var(--dim)}.pgrid .v{font-size:16px}
 .donebg{pointer-events:auto;display:grid;place-items:center;background:rgba(4,6,12,.6)}
 .donecard{width:min(440px,calc(100% - 32px));padding:24px;text-align:center;display:flex;flex-direction:column;gap:10px}.donecard h2{font-family:var(--f-display);font-weight:500;margin:0}
 .dstars{font-size:46px;letter-spacing:6px;color:var(--flare)}.dstars .off{color:rgba(255,255,255,.15)}
 .democap{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(var(--bot) + 8px);width:min(640px,calc(100% - 32px));padding:12px 14px;z-index:6;display:flex;gap:12px;align-items:center;justify-content:space-between}
-@media (max-width:760px){.home{background:rgba(4,6,12,.72)}.chhud{width:auto;left:var(--gut);right:var(--gutR);transform:none;top:calc(var(--top) + 150px);bottom:auto}.hgrid{grid-template-columns:repeat(auto-fill,minmax(84px,1fr))}}
+@media (max-width:760px){.home{background:rgba(4,6,12,.72)}.chhud{width:auto;left:var(--gut);right:var(--gutR);transform:none;top:auto;bottom:100px;max-height:40vh;overflow:auto}.hgrid{grid-template-columns:repeat(auto-fill,minmax(84px,1fr))}}
 .hint{position:fixed;left:50%;transform:translateX(-50%);bottom:var(--bot);font-family:var(--f-mono);font-size:11.5px;color:var(--dim);background:var(--panel);border:1px solid var(--line);border-radius:99px;padding:7px 14px;white-space:nowrap;z-index:4;pointer-events:none}
 .toasts{position:fixed;left:50%;transform:translateX(-50%);top:calc(var(--top) + 84px);display:flex;flex-direction:column;align-items:center;gap:6px;z-index:6;pointer-events:none}
 .toast{font-family:var(--f-mono);font-size:12px;padding:7px 14px;border-radius:99px;background:rgba(30,20,10,.85);border:1px solid rgba(255,180,84,.45);color:#ffe1b8;transition:opacity .4s,transform .4s}
@@ -276,6 +289,7 @@ body.mDemo .rail,body.mDemo .campad,body.mDemo .hint,body.mDemo .insp,body.mDemo
     <div class="stat g"><span class="k">Grid cell</span><span id="gridStep" class="v">1 AU</span></div>
     <div class="findwrap"><input id="find" class="find" placeholder="Search or add…" title="Search the scene, or add a famous object: Antares, TON 618, Titan…" aria-label="Search for an object to fly to or add" autocomplete="off" spellcheck="false" role="combobox" aria-expanded="false" aria-controls="findList"><div id="findList" class="findlist panel" role="listbox" hidden></div></div>
     <button id="homeBtn" class="btn" title="Back to the home page">⌂ Home</button>
+    <button id="acctBtn" class="btn" title="Account: save your progress on this device">👤</button>
     <button id="createBtn" class="btn" aria-expanded="false" aria-controls="create">Create</button>
     <button id="scenBtn" class="btn" aria-expanded="false" aria-controls="scen">Scenarios</button>
   </div>
@@ -489,9 +503,9 @@ body.mDemo .rail,body.mDemo .campad,body.mDemo .hint,body.mDemo .insp,body.mDemo
 </div>
 <div id="home" class="home" role="dialog" aria-label="Home">
   <div class="hcard">
-    <div class="hhead"><h1 class="htitle">Bary<b>center</b></h1><p class="htag">A 3D sandbox for gravity, worlds and stars</p></div>
+    <div class="hhead"><h1 class="htitle">Bary<b>center</b></h1><p class="htag">A 3D sandbox for gravity, worlds and stars</p><div class="hacct"><button class="chip" id="hAcctBtn" title="Accounts: save progress on this device">👤 <span id="hAcctName">Guest</span></button><button class="chip" id="hPlays" title="Your plays and stats">▶ <b id="hPlaysN">0</b> plays</button></div></div>
     <div id="hMain" class="hview">
-      <button class="hb" id="hChal"><span class="ht">Challenges</span><span class="hd" id="hChalSub">100 goals, from easy to fiendish</span></button>
+      <button class="hb" id="hChal"><span class="ht">Challenges</span><span class="hd" id="hChalSub">Goals from easy to fiendish</span></button>
       <button class="hb" id="hDemo"><span class="ht">Demo &amp; tutorial</span><span class="hd">Watch the highlights, or learn the controls step by step</span></button>
       <button class="hb primary" id="hFree"><span class="ht">Free play</span><span class="hd">The full sandbox: build, break and explore anything</span></button>
       <p class="hfoot">Real Newtonian gravity with real masses and orbits where known; some visuals are artistic approximations.</p>
@@ -514,6 +528,23 @@ body.mDemo .rail,body.mDemo .campad,body.mDemo .hint,body.mDemo .insp,body.mDemo
   <div id="chGoal" class="chgoal"></div>
   <div class="chbarw"><span id="chBar"></span></div>
   <div class="chrow"><span id="chProg" class="chprog"></span><span class="chbtns"><button id="chHint" class="btn ghost">Hint</button><button id="chRestart" class="btn">Restart</button><button id="chExit" class="btn ghost">Exit</button></span></div>
+</div>
+<div id="acct" class="ovl" hidden role="dialog" aria-label="Accounts">
+  <div class="obox panel">
+    <div class="hbar"><h2>Accounts</h2><button class="btn" id="acctClose" aria-label="Close">×</button></div>
+    <p class="hfoot">Your stars, plays and time are saved in this browser on this device. Each account keeps its own progress. Clearing your browser data erases them.</p>
+    <div id="acctList" class="hview" style="gap:6px"></div>
+    <form id="acctForm" class="aform"><input id="acctNew" maxlength="20" placeholder="Your name" autocomplete="off"><input id="acctPin" maxlength="4" inputmode="numeric" placeholder="PIN (optional)" autocomplete="off"><button class="btn primary" type="submit">Create account</button></form>
+    <p class="hfoot" id="acctMsg" aria-live="polite"></p>
+  </div>
+</div>
+<div id="playsBox" class="ovl" hidden role="dialog" aria-label="Plays">
+  <div class="obox panel">
+    <div class="hbar"><h2 id="pWho">Plays</h2><button class="btn" id="playsClose" aria-label="Close">×</button></div>
+    <div><div class="pbig" id="pN">0</div><div class="hfoot">plays on this account · <span id="pDev"></span></div></div>
+    <div class="pgrid" id="pGrid"></div>
+    <p class="hfoot">A play is each time you start free play, a challenge, the demo or the tutorial. Counted on this device only.</p>
+  </div>
 </div>
 <div id="chDone" class="home donebg" hidden role="dialog" aria-label="Challenge result">
   <div class="donecard panel">
@@ -2893,6 +2924,7 @@ window.addEventListener('keyup',e=>{const k=CAMKEYS[e.key.toLowerCase()]||(e.key
 window.addEventListener('blur',()=>CAMHELD.clear());
 window.addEventListener('keydown',e=>{
   if(['INPUT','SELECT','TEXTAREA'].includes(e.target.tagName))return;
+  if(!$('acct').hidden||!$('playsBox').hidden){if(e.key==='Escape'){$('acct').hidden=true;$('playsBox').hidden=true}return}
   if(!$('home').hidden||!$('chDone').hidden){if(e.key==='Escape'&&!$('home').hidden)homeView('hMain');return}
   if(document.body.classList.contains('mDemo')){if(e.key==='Escape')stopDemo();return}
   {const lk=e.key.toLowerCase();if(!e.ctrlKey&&!e.metaKey&&!e.altKey&&(CAMKEYS[lk]||(lk==='f'&&!S.sel))){CAMHELD.add(CAMKEYS[lk]||'down');return}}
@@ -2912,9 +2944,24 @@ window.addEventListener('resize',resize);
 
 /* ---------- home page, challenges, demo and tutorial ---------- */
 const CH={active:null,idx:-1,events:[],hold:{},t0:0,real0:0,base:0,done:false,failed:'',loading:false,ref:{}};
-const PROG_KEY='barycenter.progress';let PROG={stars:{}};
-try{const v=JSON.parse(localStorage.getItem(PROG_KEY)||'null');if(v&&typeof v.stars==='object')PROG=v}catch(e){}
-function saveProg(){try{localStorage.setItem(PROG_KEY,JSON.stringify(PROG))}catch(e){}}
+const PROG_KEY='barycenter.progress',ACC_KEY='barycenter.accounts';
+const lsGet=k=>{try{return JSON.parse(localStorage.getItem(k)||'null')}catch(e){return null}};
+const lsSet=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}};
+// device accounts: every account has its own progress record; "guest" keeps the original key
+let ACC=lsGet(ACC_KEY);if(!ACC||!Array.isArray(ACC.list))ACC={list:[],cur:'guest',devicePlays:0};
+if(ACC.cur!=='guest'&&!ACC.list.some(a=>a.id===ACC.cur))ACC.cur='guest';
+let ACCN=0;// account creations and switches this session (tutorial step and challenge)
+const progKey=id=>id==='guest'?PROG_KEY:PROG_KEY+'.'+id;
+const blankProg=()=>({stars:{},plays:0,by:{free:0,chal:0,demo:0,tut:0},secs:0,keyed:1});
+let PROG=blankProg();
+function loadProg(){const v=lsGet(progKey(ACC.cur));PROG=Object.assign(blankProg(),{keyed:0},v&&typeof v.stars==='object'?v:{});if(!v)PROG.keyed=1;PROG.by=Object.assign(blankProg().by,PROG.by||{});
+  if(!PROG.keyed&&typeof CHALS!=='undefined'){const old=CHALS.filter(c=>!c.nw),st={};for(const k in PROG.stars){const c=old[+k];if(c)st[c.t]=PROG.stars[k]}PROG.stars=st;PROG.keyed=1;saveProg()}}
+function saveProg(){lsSet(progKey(ACC.cur),PROG)}
+function saveAcc(){lsSet(ACC_KEY,ACC)}
+const curAcc=()=>ACC.list.find(a=>a.id===ACC.cur);
+const accName=()=>(curAcc()||{name:'Guest'}).name;
+const pinHash=p=>{let h=5381;for(const c of 'bary:'+p)h=((h*33)^c.charCodeAt(0))>>>0;return h.toString(36)};
+function countPlay(kind){PROG.plays++;PROG.by[kind]=(PROG.by[kind]||0)+1;ACC.devicePlays=(ACC.devicePlays||0)+1;saveProg();saveAcc();updateAcctUI()}
 function chEv(k,d){if(CH.active&&!CH.done&&!CH.loading)CH.events.push({k,...(d||{}),t:S.t})}
 const BN=n=>S.bodies.find(b=>b.name===n);
 const mine=()=>S.bodies.filter(b=>b.id>CH.base);
@@ -2929,7 +2976,7 @@ const merged=(a,b)=>evHas(e=>e.k==='merge'&&((e.a===a&&e.b===b)||(e.a===b&&e.b==
 const scen=id=>()=>load(SCEN.find(x=>x.id===id));
 function holdTxt(p,H){return p>0?`holding: ${(p*H).toFixed(1)} of ${H} years`:''}
 // a challenge: title, goal, how it is set up, a check that returns [done, progress 0..1, text, metric], an optional fail check and a star rating
-const CHALS=[];const CC=(diff,o)=>CHALS.push({diff,...o});
+const CHALS=[];const CC=(diff,o)=>CHALS.push({diff,...o});const CCN=(diff,o)=>CC(diff,{nw:1,...o});
 // find things
 [['Saturn',1],['Titan',1.1],['Pluto',1.3],['Halley',1.5],['Psyche',1.7]].forEach(([n,d])=>CC(d,{t:`Find ${n}`,g:`Find ${n} and follow it with the camera.`,hint:'Type its name in the search bar and press Enter, or double-click it.',setup:scen('solar'),
   check:()=>{const ok=S.sel&&S.sel.name===n;return[ok&&S.follow,ok?1:0,ok?'Found it':'Not found yet']},stars:byTime(20,45)}));
@@ -3012,12 +3059,26 @@ CC(6.8,{t:'Type Ia supernova',g:'Push a white dwarf past 1.44 solar masses so it
   check:()=>{const s0=BN('Sun');let best=null;if(s0)for(const b of mine())if(b.type==='rock'&&b.m>=50*ME&&parentOf(b)===s0){const o=orb(b,s0);if(o.a>=a1&&o.a<=a2&&(!best||o.e<best.e))best=o}
     const p=hold('g',!!best,H);return[p>=1,p,best?`Giant at ${best.a.toFixed(2)} AU · ${holdTxt(p,H)}`:'No gas giant in that range yet',best&&best.e]},
   fail:()=>{const s0=BN('Sun');const lost=['Mercury','Venus','Earth','Mars','Jupiter','Saturn','Uranus','Neptune'].find(n=>{const b=BN(n);return !b||!s0||parentOf(b)!==s0});return lost?`${lost} was lost`:''},stars:byE(0.05,0.15)}));
+// account challenges
+CCN(1.15,{t:'Make it yours',g:'Create an account (👤 at the top) or sign in to one, then drop a rocky planet into orbit around the Sun and keep it there for 3 years.',hint:'Click 👤, type a name and press Create account. Then pick Rocky planet and click near the Sun.',
+  setup:()=>{scen('solar')();CH.ref.n=ACCN},
+  check:()=>{const acc=ACCN>CH.ref.n;const sun=BN('Sun');let ok=false;if(acc&&sun)for(const b of mine())if(b.type==='rock'&&parentOf(b)===sun&&orb(b,sun).bound)ok=true;
+    const p=hold('o',ok,3);return[p>=1,acc?0.3+0.7*p:0,acc?(ok?holdTxt(p,3):`Signed in as ${accName()} · now add a planet`):'Create or sign in to an account first']},stars:byTime(60,150)});
+CCN(3.05,{t:'Trophy shelf',g:'Sign in to an account, then crash a planet you added into Jupiter. Your stars land on your account.',hint:'Click 👤 and sign in or create an account. Add a rocky planet and drag it onto Jupiter.',
+  setup:()=>{scen('solar')();CH.ref.orig=new Set(S.bodies.map(b=>b.name))},
+  check:()=>{const acc=!!curAcc();const hit2=evHas(e=>e.k==='merge'&&(e.a==='Jupiter'&&!CH.ref.orig.has(e.b)||e.b==='Jupiter'&&!CH.ref.orig.has(e.a)));
+    return[acc&&hit2,(acc?0.5:0)+(hit2?0.5:0),acc?(hit2?'Hit!':`Signed in as ${accName()} · now hit Jupiter`):'Sign in or create an account first']},stars:byTime(45,120)});
 CHALS.sort((a,b)=>a.diff-b.diff);
-const unlocked=i=>i===0||PROG.stars[i-1]>0;
-function totalStars(){return Object.values(PROG.stars).reduce((a,b)=>a+b,0)}
+loadProg();
+const NCH=CHALS.length;
+const starsOf=i=>(CHALS[i]&&PROG.stars[CHALS[i].t])||0;
+// a challenge is open once the one before it is done (or anything after it, for progress saved before new challenges were added)
+const unlocked=i=>{if(i===0||starsOf(i-1)||starsOf(i))return true;for(let j=i+1;j<NCH;j++)if(starsOf(j))return true;return false};
+function totalStars(){let n=0;for(let i=0;i<NCH;i++)n+=starsOf(i);return n}
+const doneCount=()=>CHALS.filter((c,i)=>starsOf(i)>0).length;
 
 function setMode(m){document.body.classList.toggle('mHome',m==='home');document.body.classList.toggle('mDemo',m==='demo')}
-function homeView(v){for(const id of ['hMain','hChalView','hDemoView'])$(id).hidden=id!==v;if(v==='hChalView')renderGrid();const done=Object.keys(PROG.stars).length;$('hChalSub').textContent=done?`${done} of 100 complete · ${totalStars()} of 300 stars`:'100 goals, from easy to fiendish'}
+function homeView(v){for(const id of ['hMain','hChalView','hDemoView'])$(id).hidden=id!==v;if(v==='hChalView')renderGrid();const done=doneCount();$('hChalSub').textContent=done?`${done} of ${NCH} complete · ${totalStars()} of ${NCH*3} stars`:`${NCH} goals, from easy to fiendish`;updateAcctUI()}
 function showHome(){stopDemo(true);if(CH.active)endChallenge();if(TUT.on)endTutorial();$('chDone').hidden=true;
   CH.loading=true;load(SCEN.find(x=>x.id==='solar'));CH.loading=false;setTog('labels','tLabels',false);setTog('zones','tZones',false);setTog('spin','tSpin',true);setView(-0.9,0.42);fit(3.2);setSpeed(0.4);
   VIEW_OX=innerWidth>900?innerWidth*0.2:0;
@@ -3027,25 +3088,25 @@ $('homeBtn').addEventListener('click',showHome);
 document.querySelectorAll('.hback').forEach(b=>b.addEventListener('click',()=>homeView('hMain')));
 $('hChal').addEventListener('click',()=>homeView('hChalView'));
 $('hDemo').addEventListener('click',()=>homeView('hDemoView'));
-$('hFree').addEventListener('click',()=>{leaveHome();load(SCEN.find(x=>x.id==='solar'))});
+$('hFree').addEventListener('click',()=>{leaveHome();load(SCEN.find(x=>x.id==='solar'));countPlay('free')});
 function renderGrid(){const g=$('hGrid');g.textContent='';let next=-1;
-  CHALS.forEach((c,i)=>{const st=PROG.stars[i]||0,un=unlocked(i);if(un&&!st&&next<0)next=i;const b=document.createElement('button');b.className='ct'+(i===next?' next':'');b.disabled=!un;b.title=un?`${c.t}: ${c.g}`:'Finish the previous challenge to unlock';
+  CHALS.forEach((c,i)=>{const st=starsOf(i),un=unlocked(i);if(un&&!st&&next<0)next=i;const b=document.createElement('button');b.className='ct'+(i===next?' next':'');b.disabled=!un;b.title=un?`${c.t}: ${c.g}`:'Finish the previous challenge to unlock';
     b.innerHTML='<span class="cn"></span><span class="ctt"></span><span class="cs"></span>';b.children[0].textContent=`#${i+1}`;b.children[1].textContent=un?c.t:'Locked';b.children[2].textContent=un?(st?'★'.repeat(st)+'☆'.repeat(3-st):'☆☆☆'):'🔒';
     b.onclick=()=>startChallenge(i);g.appendChild(b)});
-  $('hStars').textContent=`★ ${totalStars()} / 300`;if(next>=0)setTimeout(()=>{const el=g.children[next];if(el)el.scrollIntoView({block:'nearest'})},30)}
+  $('hStars').textContent=`★ ${totalStars()} / ${NCH*3}`;if(next>=0)setTimeout(()=>{const el=g.children[next];if(el)el.scrollIntoView({block:'nearest'})},30)}
 function startChallenge(i){
-  const c=CHALS[i];if(!c||!unlocked(i))return;leaveHome();$('chDone').hidden=true;
+  const c=CHALS[i];if(!c||!unlocked(i))return;leaveHome();countPlay('chal');$('chDone').hidden=true;
   CH.active=c;CH.idx=i;CH.events=[];CH.hold={};CH.ref={};CH.done=false;CH.failed='';CH.loading=true;
   try{c.setup()}finally{CH.loading=false}
   CH.base=S.bodies.reduce((m,b)=>Math.max(m,b.id),0);CH.t0=S.t;CH.real0=performance.now();setPaused(false);
-  $('chHud').hidden=false;$('chNum').textContent=`Challenge ${i+1} of 100`;$('chTitle').textContent=c.t;$('chGoal').textContent=c.g;$('chProg').textContent='';$('chBar').style.width='0%';$('chHint').hidden=!c.hint}
+  $('chHud').hidden=false;$('chNum').textContent=`Challenge ${i+1} of ${NCH}`;$('chTitle').textContent=c.t;$('chGoal').textContent=c.g;$('chProg').textContent='';$('chBar').style.width='0%';$('chHint').hidden=!c.hint}
 function endChallenge(){CH.active=null;$('chHud').hidden=true}
 function chTick(){
   if(TUT.on)tutTick();
   if(!CH.active||CH.done)return;const c=CH.active;let r;try{r=c.check()}catch(e){r=[false,0,'']}
   const [done,p,txt,metric]=r;$('chProg').textContent=CH.failed||txt||'';$('chBar').style.width=Math.round(Math.max(0,Math.min(1,p||0))*100)+'%';
   const t=realSecs();$('chTime').textContent=`${Math.floor(t/60)}:${String(Math.floor(t%60)).padStart(2,'0')}`;
-  if(done){CH.done=true;const st=Math.max(1,Math.min(3,c.stars(metric)));const prev=PROG.stars[CH.idx]||0;if(st>prev)PROG.stars[CH.idx]=st;saveProg();
+  if(done){CH.done=true;const st=Math.max(1,Math.min(3,c.stars(metric)));const prev=starsOf(CH.idx);if(st>prev)PROG.stars[c.t]=st;saveProg();updateAcctUI();
     $('dStars').innerHTML='★'.repeat(st)+'<span class="off">'+'★'.repeat(3-st)+'</span>';$('dTitle').textContent=`Challenge ${CH.idx+1} complete!`;
     $('dText').textContent=`${c.t} · ${Math.floor(t/60)}:${String(Math.floor(t%60)).padStart(2,'0')}${st<3?' · Faster or more precise solutions earn more stars.':' · Perfect!'}${prev>st?` Your best is still ${prev} ★.`:''}`;
     $('dNext').hidden=CH.idx>=CHALS.length-1;$('dNext').textContent='Next challenge';$('dRetry').hidden=false;$('dList').textContent='All challenges';$('chDone').hidden=false;$('chHud').hidden=true;return}
@@ -3056,7 +3117,7 @@ $('chExit').addEventListener('click',()=>{endChallenge();showHome();homeView('hC
 $('chHint').addEventListener('click',()=>{if(CH.active)toast('Hint: '+CH.active.hint)});
 $('dNext').addEventListener('click',()=>{if(TUT.on||CH.idx<0){showHome();homeView('hChalView');return}startChallenge(CH.idx+1)});
 $('dRetry').addEventListener('click',()=>{if(TUT.finished){TUT.finished=false;startTutorial();return}startChallenge(CH.idx)});
-$('dList').addEventListener('click',()=>{if(TUT.finished){TUT.finished=false;$('chDone').hidden=true;endChallenge();leaveHome();load(SCEN.find(x=>x.id==='solar'));return}endChallenge();showHome();homeView('hChalView')});
+$('dList').addEventListener('click',()=>{if(TUT.finished){TUT.finished=false;$('chDone').hidden=true;endChallenge();leaveHome();load(SCEN.find(x=>x.id==='solar'));countPlay('free');return}endChallenge();showHome();homeView('hChalView')});
 
 /* tutorial: each step completes when the player does it (new features get a step here too) */
 const TUT={on:false,i:0,ref:{},finished:false};
@@ -3075,9 +3136,10 @@ const TSTEPS=[
  ['Add a famous object','Type Betelgeuse in the search bar and press Add.',()=>S.bodies.some(b=>/^Betelgeuse/.test(b.name))],
  ['Star types','Pick the Star tool and choose a type, such as Hypergiant, Brown dwarf or Black dwarf, then click to place one.',r=>S.bodies.some(b=>b.id>r.base&&(b.type==='star'||b.type==='dwarf'||b.type==='neutron')&&!/^Betelgeuse/.test(b.name)),r=>{r.base=S.bodies.reduce((m,b)=>Math.max(m,b.id),0)}],
  ['Black hole','Pick Black hole and click near the Sun. Watch it pull things in (and drag it around).',()=>S.bodies.some(b=>b.type==='blackhole')],
+ ['Save your progress','Click 👤 in the top bar and create an account (a PIN is optional). Your stars and plays save on this device.',r=>ACCN>r.n||!!curAcc()&&r.had===false,r=>{r.n=ACCN;r.had=!!curAcc()}],
  ['Views','Try the toolbar views: turn on Zones (habitable zones), Heat (temperature map) or Sky (background stars).',r=>S.zones!==r.z||S.heat!==r.h||S.sky!==r.s,r=>{r.z=S.zones;r.h=S.heat;r.s=S.sky}],
 ];
-function startTutorial(){leaveHome();$('chDone').hidden=true;CH.loading=true;load(SCEN.find(x=>x.id==='solar'));CH.loading=false;TUT.on=true;TUT.i=0;TUT.finished=false;tutStep()}
+function startTutorial(){leaveHome();countPlay('tut');$('chDone').hidden=true;CH.loading=true;load(SCEN.find(x=>x.id==='solar'));CH.loading=false;TUT.on=true;TUT.i=0;TUT.finished=false;tutStep()}
 function tutStep(){const st=TSTEPS[TUT.i];if(!st){TUT.on=false;TUT.finished=true;$('chHud').hidden=true;$('dStars').innerHTML='★★★';$('dTitle').textContent='Tutorial complete!';$('dText').textContent='You know all the controls. Try the challenges, or build anything in free play.';
     $('dNext').hidden=false;$('dNext').textContent='Challenges';$('dRetry').hidden=false;$('dList').textContent='Free play';$('chDone').hidden=false;return}
   TUT.ref={};if(st[3])st[3](TUT.ref);$('chHud').hidden=false;$('chNum').textContent=`Tutorial · step ${TUT.i+1} of ${TSTEPS.length}`;$('chTitle').textContent=st[0];$('chGoal').textContent=st[1];$('chProg').textContent='';$('chTime').textContent='';$('chBar').style.width=Math.round(TUT.i/TSTEPS.length*100)+'%';$('chHint').hidden=true;
@@ -3087,6 +3149,48 @@ function endTutorial(){TUT.on=false;$('chHud').hidden=true;$('chRestart').textCo
 $('hTut').addEventListener('click',startTutorial);
 $('chRestart').addEventListener('click',e=>{if(TUT.on){e.stopImmediatePropagation();TUT.i++;tutStep()}},true);
 $('chExit').addEventListener('click',e=>{if(TUT.on){e.stopImmediatePropagation();endTutorial();showHome();homeView('hDemoView')}},true);
+
+/* accounts and plays, saved on this device */
+const fmtPlay=s=>s<60?`${Math.round(s)} s`:s<3600?`${Math.floor(s/60)} min`:`${Math.floor(s/3600)} h ${Math.floor(s%3600/60)} min`;
+function progOf(id){if(id===ACC.cur)return PROG;const v=lsGet(progKey(id))||{};return{stars:v.stars||{},plays:v.plays||0}}
+const starSum=st=>Object.values(st||{}).reduce((a,b)=>a+(+b||0),0);
+function updateAcctUI(){const n=accName();$('hAcctName').textContent=curAcc()?n:'Guest · make an account';$('hPlaysN').textContent=PROG.plays;$('acctBtn').title=`Account: ${n} (saved on this device)`}
+function switchAcc(id,quiet){if(id===ACC.cur)return;saveProg();ACC.cur=id;saveAcc();loadProg();ACCN++;updateAcctUI();
+  if(!$('home').hidden){if(!$('hChalView').hidden)renderGrid();homeView($('hChalView').hidden?($('hDemoView').hidden?'hMain':'hDemoView'):'hChalView')}
+  if(!quiet)toast(`Signed in as ${accName()} · progress saves on this device`);renderAcct()}
+let acctPend=null;
+function renderAcct(msg){const L=$('acctList');L.textContent='';$('acctMsg').textContent=msg||'';
+  const rows=[{id:'guest',name:'Guest',guest:1},...ACC.list];
+  for(const a of rows){const pr=progOf(a.id),cur=a.id===ACC.cur,r=document.createElement('div');r.className='arow'+(cur?' cur':'');
+    const nm=document.createElement('div');nm.className='an';nm.innerHTML='<div></div><div class="as"></div>';nm.children[0].textContent=(a.pin?'🔒 ':'')+a.name+(cur?' (signed in)':'');
+    nm.children[1].textContent=`★ ${starSum(pr.stars)} · ${pr.plays} plays${a.guest?' · shared, no account':''}`;r.appendChild(nm);
+    if(!cur){if(acctPend===a.id){const inp=document.createElement('input');inp.placeholder='PIN';inp.maxLength=4;inp.inputMode='numeric';inp.className='apin';const go=document.createElement('button');go.className='btn primary';go.textContent='OK';
+        const tryPin=()=>{if(pinHash(inp.value)===a.pin){acctPend=null;switchAcc(a.id)}else{inp.value='';renderAcct('Wrong PIN');}};go.onclick=tryPin;inp.onkeydown=e=>{if(e.key==='Enter')tryPin()};r.append(inp,go);setTimeout(()=>inp.focus(),0)}
+      else{const b=document.createElement('button');b.className='btn';b.textContent=a.guest?'Use guest':'Sign in';b.onclick=()=>{if(a.pin){acctPend=a.id;renderAcct()}else switchAcc(a.id)};r.appendChild(b)}}
+    else if(!a.guest){const so=document.createElement('button');so.className='btn';so.textContent='Sign out';so.onclick=()=>switchAcc('guest');
+      const del=document.createElement('button');del.className='btn';del.textContent='Delete';del.title='Delete this account and its progress from this device';
+      del.onclick=()=>{if(del.dataset.sure){const id=a.id;switchAcc('guest',true);ACC.list=ACC.list.filter(x=>x.id!==id);try{localStorage.removeItem(progKey(id))}catch(e){}saveAcc();renderAcct(`Deleted ${a.name}`);updateAcctUI()}else{del.dataset.sure=1;del.textContent='Sure?'}};r.append(so,del)}
+    L.appendChild(r)}}
+function openAcct(){acctPend=null;$('playsBox').hidden=true;$('acct').hidden=false;renderAcct();setTimeout(()=>{if(!curAcc())$('acctNew').focus()},0)}
+$('acctForm').addEventListener('submit',e=>{e.preventDefault();const name=$('acctNew').value.trim().replace(/\s+/g,' ').slice(0,20),pin=$('acctPin').value.trim();
+  if(!name){renderAcct('Type a name first');return}if(/^guest$/i.test(name)||ACC.list.some(a=>a.name.toLowerCase()===name.toLowerCase())){renderAcct('That name is taken on this device');return}
+  if(pin&&!/^\d{4}$/.test(pin)){renderAcct('A PIN is 4 digits (or leave it empty)');return}
+  const fromGuest=ACC.cur==='guest'&&!ACC.list.length&&(PROG.plays||Object.keys(PROG.stars).length);
+  const a={id:'a'+Date.now().toString(36)+Math.floor(Math.random()*1e4).toString(36),name,created:Date.now()};if(pin)a.pin=pinHash(pin);
+  // the first account takes over what was played as guest, so nothing is lost
+  if(fromGuest){lsSet(progKey(a.id),PROG);lsSet(PROG_KEY,blankProg())}
+  ACC.list.push(a);saveAcc();$('acctNew').value='';$('acctPin').value='';switchAcc(a.id,true);toast(`Account ${name} created · progress saves on this device`);
+  renderAcct(fromGuest?'Your guest progress moved into this account.':'')});
+function openPlays(){$('acct').hidden=true;const p=PROG;$('pWho').textContent=`${accName()}'s plays`;$('pN').textContent=p.plays;$('pDev').textContent=`${ACC.devicePlays||0} on this device in total`;
+  const g=$('pGrid');g.textContent='';for(const [k,v] of [['Free play',p.by.free],['Challenges started',p.by.chal],['Challenges complete',`${doneCount()} / ${NCH}`],['Stars',`${totalStars()} / ${NCH*3}`],['Tutorials',p.by.tut],['Demos watched',p.by.demo],["Time played",fmtPlay(p.secs||0)],['Accounts here',ACC.list.length+1]]){const d=document.createElement('div');d.innerHTML='<span class="k"></span><span class="v"></span>';d.children[0].textContent=k;d.children[1].textContent=v;g.appendChild(d)}
+  $('playsBox').hidden=false}
+$('hAcctBtn').addEventListener('click',openAcct);$('acctBtn').addEventListener('click',openAcct);$('hPlays').addEventListener('click',openPlays);
+$('acctClose').addEventListener('click',()=>$('acct').hidden=true);$('playsClose').addEventListener('click',()=>$('playsBox').hidden=true);
+for(const id of ['acct','playsBox'])$(id).addEventListener('click',e=>{if(e.target.id===id)$(id).hidden=true});
+// time played: counted while a game is running and the tab is visible
+setInterval(()=>{if(document.hidden||!$('home').hidden)return;PROG.secs=(PROG.secs||0)+5;if(Math.round(PROG.secs)%30===0)saveProg()},5000);
+addEventListener('pagehide',saveProg);
+updateAcctUI();
 
 /* demo: an automatic tour of highlights */
 const DEMO=[
@@ -3100,7 +3204,7 @@ const DEMO=[
  ['trappist','TRAPPIST-1','Seven Earth-sized worlds packed around a tiny red star.',()=>{setSpeed(0.01)}],
 ];
 let demoI=-1,demoTimer=0;
-function startDemo(){leaveHome();setMode('demo');$('demoCap').hidden=false;demoI=-1;nextDemo()}
+function startDemo(){leaveHome();countPlay('demo');setMode('demo');$('demoCap').hidden=false;demoI=-1;nextDemo()}
 function nextDemo(){clearTimeout(demoTimer);demoI=(demoI+1)%DEMO.length;const [id,t,x,f]=DEMO[demoI];CH.loading=true;load(SCEN.find(s=>s.id===id));CH.loading=false;f();setTog('spin','tSpin',true);setTog('labels','tLabels',false);setTog('zones','tZones',false);
   $('demoStep').textContent=`Demo · ${demoI+1} of ${DEMO.length}`;$('demoTitle').textContent=t;$('demoText').textContent=x;demoTimer=setTimeout(nextDemo,13000)}
 function stopDemo(quiet){clearTimeout(demoTimer);if(demoI<0&&quiet)return;demoI=-1;$('demoCap').hidden=true;setMode('');if(!quiet)showHome()}
