@@ -1664,7 +1664,14 @@ function drawGas(){ // drawn at half resolution (it is soft anyway): emission ad
 function gasStep(simDt,rdt){
   if(!S.gas.length)return;
   const hot=S.bodies.filter(b=>b.type==='star'&&b.m>=6&&!b.giant);
-  for(const g of S.gas){g.x+=g.vx*simDt;g.y+=g.vy*simDt;g.z+=g.vz*simDt;if(g.life!==Infinity)g.life-=rdt;
+  // black holes and neutron stars pull nebula gas in and swallow it (ordinary stars' pull is held off by gas pressure and stellar winds)
+  const comp=S.bodies.filter(b=>b.type==='blackhole'||b.type==='neutron'),ns=comp.length&&simDt>0?Math.min(40,Math.max(1,Math.ceil(simDt/0.01))):1,hs=simDt/ns;
+  for(const g of S.gas){
+    if(comp.length&&simDt>0){for(let k=0;k<ns&&g.life>0;k++){for(const c of comp){const dx=c.x-g.x,dy=c.y-g.y,dz=c.z-g.z,d2=dx*dx+dy*dy+dz*dz,cr=hitR(c)*1.5;
+          if(d2<cr*cr){g.life=0;break}const d2s=d2+(cr*cr),f=G*c.m/(d2s*Math.sqrt(d2s))*hs;g.vx+=dx*f;g.vy+=dy*f;g.vz+=dz*f}
+        g.x+=g.vx*hs;g.y+=g.vy*hs;g.z+=g.vz*hs}}
+    else{g.x+=g.vx*simDt;g.y+=g.vy*simDt;g.z+=g.vz*simDt}
+    if(g.life!==Infinity)g.life-=rdt;
     for(const h of hot){const dx=g.x-h.x,dy=g.y-h.y,dz=g.z-h.z,d=Math.hypot(dx,dy,dz)||1;if(d<90){const k=2.2*Math.sqrt(h.m)/(d+6)*simDt;g.vx+=dx/d*k;g.vy+=dy/d*k;g.vz+=dz/d*k}}} // radiation from hot stars carves out a cavity
   S.gas=S.gas.filter(g=>g.life>0);
   if(S.nursery&&simDt>0){S.formT-=simDt;
