@@ -310,6 +310,7 @@ body.mDemo .rail,body.mDemo .campad,body.mDemo .hint,body.mDemo .insp,body.mDemo
   <button class="tool" data-tool="measure" aria-pressed="false" title="Measure distance (9)"><span class="ico"><svg width="20" height="14" viewBox="0 0 20 14"><rect x="1" y="3" width="18" height="8" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.3"/><path d="M5 3v3M9 3v4M13 3v3M17 3v4" stroke="currentColor" stroke-width="1.2"/></svg></span>Measure</button>
   <button class="tool" data-tool="comet" aria-pressed="false" title="Comet (8)"><span class="ico"><span class="dot comet"></span></span>Comet</button>
   <button class="tool" data-tool="blackhole" aria-pressed="false" title="Black hole (7)"><span class="ico"><span class="dot bh" style="--s:12px"></span></span>Black<br>hole</button>
+  <button class="tool" data-tool="nebula" aria-pressed="false" title="Nebula or gas cloud: pick a type, then click in space"><span class="ico"><span class="dot" style="--c:#ff7aa0;--s:13px;box-shadow:0 0 9px 4px rgba(255,120,160,.55),0 0 4px 2px rgba(110,220,220,.45)"></span></span>Nebula</button>
   <hr>
   <button class="tog" id="tReal" aria-pressed="true" title="Draw bodies at their real sizes">True size</button>
   <button class="tog" id="tTrails" aria-pressed="true">Trails</button>
@@ -325,6 +326,13 @@ body.mDemo .rail,body.mDemo .campad,body.mDemo .hint,body.mDemo .insp,body.mDemo
   <label class="fl" id="pMassL">Mass <output id="pMassO"></output><input id="pMass" type="range" min="-2" max="2" step="0.05" value="0"></label>
   <label class="fl" id="pSizeL">Size <output id="pSizeO">1.0×</output><input id="pSize" type="range" min="0.2" max="5" step="0.1" value="1"></label>
   <button id="pReset" class="btn ghost" style="align-self:flex-start">Reset</button>
+</div>
+<div id="nkinds" class="kinds panel" hidden role="group" aria-label="Nebula type">
+  <button class="kind nk" data-nk="emission" aria-pressed="true"><span class="dot" style="--c:#ff6f93;--s:12px;box-shadow:0 0 6px 2px rgba(255,110,150,.6)"></span>Star-forming nebula</button>
+  <button class="kind nk" data-nk="dark"><span class="dot" style="--c:#2a2030;--s:12px;box-shadow:0 0 0 1px rgba(200,120,140,.6)"></span>Dark cloud</button>
+  <button class="kind nk" data-nk="cloud"><span class="dot" style="--c:#aabbe6;--s:12px;box-shadow:0 0 6px 2px rgba(170,190,235,.5)"></span>Gas cloud</button>
+  <button class="kind nk" data-nk="planetary"><span class="dot" style="--c:#6edcd2;--s:12px;box-shadow:0 0 0 2px rgba(110,220,210,.7) inset"></span>Planetary nebula</button>
+  <button class="kind nk" data-nk="snr"><span class="dot" style="--c:#ff7a60;--s:12px;box-shadow:0 0 6px 2px rgba(120,160,255,.6)"></span>Supernova remnant</button>
 </div>
 <div id="kinds" class="kinds panel" hidden role="group" aria-label="Star type">
   <button class="kind" data-kind="red"><span class="dot star" style="--c:#ff9a5c;--s:9px"></span>Red dwarf</button>
@@ -1793,6 +1801,51 @@ function drawGas(){ // drawn at half resolution (it is soft anyway): emission ad
     if(any){ctx.globalCompositeOperation=pass?'source-over':'lighter';ctx.drawImage(cvx,0,0,W,H)}}
   ctx.globalAlpha=1;ctx.globalCompositeOperation='source-over';
 }
+/* ---------- nebulas and gas clouds you can add from the search bar ---------- */
+const NEBCAT=[
+ ['Orion Nebula','m42,great orion nebula,orion','emission','The nearest big star nursery, 1,344 light-years away'],
+ ['Carina Nebula','eta carinae nebula,ngc 3372','emission','One of the brightest nebulas, home to giant stars'],
+ ['Eagle Nebula','m16,pillars of creation,pillars','emission','Home of the Pillars of Creation'],
+ ['Lagoon Nebula','m8','emission','A glowing cloud where stars are forming'],
+ ['Rosette Nebula','ngc 2237','emission','A rose-shaped cloud around a cluster of young stars'],
+ ['Tarantula Nebula','30 doradus','emission','The most active star factory near the Milky Way'],
+ ['North America Nebula','ngc 7000','emission','Shaped like the continent of North America'],
+ ['Horsehead Nebula','barnard 33','dark','A dark dust cloud shaped like a horse’s head'],
+ ['Coalsack Nebula','coalsack','dark','A dark cloud that blots out the Milky Way'],
+ ['Molecular cloud','giant molecular cloud,dark cloud,dust cloud','dark','A cold cloud of gas and dust where stars are born'],
+ ['Gas cloud','interstellar cloud,hydrogen cloud,space cloud,cloud,nebula','cloud','A soft cloud of glowing hydrogen'],
+ ['Ring Nebula','m57','planetary','The glowing shell of a dying Sun-like star'],
+ ['Helix Nebula','eye of god,ngc 7293','planetary','A huge planetary nebula, the “Eye of God”'],
+ ['Cat’s Eye Nebula','cats eye,ngc 6543','planetary','A complex shell around a dying star'],
+ ['Butterfly Nebula','ngc 6302,bug nebula','planetary','Two glowing wings blown out by a dying star'],
+ ['Planetary nebula','planetary','planetary','The shell a Sun-like star sheds at the end of its life'],
+ ['Crab Nebula','m1,crab','snr','What is left of a supernova seen in 1054, with a pulsar inside'],
+ ['Veil Nebula','cygnus loop','snr','Wispy filaments from a supernova 10,000 years ago'],
+ ['Cassiopeia A','cas a','snr','The youngest known supernova remnant in our galaxy'],
+ ['Supernova remnant','snr,supernova remnant','snr','The expanding debris of an exploded star']].map(([n,al,k,about])=>({n,al,k,about}));
+let NEBADD=0,NEWSTARS=0;
+const NEBKINDS={emission:{n:'Star-forming nebula',k:'emission'},dark:{n:'Dark cloud',k:'dark'},cloud:{n:'Gas cloud',k:'cloud'},planetary:{n:'Planetary nebula',k:'planetary'},snr:{n:'Supernova remnant',k:'snr'}};let NEBKIND=NEBKINDS.emission;
+function addNebula(N,opt={}){const R=Math.max(12,cam.dist*(opt.at?0.1:0.13));
+  // put it beside what you are looking at, clear of stars and planets, then frame it
+  let c=opt.at||[cam.tx,cam.ty,cam.tz];const heavy=opt.at?[]:S.bodies.filter(b=>b.m>1e-7);for(let t=0;t<40;t++){const far=heavy.every(b=>Math.hypot(b.x-c[0],b.y-c[1],b.z-c[2])>R*2.4);if(far)break;const d=randDir(),k=R*(2.5+t*0.4);c=[cam.tx+d[0]*k,cam.ty+d[1]*k,cam.tz+d[2]*k*0.3]}
+  if(!opt.at){if(S.follow){S.follow=false;syncFollow()}cam.tx=c[0];cam.ty=c[1];cam.tz=c[2];cam.distT=R*3.4}
+  const P=(x,y,z)=>[c[0]+x*R,c[1]+y*R,c[2]+z*R*0.6],sz=R*0.3;
+  if(S.gas.length>1200){toast('There is too much gas already: wait for some to fade, or clear the scene');return}
+  if(N.k==='emission'||N.k==='dark'||N.k==='cloud'){const clumps=Array.from({length:7},()=>[gauss()*0.6,gauss()*0.6,gauss()*0.4]);
+    for(let i=0;i<(N.k==='cloud'?140:240);i++){const cl=pick(clumps),x=cl[0]+gauss()*0.35,y=cl[1]+gauss()*0.35,z=cl[2]+gauss()*0.25,d=Math.hypot(x,y,z),u=Math.random(),[px,py,pz]=P(x,y,z);
+      if(N.k==='cloud')addGas({x:px,y:py,z:pz,vx:gauss()*0.05,vy:gauss()*0.05,vz:gauss()*0.05,c:pick(['170,190,235','150,175,230','200,205,230']),a:rnd(0.14,0.26),size:sz*rnd(0.8,1.6)});
+      else if(N.k==='dark'?u<0.7:(u<0.22&&d>0.4))addGas({x:px,y:py,z:pz,dark:true,c:'6,5,12',a:rnd(0.3,0.55),size:sz*rnd(0.8,1.5),dense:true});
+      else addGas({x:px,y:py,z:pz,vx:gauss()*0.12,vy:gauss()*0.12,vz:gauss()*0.12,c:N.k==='dark'?'200,90,110':d<0.5?pick(['90,205,210','140,220,230','255,150,170']):pick(['255,80,115','245,95,130','255,120,140']),a:N.k==='dark'?rnd(0.1,0.18):rnd(0.2,0.34),size:sz*rnd(0.7,1.5),dense:d>0.5&&Math.random()<0.3})}
+    const clear=S.bodies.every(b=>b.anon||b.m<=1e-7||Math.hypot(b.x-c[0],b.y-c[1],b.z-c[2])>R*6);// only light it up with young stars where it will not wreck a planetary system
+    if(N.k==='emission'&&clear)for(const m of [14,9,6]){const d=randDir(),r=R*rnd(0.1,0.3);addBody({type:'star',m,x:c[0]+d[0]*r,y:c[1]+d[1]*r,z:c[2]+d[2]*r*0.6,vx:gauss()*0.5,vy:gauss()*0.5,vz:gauss()*0.3,anon:true,name:''})}
+    if(N.k!=='cloud'){S.nursery=true;S.formT=Math.min(S.formT||1,1)}}
+  else{// an expanding shell: a planetary nebula round a white dwarf, or a supernova remnant
+    const snr=N.k==='snr',n=snr?260:200,speed=snr?2.5:0.6;
+    for(let i=0;i<n;i++){const d=randDir(),bip=N.n.startsWith('Butterfly')?1+2.2*Math.abs(d[0]):1,r=R*(snr?rnd(0.55,0.8):rnd(0.32,0.42))*bip,[px,py,pz]=[c[0]+d[0]*r,c[1]+d[1]*r,c[2]+d[2]*r];
+      addGas({x:px,y:py,z:pz,vx:d[0]*speed*bip,vy:d[1]*speed*bip,vz:d[2]*speed,c:snr?pick(['255,90,80','255,140,90','120,160,255','230,230,255']):pick(['110,220,210','90,190,230','255,120,150','255,170,190']),a:rnd(0.22,0.38),size:sz*rnd(0.4,0.9)})}
+    const clear2=S.bodies.every(b=>b.anon||b.m<=1e-7||Math.hypot(b.x-c[0],b.y-c[1],b.z-c[2])>R*6);
+    if(clear2){if(snr&&/Crab/.test(N.n))addBody({type:'neutron',m:1.4,name:'Crab Pulsar',x:c[0],y:c[1],z:c[2]});else if(!snr)addBody({type:'dwarf',m:0.6,name:N.n+' core',x:c[0],y:c[1],z:c[2]})}}
+  NEBADD++;chEv('nebula',{k:N.k});S.dirty=true;toast(`Added the ${N.n}`)}
 function gasStep(simDt,rdt){
   if(!S.gas.length)return;
   const hot=S.bodies.filter(b=>b.type==='star'&&b.m>=6&&!b.giant);
@@ -1808,9 +1861,10 @@ function gasStep(simDt,rdt){
   S.gas=S.gas.filter(g=>g.life>0);
   if(S.nursery&&simDt>0){S.formT-=simDt;
     if(S.formT<=0){S.formT=rnd(0.6,2.2);const dense=S.gas.filter(g=>g.dark||g.dense);
-      if(dense.length&&S.bodies.length<90){const g=pick(dense),u=Math.random(),m=u<0.7?rnd(0.15,0.8):u<0.95?rnd(0.8,3):rnd(3,9);
+      const g0=dense.length?pick(dense):null;if(g0&&S.bodies.some(b=>!b.anon&&b.m>1e-7&&Math.hypot(b.x-g0.x,b.y-g0.y,b.z-g0.z)<Math.max(10*g0.size,40)))dense.length=0;// no new stars on top of planets
+      if(dense.length&&S.bodies.length<150){const g=g0,u=Math.random(),m=u<0.7?rnd(0.15,0.8):u<0.95?rnd(0.8,3):rnd(3,9);
         addBody({type:'star',m,x:g.x+gauss(),y:g.y+gauss(),z:g.z+gauss(),vx:g.vx+gauss()*0.8,vy:g.vy+gauss()*0.8,vz:g.vz+gauss()*0.8,anon:true,name:''});
-        flash(g.x,g.y,g.z,1.5,'#ffe8c0');if(Math.random()<0.35)toast('A new star ignited inside the nebula')}}}
+        flash(g.x,g.y,g.z,1.5,'#ffe8c0');NEWSTARS++;chEv('newstar',{});if(Math.random()<0.35)toast('A new star ignited inside the nebula')}}}
 }
 let GRAN=null;
 function granTex(){if(GRAN)return GRAN;GRAN=document.createElement('canvas');GRAN.width=GRAN.height=256;const g=GRAN.getContext('2d'),im=g.createImageData(256,256);
@@ -1957,7 +2011,7 @@ document.querySelectorAll('.spd').forEach(b=>b.addEventListener('click',()=>{set
 function setPaused(p){S.paused=p;$('icoPause').hidden=p;$('icoPlay').hidden=!p;$('play').setAttribute('aria-label',p?'Resume simulation':'Pause simulation')}
 $('play').addEventListener('click',()=>setPaused(!S.paused));
 
-const HINTS={orbit:'Orbit tool: click the body you want to move, then click the body it should orbit · Esc to cancel',measure:'Click anywhere (an object or empty space) to start, then anywhere else to measure · Esc clears',select:'Drag to orbit · right-drag to pan · W A S D to move, Q E to rotate, R F up and down · scroll or pinch to zoom · double-click a body to follow',
+const HINTS={nebula:'Click in space to place the nebula type chosen on the right · new stars form inside star-forming nebulas and dark clouds',orbit:'Orbit tool: click the body you want to move, then click the body it should orbit · Esc to cancel',measure:'Click anywhere (an object or empty space) to start, then anywhere else to measure · Esc clears',select:'Drag to orbit · right-drag to pan · W A S D to move, Q E to rotate, R F up and down · scroll or pinch to zoom · double-click a body to follow',
   spawn:'Click to drop it into orbit · drag to throw it along the grid · right-drag to orbit the camera'};
 const STARKINDS={red:{type:'star',m:0.2},sun:{type:'star',m:1},blue:{type:'star',m:18},giant:{type:'star',m:1.2,giant:true},white:{type:'dwarf',m:0.6},neutron:{type:'neutron',m:1.4},
   // real typical values: orange (K-type) dwarf; red hypergiant like VY Canis Majoris; brown dwarf (failed star, glows faintly in infrared); black dwarf (a white dwarf cooled to darkness, none exist yet)
@@ -1966,14 +2020,15 @@ const STARKINDS={red:{type:'star',m:0.2},sun:{type:'star',m:1},blue:{type:'star'
   brown:{type:'star',m:0.05,extra:{bd:1,Teff:1300,Lsun:1e-5,rTrue:0.00046504700000000006,kindLabel:'Brown dwarf',color:'#9c4a32'}},
   black:{type:'dwarf',m:0.6,extra:{black:1,Teff:5,Lsun:1e-9,kindLabel:'Black dwarf',color:'#16161c'}}};
 const KIND_FIELDS=['Teff','Lsun','rTrue','kindLabel','bd','black'];
-document.querySelectorAll('.kind').forEach(k=>k.addEventListener('click',()=>{TOOLS.star={...STARKINDS[k.dataset.kind]};document.querySelectorAll('.kind').forEach(x=>x.setAttribute('aria-pressed',x===k))}));
+document.querySelectorAll('.nk').forEach(k=>k.addEventListener('click',()=>{NEBKIND=NEBKINDS[k.dataset.nk];document.querySelectorAll('.nk').forEach(x=>x.setAttribute('aria-pressed',x===k))}));
+document.querySelectorAll('.kind:not(.nk)').forEach(k=>k.addEventListener('click',()=>{TOOLS.star={...STARKINDS[k.dataset.kind]};document.querySelectorAll('.kind:not(.nk)').forEach(x=>x.setAttribute('aria-pressed',x===k))}));
 function fmtMassAny(m){return m>=0.01?sig(m)+' M☉':m>=1e-6?sig(m/ME)+' M⊕':(m*1.989e30).toExponential(1)+' kg'}
 function syncPlace(){const t=TOOLS[S.tool];if(!t)return;S.pmf=Math.pow(10,+$('pMass').value);S.psz=+$('pSize').value;
   $('pMassO').textContent=`${fmtMassAny(t.m*S.pmf)} (×${S.pmf>=10?Math.round(S.pmf):S.pmf.toPrecision(2)})`;$('pSizeO').textContent=S.psz.toFixed(1)+'×';$('pSizeL').hidden=t.type==='blackhole'}
 $('pMass').addEventListener('input',syncPlace);$('pSize').addEventListener('input',syncPlace);
 $('pReset').addEventListener('click',()=>{$('pMass').value=0;$('pSize').value=1;syncPlace()});
 document.querySelectorAll('.kind').forEach(k=>k.addEventListener('click',()=>setTimeout(syncPlace,0)));
-function setTool(t){S.tool=t;$('kinds').hidden=t!=='star';document.querySelectorAll('.tool').forEach(b=>b.setAttribute('aria-pressed',b.dataset.tool===t));
+function setTool(t){S.tool=t;$('kinds').hidden=t!=='star';$('nkinds').hidden=t!=='nebula';document.querySelectorAll('.tool').forEach(b=>b.setAttribute('aria-pressed',b.dataset.tool===t));
   cv.classList.toggle('spawn',t!=='select');$('hint').textContent=HINTS[t]||HINTS.spawn;S.orbA=0;$('placeOpts').hidden=!TOOLS[t];if(TOOLS[t])syncPlace()}
 document.querySelectorAll('.tool').forEach(b=>b.addEventListener('click',()=>setTool(b.dataset.tool)));
 function bindTog(id,key){const el=$(id);el.addEventListener('click',()=>{S[key]=!S[key];el.setAttribute('aria-pressed',S[key]);if(key==='trails'&&S[key])S.bodies.forEach(b=>b.trail=[])})}
@@ -2581,6 +2636,7 @@ function renderFind(){
   const scene=[],cat=[];let anyFuzzy=false,exact=false;
   for(const b of S.bodies){if(!b.name||b.anon)continue;const r=matchScore(q,[b.name]);if(r.sc>0){scene.push({sc:r.sc,b});if(r.fuzzy)anyFuzzy=true;if(r.sc>=60)exact=true}}
   for(const c of CAT){const r=matchScore(q,[c.n,...c.al.split(',')]);if(r.sc>0){cat.push({sc:r.sc,c,fz:r.fuzzy});if(r.fuzzy)anyFuzzy=true;if(r.sc>=60)exact=true}}
+  const nebs=[];for(const c of NEBCAT){const r=matchScore(q,[c.n,...c.al.split(',')]);if(r.sc>0){nebs.push({sc:r.sc,c});if(r.sc>=60)exact=true}}nebs.sort((a,b)=>b.sc-a.sc);
   scene.sort((a,b)=>b.sc-a.sc);cat.sort((a,b)=>b.sc-a.sc);
   const head=t=>{const h=document.createElement('div');h.className='fh';h.textContent=t;list.appendChild(h)};
   const item=(name,desc,act,cls,fn)=>{const b=document.createElement('button');b.className='fi';b.setAttribute('role','option');b.innerHTML='<span class="fn"></span><span class="fa"></span><span class="fd"></span>';
@@ -2589,7 +2645,8 @@ function renderFind(){
   if(!exact&&anyFuzzy){const top=(cat[0]&&cat[0].c.n)||(scene[0]&&scene[0].b.name);if(top)head(`Did you mean ${top}?`)}
   if(scene.length){head('In this scene');for(const {b} of scene.slice(0,5))item(b.name,classify(b),'Fly to','go',()=>flyTo(b))}
   if(cat.length){head('Add to the simulation');for(const {c} of cat.slice(0,8))item(c.n,`${c.lab} · ${catFacts(c)} · ${c.about}`,'Add','',()=>addFamous(c))}
-  if(!scene.length&&!cat.length){const d=document.createElement('div');d.className='fnone';d.textContent=`No match for “${raw}”. Try a star, planet, moon or black hole, such as Betelgeuse, Titan or Sagittarius A*.`;list.appendChild(d)}
+  if(nebs.length){head('Add a nebula or cloud');const KN={emission:'Star-forming nebula',dark:'Dark cloud',cloud:'Gas cloud',planetary:'Planetary nebula',snr:'Supernova remnant'};for(const {c} of nebs.slice(0,5))item(c.n,`${KN[c.k]} · ${c.about}`,'Add','',()=>addNebula(c))}
+  if(!scene.length&&!cat.length&&!nebs.length){const d=document.createElement('div');d.className='fnone';d.textContent=`No match for “${raw}”. Try a star, planet, moon or black hole, such as Betelgeuse, Titan or Sagittarius A*.`;list.appendChild(d)}
   list.hidden=false;$('find').setAttribute('aria-expanded','true');markFind();
 }
 function catFacts(c){if(c.m>=0.01)return `${c.m>=1e5?c.m.toExponential(1).replace('e+',' × 10^'):sig(c.m)} M☉`+(c.R&&c.R>0.05?` · ${sig(c.R/RSUN)} × the Sun’s width`:'');return `${sig(c.m/ME)} M⊕`}
@@ -2906,6 +2963,7 @@ cv.addEventListener('pointerdown',e=>{
     if(hit===A)return;S.orbA=0;setOrbitAround(A,hit);return}
   if(S.pickParent&&e.button===0){const hit=pickAt(e.clientX,e.clientY),b=S.bodies.find(q=>q.id===S.pickParent);S.pickParent=0;setTool(S.tool);
     if(hit&&b&&hit!==b)setOrbitAround(b,hit);else toast('Cancelled: no other body there');drag={mode:'none'};return}
+  if(S.tool==='nebula'&&e.button===0&&!e.shiftKey){const w=rayPlane(e.clientX,e.clientY,cam.tz);addNebula(NEBKIND,{at:[w.x,w.y,w.z]});drag={mode:'none'};return}
   if(S.tool==='measure'&&e.button===0&&!e.shiftKey){const ep=measurePoint(e.clientX,e.clientY);
     if(!S.measure||S.measure.b)S.measure={a:ep,b:null};else S.measure.b=ep;drag={mode:'none'};return}
   if(pan||orbit||S.tool==='select'){
@@ -3102,6 +3160,7 @@ CCN(2.05,{t:'On the board',g:'Open the 🏆 leaderboard (👤 at the top, then W
   check:()=>{const seen=LBOPEN>CH.ref.n;const P=BN('Mars'),gp=P&&parentOf(P),hill=gp?orb(P,gp).a*Math.cbrt(P.m/(3*gp.m)):Infinity;const ok=!!(seen&&P&&mine().some(b=>{if(b===P)return false;const o=orb(b,P);return o.bound&&o.d<hill}));
     const p=hold('o',ok,3);return[p>=1,seen?0.3+0.7*p:0,seen?(ok?holdTxt(p,3):'Leaderboard checked · now give Mars a moon'):'Open the leaderboard first']},fail:()=>BN('Mars')?'':'Mars was destroyed',stars:byTime(90,200)});
 CCN(1.45,{t:'Edge of no return',g:'Find Sagittarius A*, the black hole at the centre of our galaxy, and look at its event horizon.',hint:'Type Sagittarius A* (or sgr a) in the search bar and press Enter or Add. Its event horizon is the dashed red ring.',setup:scen('solar'),check:()=>{const ok=S.sel&&S.sel.type==='blackhole'&&/Sagittarius/.test(S.sel.name||'');return[ok,ok?1:0,ok?'You are looking at the event horizon':'Not found yet']},stars:byTime(30,70)});
+CCN(2.2,{t:'Star factory',g:'Add a star-forming nebula and watch 3 new stars ignite inside it.',hint:'Search for Orion Nebula, Eagle Nebula or a molecular cloud and press Add, then speed up time.',setup:scen('empty'),check:()=>{const n=evHas?CH.events.filter(e=>e.k==='newstar').length:0;return[n>=3,n/3,`${Math.min(n,3)} of 3 new stars`]},stars:byTime(40,100)});
 CHALS.sort((a,b)=>a.diff-b.diff);
 loadProg();
 const NCH=CHALS.length;
@@ -3173,6 +3232,7 @@ const TSTEPS=[
  ['Save your progress','Click 👤 in the top bar and create an account (a PIN is optional). Your stars and plays save on this device.',r=>ACCN>r.n||!!curAcc()&&r.had===false,r=>{r.n=ACCN;r.had=!!curAcc()}],
  ['Leaderboard','Open 👤 in the top bar and press 🏆 World leaderboard to see the players with the most stars.',r=>LBOPEN>r.n,r=>{r.n=LBOPEN}],
  ['Event horizon','Click a black hole: the dashed red ring is its event horizon, the edge nothing can escape. The info panel shows how big it is.',()=>S.sel&&S.sel.type==='blackhole'],
+ ['Nebulas','Pick Nebula in the toolbar and click in space (or search for Orion Nebula and press Add). New stars form inside star-forming nebulas.',r=>NEBADD>r.n,r=>{r.n=NEBADD}],
  ['Views','Try the toolbar views: turn on Zones (habitable zones), Heat (temperature map) or Sky (background stars).',r=>S.zones!==r.z||S.heat!==r.h||S.sky!==r.s,r=>{r.z=S.zones;r.h=S.heat;r.s=S.sky}],
 ];
 function startTutorial(){leaveHome();countPlay('tut');$('chDone').hidden=true;CH.loading=true;load(SCEN.find(x=>x.id==='solar'));CH.loading=false;TUT.on=true;TUT.i=0;TUT.finished=false;tutStep()}
