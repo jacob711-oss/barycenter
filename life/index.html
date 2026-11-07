@@ -417,7 +417,7 @@ function nearTrees(x,y,r,fn){const x0=Math.max(0,((x-r)/TB)|0),x1=Math.min(TBW-1
   for(let by=y0;by<=y1;by++)for(let bx=x0;bx<=x1;bx++){const L=tbuckets[by*TBW+bx];if(!L)continue;for(const t of L){if(t.dead)continue;const dx=t.x-x,dy=t.y-y,d2=dx*dx+dy*dy;if(d2<=r2)fn(t,d2)}}}
 
 /* ---------- animals ---------- */
-const MAXA=3600,MAXT=5000,SPCAP={fish:600,mouse:350,rabbit:420,fox:45,hawk:30,wolf:30,lion:30,otter:40,bear:16};let SPN={};
+const MAXA=4000,USERA=800,MAXT=5000,SPCAP={fish:600,mouse:350,rabbit:420,fox:45,hawk:30,wolf:30,lion:30,otter:40,bear:16};let SPN={};
 function habitatOK(sp,i){if(i<0)return false;const h=SP[sp].hab;if(h==='air')return true;const w=isWater(i);if(h==='water')return w;if(h==='amph')return SP[sp].diet==='herb'?(!w||dwLand(i)<=2):true;return !w}
 function dwLand(i){// how far a water cell is from land (approx: check neighbours)
   const x=i%GW,y=(i/GW)|0;for(let r=1;r<5;r++)for(const [dx,dy] of [[r,0],[-r,0],[0,r],[0,-r]]){const j=idx(x+dx,y+dy);if(j>=0&&!isWater(j))return r}return 9}
@@ -442,14 +442,14 @@ function shadeCol2(c,d){const m=c.match(/\d+/g);return`rgb(${clamp(+m[0]+d,0,255
 // camouflage: +1 hidden, -1 stands out. White hides in snow, dark in thick forest
 function camoOf(b){const i=idx(b.x,b.y);if(i<0)return 0;const snowy=cellT(i)<0,c=coatOf(b.genes);if(c==='white')return snowy?1:-0.8;if(c==='dark')return snowy?-1:veg[i]>0.65?0.7:0;return snowy?-0.6:0.2}
 const nameOfId=id=>typeof NAMES!=='undefined'?NAMES[id%NAMES.length]+(id>NAMES.length?' '+'IVXLC'[Math.floor(id/NAMES.length)%5]:''):'#'+id;
-function addAnimal(sp,x0,y0,o={}){const x=wrapX(x0),y=wrapY(y0);if(S.animals.length>=MAXA||o.age===0&&(SPN[sp]||0)>=(SPCAP[sp]||320))return null;SPN[sp]=(SPN[sp]||0)+1;const g=o.genes||newGenes(sp,o.fur);const s=SP[sp];
+function addAnimal(sp,x0,y0,o={}){const x=wrapX(x0),y=wrapY(y0);if(S.animals.length>=MAXA+(o.user?USERA:0)||o.age===0&&(SPN[sp]||0)>=(SPCAP[sp]||320))return null;SPN[sp]=(SPN[sp]||0)+1;const g=o.genes||newGenes(sp,o.fur);const s=SP[sp];
   const a={id:S.nextId++,sp,x,y,dir:rnd()*TAU,e:o.e??rr(.55,.85),w:1,age:o.age??rr(s.mature*1.05,s.mature*2.2),sex:o.sex||(rnd()<.5?'f':'m'),genes:g,gen:o.gen||1,kids:0,kills:0,preg:0,pg:null,cd:rr(0,20),
     life:s.life*rr(.75,1.2)*(g.life??1),state:'wander',tx:0,ty:0,ttl:0,sick:0,fat:rr(0,0.9),col:colorOf(sp,g),mom:o.mom||0,dad:o.dad||0,par:o.par||null,born:S.t};
   S.animals.push(a);S.maxGen[sp]=Math.max(S.maxGen[sp]||0,a.gen);return a}
 function kill(a,cause){if(a.dead)return;a.dead=true;a.cause=cause;S.died++;if(cause!=='removed'&&cause!=='meteor'&&cause!=='lost'&&S.carcasses.length<700){const m=SP[a.sp].mass*Math.pow(a.genes.size,1.5)*(a.age<SP[a.sp].mature?0.5:1);a.carc={carc:1,id:S.nextId++,x:a.x,y:a.y,sp:a.sp,dir:a.dir,meat:m,m0:m,t:S.t,cause};S.carcasses.push(a.carc)}if(cause==='old age'){S.oldAge=(S.oldAge||0)+1;if(S.parts.length<1400)S.parts.push({x:a.x,y:a.y,vx:0,vy:-0.4,life:1.6,max:1.6,k:'old'})}const C=S.causes||(S.causes={});const c=C[a.sp]||(C[a.sp]={});c[cause]=(c[cause]||0)+1;chEv('death',{sp:a.sp,cause});if(S.sel===a){S.selDead=cause}}
 function suitableFur(sp,i){return clamp(SP[sp].tmin-meanT(i)+8,0,35)}
-function spawnAt(sp,x,y,n,adapt,e){let made=0,tries=0;while(made<n&&tries<n*30){tries++;const px=x+(n>1?gauss()*Math.sqrt(n)*0.9:0),py=y+(n>1?gauss()*Math.sqrt(n)*0.9:0),i=idx(px,py);if(!habitatOK(sp,i))continue;
-    const a=addAnimal(sp,px,py,{fur:adapt?suitableFur(sp,i):0,e});if(!a)break;made++}return made}
+function spawnAt(sp,x,y,n,adapt,e,user){let made=0,tries=0;while(made<n&&tries<n*30){tries++;const px=x+(n>1?gauss()*Math.sqrt(n)*0.9:0),py=y+(n>1?gauss()*Math.sqrt(n)*0.9:0),i=idx(px,py);if(!habitatOK(sp,i))continue;
+    const a=addAnimal(sp,px,py,{fur:adapt?suitableFur(sp,i):0,e,user});if(!a)break;made++}return made}
 function randomCell(test,tries=4000){for(let k=0;k<tries;k++){const x=rnd()*GW,y=rnd()*GH,i=idx(x,y);if(test(i,x,y))return[x,y]}return null}
 
 const SPD_CELLS=1;// movement scale
@@ -481,9 +481,9 @@ function stepAnimal(a,dt){
   if((s.hab==='land')&&isWater(i)&&(sea()-hgt[i])>0.02){a.e-=0.3*dt;if(a.e<=0){kill(a,'drowned');return}}
   if(burn[i]>0&&s.hab!=='air'&&s.hab!=='water'){if(rnd()<0.6){kill(a,'fire');return}}
   if(a.preg>0){a.preg-=dt;if(a.preg<=0)giveBirth(a)}
-  if(a.cd>0)a.cd-=dt;if(a.hc>0)a.hc-=dt;
+  if(a.cd>0)a.cd-=dt;if(a.hc>0)a.hc-=dt;if(a.hurt>0)a.hurt-=dt;if(a.fleeT>0)a.fleeT-=dt;
   if(a.sick>0)nearSp([a.sp],a.x,a.y,2.6,b=>{if(b!==a&&!b.sick&&!(b.immT>0)&&rnd()<0.35*dt*clamp(1.6-(b.genes.immune??1),0.1,1.3)){b.sick=rr(14,30);chEv('infect',{sp:b.sp})}});
-  const sense=s.sense*g.sense;let spd=s.spd*g.speed*(a.age<s.mature?0.75:1)*(a.sick>0?0.65:1)*(1-0.3*clamp((a.fat||0)-1,0,1.5));// tired animals are slower
+  const sense=s.sense*g.sense;let spd=s.spd*g.speed*(a.age<s.mature?0.75:1)*(a.sick>0?0.65:1)*(a.hurt>0?0.7:1)*(1-0.3*clamp((a.fat||0)-1,0,1.5));// tired animals are slower
   if(elevKm(i)>2.5&&s.hab==='land')spd*=0.6;
   let mode='wander';
   // young animals stay with their mother and are fed by her until they are old enough
@@ -496,6 +496,7 @@ function stepAnimal(a,dt){
   const hd=H?Math.hypot(H.x-a.x,H.y-a.y):1e9;
   if(threat&&H&&H.prog>=1&&HOMEK[H.hk].safe&&hd<8){// run home and hide
     if(hd<0.8){mode='hide';a.hidden=true;spd=0}else{mode='hide';a.dir=Math.atan2(H.y-a.y,H.x-a.x);spd*=1.5}}
+  else if(threat&&!a.fireScare&&s.diet==='herb'&&a.age>s.mature&&(()=>{let foe=null,fd=1e9;nearSp(PREDS[a.sp],a.x,a.y,sense*0.5,(b,d2)=>{if(d2<fd){fd=d2;foe=b}});if(foe&&strength(a)>strength(foe)*1.3){a.dir=Math.atan2(foe.y-a.y,foe.x-a.x);if(fd<2.2&&rnd()<0.6*dt)fight(a,foe,'charge');return true}return false})()){mode='defend';spd*=1.3}
   else if(threat){mode=a.fireScare?'fire':'flee';a.dir=Math.atan2(fy,fx)+gauss()*0.25;spd*=1.5;a.e-=0.01*dt}
   else if(a.fat>1.15||(a.state==='sleep'&&a.fat>0.1)||(a.fat>(restTime(a)?0.35:0.8)&&a.e>(s.diet==='herb'?0.5:0.65)&&(!s.thirst||a.w>0.5))){// sleep: at home if it is close, otherwise right here
     if(H&&H.prog>=1&&hd>0.9&&hd<10&&a.fat<1.3&&a.state!=='sleep'){mode='tohome';a.dir=Math.atan2(H.y-a.y,H.x-a.x)}else{mode='sleep';spd=0;if(H&&hd<0.9&&HOMEK[H.hk].safe)a.hidden=true}}
@@ -522,7 +523,7 @@ function lerpAng(a,b,t){let d=((b-a+Math.PI)%TAU+TAU)%TAU-Math.PI;return a+d*t}
 // every animal has a climate zone: a few degrees past its comfortable range. More than 60 weeks outside it is fatal,
 // so animals will not walk out of their zone, and if the climate shifts they head for somewhere bearable.
 function zoneOf(a){const s=SP[a.sp],g=a.genes;return[s.tmin-g.fur-(g.size-1)*4-12,s.tmax-g.fur*0.5+(g.size<1?(1-g.size)*3:0)+(g.heat??0)+7]}
-const ZONEFREE=new Set(['fire','flee','hunt','track','hide','migrate','pack']);// may leave their zone while doing these
+const ZONEFREE=new Set(['defend','fight','fire','flee','hunt','track','hide','migrate','pack']);// may leave their zone while doing these
 const tFor=(sp,j)=>SP[sp].hab==='water'?Math.max(2,cellT(j)):cellT(j);
 function move(a,dist){try{return move_(a,dist)}finally{a.x=wrapX(a.x);a.y=wrapY(a.y)}}
 function move_(a,dist){const steps=Math.max(1,Math.ceil(dist/1.5)),d=dist/steps,[lo,hi]=zoneOf(a),ci=idx(a.x,a.y),ct=ci>=0?tFor(a.sp,ci):0,inZone=ct>=lo&&ct<=hi&&!ZONEFREE.has(a.state);
@@ -546,7 +547,7 @@ function feed(a,s,g,i,sense,dt){
   // carnivores (and omnivores without fruit)
   // scavenging: a carcass nearby is an easy meal
   if(S.carcasses.length){let c=null,cd2=(sense*0.8)**2;for(const k of carcNear(a.x,a.y,sense*0.8)){if(k.meat<=0.01||SP[k.sp].mass>s.mass*6)continue;const d2=(k.x-a.x)**2+(k.y-a.y)**2;if(d2<cd2){cd2=d2;c=k}}
-   if(c){if(cd2<1.5){eatCarcass(a,c,s.mass*0.9*dt);return 'scavenge'}a.dir=Math.atan2(c.y-a.y,c.x-a.x);return 'scavenge'}}
+   if(c){if(cd2<1.5){if(rnd()<0.3*dt){let rv=null;near(c.x,c.y,1.6,b=>{if(!rv&&b!==a&&b.sp!==a.sp&&b.state==='scavenge')rv=b});if(rv){const w=fight(a,rv,'carcass');if(w!==a)return 'fight'}}eatCarcass(a,c,s.mass*0.9*dt);return 'scavenge'}a.dir=Math.atan2(c.y-a.y,c.x-a.x);return 'scavenge'}}
   if(s.tp==='human'){if(S.t-(a.kyT??(a.kyT=S.t))>=365){a.kyT=S.t;a.ky=0}if((a.ky||0)>=CL.huntQuota){// hunting limit reached: gather plants and fruit instead
     let best=null,bd=1e9;nearTrees(a.x,a.y,sense,(t,d2)=>{if(TK[t.k].fruit&&t.fruit>0.15&&d2<bd){bd=d2;best=t}});if(best){if(bd<2.5){const take=Math.min(best.fruit,0.5*dt);best.fruit-=take;a.e=Math.min(1,a.e+take*1.2);return 'eat'}a.dir=Math.atan2(best.y-a.y,best.x-a.x);return 'gather'}
     if(veg[i]>0.12){const take=Math.min(veg[i]-0.06,0.1*dt);veg[i]-=take;a.e=Math.min(1,a.e+take*3);return 'eat'}return 'gather'}}
@@ -570,16 +571,27 @@ function feed(a,s,g,i,sense,dt){
     let mates=0;if(isPack(a.sp))nearSp([a.sp],prey.x,prey.y,3.5,b=>{if(b!==a&&(b.state==='hunt'||b.state==='pack'))mates++});if(mates){p=Math.min(0.97,p+0.13*Math.min(3,mates));a.packKill=mates}else a.packKill=0;
     {const pi=idx(prey.x,prey.y);if(SP[prey.sp].mass<0.5&&pi>=0&&veg[pi]>0.6)p*=0.7;if((SPN[prey.sp]||0)<20)p*=0.5}// small prey hide in thick grass
     if(rnd()<p){kill(prey,'eaten');a.kills++;a.ky=(a.ky||0)+1;S.kills++;chEv('kill',{pred:a.sp,prey:prey.sp,pack:a.packKill||0});if(prey.carc)eatCarcass(a,prey.carc,1e9);else a.e=Math.min(1,a.e+SP[prey.sp].mass/s.mass*1.3);a.hc=0.5;return 'eat'}
-    a.hc=0.6;prey.dir=Math.atan2(prey.y-a.y,prey.x-a.x);return 'hunt'}
+    a.hc=0.6;prey.dir=Math.atan2(prey.y-a.y,prey.x-a.x);if(strength(prey)>strength(a)*0.55&&rnd()<0.45){fight(prey,a,'defend');return 'fight'}return 'hunt'}
   return 'hunt'}
 // bears only take young deer; land and air hunters only catch fish near the shore
 // eat from a carcass: up to `limit` of its meat, and no more than it takes to be full
 function eatCarcass(a,c,limit){const s=SP[a.sp],per=1.3/s.mass*(s.tp==='human'?1.35:1),take=Math.min(c.meat,limit,Math.max(0,(1-a.e)/per));c.meat-=take;a.e=Math.min(1,a.e+take*per);if(c.meat<=0.01&&!c.done){c.done=1;chEv('scavenged',{sp:a.sp})}}
 const PACKS=new Set(['wolf','lion','x_hyena','x_african_wild_dog','x_dingo','x_human_hunter','x_orca','x_killer_whale','x_velociraptor','x_gray_wolf','x_arctic_wolf','x_dire_wolf','x_dolphin','x_jackal','x_coyote']);
 const isPack=sp=>PACKS.has(sp);
+/* ---------- fights: any animal can fight any other ---------- */
+// strength: body mass, size gene, age, energy and injuries; people have weapons
+function strength(a){const s=SP[a.sp],g=a.genes;let st=s.mass*Math.pow(g.size,1.5)*(a.age<s.mature?0.4+0.6*a.age/s.mature:a.age>a.life*0.85?0.7:1)*(0.45+0.55*a.e)*(a.hurt>0?0.6:1)*(a.sick>0?0.7:1);
+  if(s.tp==='human')st*=3;if(s.diet==='carn')st*=1.3;return st}
+// a fight: the stronger usually wins; the loser is hurt or killed; both are tired afterwards
+function fight(a,b,why){if(a.dead||b.dead||a===b)return null;const sa=Math.pow(strength(a),1.3),sb=Math.pow(strength(b),1.3),pa=sa/(sa+sb),aw=rnd()<pa,W=aw?a:b,L=aw?b:a,r=Math.max(strength(W),0.001)/Math.max(strength(L),0.001);
+  W.e=Math.max(0.05,W.e-0.06);W.fat=(W.fat||0)+0.25;W.wins=(W.wins||0)+1;L.losses=(L.losses||0)+1;if(r<1.6&&rnd()<0.4)W.hurt=Math.max(W.hurt||0,rr(3,8));
+  const killP=clamp((r-0.8)*0.35,0.04,0.85)*(why==='rival'?0.2:1);// rivals mostly fight until one backs offif(rnd()<killP){kill(L,'killed in a fight');if(SP[W.sp].diet!=='herb'&&L.carc)eatCarcass(W,L.carc,1e9)}else{L.hurt=Math.max(L.hurt||0,rr(8,25));L.e=Math.max(0.05,L.e-0.2);L.dir=Math.atan2(L.y-W.y,L.x-W.x);L.fleeT=2}
+  S.fights=(S.fights||0)+1;const FW=S.fw||(S.fw={});FW[why]=(FW[why]||0)+1;chEv('fight',{a:a.sp,b:b.sp,win:W.sp,lose:L.sp,why,killed:L.dead?1:0});
+  if(S.parts.length<1400)S.parts.push({x:(a.x+b.x)/2,y:(a.y+b.y)/2-0.5,vx:0,vy:-0.6,life:1.2,max:1.2,k:'fight'});return W}
 function canCatch(a,b){if(b===a||b.hidden)return false;const A=SP[a.sp],B=SP[b.sp];if(a.sp==='bear'&&b.sp==='deer'&&b.age>SP.deer.mature)return false;if(B.hab==='water'&&A.hab==='land'){const j=idx(b.x,b.y);if(j<0||dwLand(j)>2)return false}return true}
 function mate(a,s,sense){if(a.sex==='m'){let f=null,fd=1e9;nearSp([a.sp],a.x,a.y,sense,(b,d2)=>{if(b.sex==='f'&&!b.preg&&b.age>s.mature&&b.cd<=0&&b.e>s.repE&&d2<fd){fd=d2;f=b}});
-    if(!f&&((a.id+(S.t|0))%4)===0)nearSp([a.sp],a.x,a.y,45,(b,d2)=>{if(b.sex==='f'&&b.age>s.mature&&d2<fd){fd=d2;f=b}});if(!f)return 'wander';a.dir=Math.atan2(f.y-a.y,f.x-a.x);if(fd>sense*sense)return 'mate';if(fd<2.2){f.preg=s.gest*rr(.9,1.1);if(s.tp==='human'){if(f.home&&!f.home.gone&&f.home.hk==='hut')a.home=f.home;else if(a.home&&!a.home.gone)f.home=a.home;if(a.fam&&!f.fam)f.fam=a.fam;f.mate=a.id;a.mate=f.id}if(S.parts.length<1400)S.parts.push({x:(a.x+f.x)/2,y:(a.y+f.y)/2-0.4,vx:0,vy:-0.7,life:1.3,max:1.3,k:'heart'});f.pg=a.genes;f.pgen=a.gen;f.pdad=a.id;a.cd=s.gest*0.2+5;f.cd=s.gest+10;chEv('mate',{sp:a.sp})}return 'mate'}
+    if(!f&&((a.id+(S.t|0))%4)===0)nearSp([a.sp],a.x,a.y,45,(b,d2)=>{if(b.sex==='f'&&b.age>s.mature&&d2<fd){fd=d2;f=b}});if(!f)return 'wander';a.dir=Math.atan2(f.y-a.y,f.x-a.x);if(fd>sense*sense)return 'mate';
+    if(fd<9&&rnd()<0.04){let rv=null;nearSp([a.sp],f.x,f.y,2.5,b=>{if(!rv&&b!==a&&b.sex==='m'&&b.age>s.mature&&!b.dead)rv=b});if(rv){const w=fight(a,rv,'rival');if(w!==a)return 'fight'}}if(fd<2.2){f.preg=s.gest*rr(.9,1.1);if(s.tp==='human'){if(f.home&&!f.home.gone&&f.home.hk==='hut')a.home=f.home;else if(a.home&&!a.home.gone)f.home=a.home;if(a.fam&&!f.fam)f.fam=a.fam;f.mate=a.id;a.mate=f.id}if(S.parts.length<1400)S.parts.push({x:(a.x+f.x)/2,y:(a.y+f.y)/2-0.4,vx:0,vy:-0.7,life:1.3,max:1.3,k:'heart'});f.pg=a.genes;f.pgen=a.gen;f.pdad=a.id;a.cd=s.gest*0.2+5;f.cd=s.gest+10;chEv('mate',{sp:a.sp})}return 'mate'}
   let m=null,md=1e9;nearSp([a.sp],a.x,a.y,sense,(b,d2)=>{if(b.sex==='m'&&b.age>s.mature&&b.cd<=0&&d2<md){md=d2;m=b}});if(!m)return 'wander';a.dir=Math.atan2(m.y-a.y,m.x-a.x);return 'mate'}
 function giveBirth(a){const s=SP[a.sp],fg=(a.genes.fert??1);const n=Math.max(1,ri(s.litter[0],s.litter[1])+(fg>1.15&&rnd()<fg-1?1:0)-(fg<0.85&&rnd()<1-fg?1:0));let born=0;
   const atHome=a.home&&!a.home.gone&&Math.hypot(a.home.x-a.x,a.home.y-a.y)<2;if(atHome)a.home.kids+=n;
@@ -1181,7 +1193,8 @@ function render(now){ctx.fillStyle='#08100c';ctx.fillRect(0,0,W,H);
   if(z>=2.2){ctx.font='bold 11px IBM Plex Mono, monospace';ctx.fillStyle='rgba(220,230,255,.85)';const ph=performance.now()/600;for(const a of S.animals){if(a.state!=='sleep'||a.hidden||a.dead||!inV(a.x,a.y))continue;ctx.fillText('z',sx(a.x)+6,sy(a.y)-6-((ph+a.id)%1)*6)}}
   if(S.labels&&z>=1.8){let n=0;for(const a of S.animals){if(a.dead||!inV(a.x,a.y))continue;if(++n>400)break;const X=sx(a.x),Y=sy(a.y)-Math.max(7,SP[a.sp].len*z*0.55);ctx.drawImage(badge(a.sp),X-9,Y-16,18,18)}}
   // particles
-  for(const p of S.parts){const X=sx(p.x),Y=sy(p.y),u=p.life/p.max;if(p.k==='drop'){if(z<1.5)continue;ctx.globalAlpha=Math.min(1,u*1.5);ctx.fillStyle='#7fd0ff';ctx.beginPath();ctx.arc(X,Y,2.2,0,TAU);ctx.fill();ctx.beginPath();ctx.moveTo(X-2,Y-0.5);ctx.lineTo(X,Y-5);ctx.lineTo(X+2,Y-0.5);ctx.fill();ctx.globalAlpha=1;continue}
+  for(const p of S.parts){const X=sx(p.x),Y=sy(p.y),u=p.life/p.max;if(p.k==='fight'){if(z<0.8)continue;ctx.globalAlpha=Math.min(1,u*1.5);ctx.font='bold 14px system-ui';ctx.textAlign='center';ctx.fillStyle='#ff6b5a';ctx.fillText('⚔',X,Y);ctx.globalAlpha=1;ctx.textAlign='start';continue}
+    if(p.k==='drop'){if(z<1.5)continue;ctx.globalAlpha=Math.min(1,u*1.5);ctx.fillStyle='#7fd0ff';ctx.beginPath();ctx.arc(X,Y,2.2,0,TAU);ctx.fill();ctx.beginPath();ctx.moveTo(X-2,Y-0.5);ctx.lineTo(X,Y-5);ctx.lineTo(X+2,Y-0.5);ctx.fill();ctx.globalAlpha=1;continue}
     if(p.k==='heart'||p.k==='birth'||p.k==='old'){if(z<1)continue;ctx.globalAlpha=Math.min(1,u*1.5);ctx.font=`${p.k==='heart'?12:11}px system-ui`;ctx.textAlign='center';ctx.fillStyle=p.k==='heart'?'#ff7aa8':p.k==='birth'?'#fff3a0':'#c8c8c8';ctx.fillText(p.k==='heart'?'♥':p.k==='birth'?'✦':'✝',X,Y);ctx.globalAlpha=1;ctx.textAlign='start';continue}
     if(p.k==='smoke'){ctx.fillStyle=`rgba(70,70,70,${u*.35})`;ctx.beginPath();ctx.arc(X,Y,(1-u)*10*z+2,0,TAU);ctx.fill()}else{ctx.fillStyle=`rgba(255,${180*u|0},60,${u})`;ctx.fillRect(X-1.5,Y-1.5,3,3)}}
   if(S.flash&&S.flash.t>0){const X=sx(S.flash.x),Y=sy(S.flash.y),r=(1-S.flash.t)*160*z+20;const g=ctx.createRadialGradient(X,Y,0,X,Y,r);g.addColorStop(0,`rgba(255,240,200,${S.flash.t})`);g.addColorStop(1,'rgba(255,120,40,0)');ctx.fillStyle=g;ctx.beginPath();ctx.arc(X,Y,r,0,TAU);ctx.fill()}
@@ -1255,7 +1268,7 @@ function pick(px,py){const wx=wrapX(wxOf(px)),wy=wrapY(wyOf(py)),r=Math.max(1.4,
   select(best)}
 function select(o){S.sel=o;S.selDead=null;if(!o)S.follow=false;buildInspector();if(o)showTab('insp')}
 function applyTool(px,py,first){const x=wrapX(wxOf(px)),y=wrapY(wyOf(py)),t=S.tool,i=idx(x,y);if(i<0)return;
-  if(SP[t]){if(!first)return;const n=spawnAt(t,x,y,S.count,false);if(!n)toast(SP[t].hab==='water'?`${SP[t].pl} need water: click on a lake or the sea`:SP[t].hab==='land'||SP[t].hab==='amph'?`${SP[t].pl} need land`:'No room');else{PLACED[t]=(PLACED[t]||0)+n;chEv('place',{sp:t,n})}return}
+  if(SP[t]){if(!first)return;const n=spawnAt(t,x,y,S.count,false,undefined,true);if(!n)toast(S.animals.length>=MAXA+USERA?`The world is full (${S.animals.length} animals). Remove some animals or let time pass, then try again.`:SP[t].hab==='water'?`${SP[t].pl} need water: click on a lake or the sea`:SP[t].hab==='land'||SP[t].hab==='amph'?`${SP[t].pl} need land`:'No room');else{PLACED[t]=(PLACED[t]||0)+n;chEv('place',{sp:t,n})}return}
   if(TK[t]){if(!first&&Math.hypot(x-ptr.lastPaint.x,y-ptr.lastPaint.y)<1.6)return;ptr.lastPaint={x,y};if(isWater(i)){if(first)toast('Trees need land');return}
     let crowd=0;nearTrees(x,y,1.2,()=>crowd++);if(crowd&&!first)return;rebuildTreesSoon();const tr=addTree(t,x,y,{age:0,size:0.18});if(tr){PLACED[t]=(PLACED[t]||0)+1;if(first&&!treeOK(t,i))toast(`${TK[t].n} trees struggle here: ${meanT(i)<TK[t].tmin?'too cold':meanT(i)>TK[t].tmax?'too hot':wetAt(i)<TK[t].rmin?'too dry':'too wet'}`)}return}
   if(t==='meteor'){if(!first||S.falling)return;S.falling={x,y,t:0};return}
@@ -1274,7 +1287,7 @@ function applyTool(px,py,first){const x=wrapX(wxOf(px)),y=wrapY(wyOf(py)),t=S.to
   if(t==='plague'){let n=0;near(x,y,R,a=>{if(!a.sick&&!(a.immT>0)&&rnd()<.7){a.sick=rr(15,35);n++}});if(n&&first)toast(`🦠 ${n} animals infected · it spreads to neighbours of the same species`)}
   if(t==='remove'){near(x,y,R,a=>kill(a,'removed'));for(const tr of S.trees)if(Math.hypot(tr.x-x,tr.y-y)<R){tr.dead=true;tr.cause='removed'}S.trees=S.trees.filter(q=>!q.dead);S.animals=S.animals.filter(q=>!q.dead)}
   if(changed)terrainChangedSoon();S.terrainDirty=true;S.tvNow=true}
-let HUTS=0,FIRELIT=0,PLACED={},WATERED=0,RAINED=0,tcTimer=0,rtTimer=0;
+let FIGHTS=0,HUTS=0,FIRELIT=0,PLACED={},WATERED=0,RAINED=0,tcTimer=0,rtTimer=0;
 function addHutToVillage(v){const p=hutSpot(v);if(!p)return null;setupHuman();const fam=SURN[Math.floor(Math.random()*SURN.length)];
   const m=addAnimal('x_human_hunter',p[0],p[1],{sex:'m',e:.9}),f=addAnimal('x_human_hunter',p[0]+.3,p[1]+.2,{sex:'f',e:.9});if(!m||!f)return null;
   m.fam=f.fam=fam;m.mate=f.id;f.mate=m.id;const h={id:S.nextId++,hk:'hut',x:p[0],y:p[1],owner:m.id,oname:'x_human_hunter',prog:1,born:S.t,last:S.t,kids:0,vil:v.id,fam};
@@ -1367,7 +1380,7 @@ let FOUND={};
 /* inspector */
 const NAMES=['Ash','Bree','Cleo','Dax','Echo','Fern','Gus','Hazel','Iris','Juno','Kit','Luna','Milo','Nell','Oak','Pip','Quill','Rue','Sage','Tilly','Uma','Vex','Wren','Yara','Zed','Basil','Clover','Dusty','Ember','Flint','Ginger','Hops','Ivy','Jasper','Koda','Lark','Maple','Nova','Olive','Pepper','Rowan','Sky','Thistle','Willow'];
 const nameOf=a=>a.sp==='x_human_hunter'?`${HFIRST[a.id%HFIRST.length]} ${a.fam||SURN[(a.id*7)%SURN.length]}`:NAMES[a.id%NAMES.length]+(a.id>NAMES.length?' '+'IVXLC'[Math.floor(a.id/NAMES.length)%5]:'');
-const STATE={browse:'Eating leaves from a tree',fire:'Running from fire',tohome:'Heading home to sleep',sleep:'Sleeping',pack:'Hunting with the pack',scavenge:'Eating a carcass',migrate:'Moving to a bearable climate',gather:'Gathering plants (hunting limit reached)',build:'Building a home',rest:'Resting at home',hide:'Hiding at home',nesting:'Going home to give birth',wander:'Wandering',eat:'Eating',graze:'Looking for food',forage:'Foraging for fruit',hunt:'Hunting',track:'Tracking prey',follow:'Following its mother',flee:'Fleeing!',drink:'Going to drink',mate:'Looking for a mate'};
+const STATE={fight:'Fighting!',defend:'Standing its ground',browse:'Eating leaves from a tree',fire:'Running from fire',tohome:'Heading home to sleep',sleep:'Sleeping',pack:'Hunting with the pack',scavenge:'Eating a carcass',migrate:'Moving to a bearable climate',gather:'Gathering plants (hunting limit reached)',build:'Building a home',rest:'Resting at home',hide:'Hiding at home',nesting:'Going home to give birth',wander:'Wandering',eat:'Eating',graze:'Looking for food',forage:'Foraging for fruit',hunt:'Hunting',track:'Tracking prey',follow:'Following its mother',flee:'Fleeing!',drink:'Going to drink',mate:'Looking for a mate'};
 let inspRefs={};
 function buildInspector(){const o=S.sel,B=$('inspBody');B.textContent='';$('inspEmpty').hidden=!!o;B.hidden=!o;if(!o)return;inspRefs={};
   const h=document.createElement('h2');h.className='ititle';const sub=document.createElement('div');sub.className='isub';B.append(h,sub);inspRefs.sub=sub;inspRefs.h=h;
@@ -1393,7 +1406,7 @@ function buildInspector(){const o=S.sel,B=$('inspBody');B.textContent='';$('insp
   const act=document.createElement('div');act.className='actions';B.appendChild(act);
   const mk=(t,f,cls)=>{const b=document.createElement('button');b.className='btn'+(cls?' '+cls:'');b.textContent=t;b.onclick=f;act.appendChild(b);return b};
   mk('Follow',()=>{S.follow=true;cam.z=Math.max(cam.z,3.5)});
-  if(!o.k&&!o.hk&&!o.carc&&!o.isVil){mk('Feed',()=>{o.e=1;o.w=1});mk('Clone',()=>{const c=addAnimal(o.sp,o.x+0.6,o.y+0.6,{genes:{...o.genes},age:o.age,gen:o.gen});if(c)toast(`Cloned ${nameOf(o)}`)})}
+  if(!o.k&&!o.hk&&!o.carc&&!o.isVil){mk('⚔ Attack nearest',()=>{let foe=null,bd=1e9;for(const b of S.animals){if(b===o||b.dead)continue;const d=dWX(b.x-o.x)**2+dWY(b.y-o.y)**2;if(d<bd){bd=d;foe=b}}if(!foe){toast('No other animal nearby');return}if(bd>25*25){toast('The nearest animal is too far away');return}const w=fight(o,foe,'player');FIGHTS++;toast(w?`⚔ ${nameOf(o)} the ${SP[o.sp].n.toLowerCase()} fought a ${SP[foe.sp].n.toLowerCase()}: ${w===o?'won':'lost'}${(w===o?foe:o).dead?' (killed)':''}`:'No fight')});mk('Feed',()=>{o.e=1;o.w=1});mk('Clone',()=>{const c=addAnimal(o.sp,o.x+0.6,o.y+0.6,{genes:{...o.genes},age:o.age,gen:o.gen});if(c)toast(`Cloned ${nameOf(o)}`)})}
   if(o.isVil)mk('🛖 Build a hut here',()=>{const h=addHutToVillage(o);if(h){HUTS++;toast(`🛖 The ${h.fam} family built a hut in ${o.name}`);inspRefs.vkey=null}else toast('No room for another hut')});
   if(!o.isVil)mk('Remove',()=>{if(o.carc){o.meat=0;S.carcasses=S.carcasses.filter(c=>c!==o)}else if(o.hk){o.gone='removed';S.homes=S.homes.filter(x=>!x.gone);rebuildHomes()}else if(o.k){o.dead=true;S.trees=S.trees.filter(t=>!t.dead)}else{kill(o,'removed');S.animals=S.animals.filter(a=>!a.dead)}select(null)},'danger');
   updateInspector()}
@@ -1415,7 +1428,7 @@ function updateInspector(){const o=S.sel;if(!o||$('pane-insp').hidden)return;con
   else if(!o.k){const s=SP[o.sp];R.sub.textContent=`${s.n}, ${o.sex==='f'?'female':'male'} · ${(o.age/365).toFixed(1)} years · generation ${o.gen}${o.preg>0?' · pregnant':''}${o.sick>0?' · sick':''}`;
     const tmin=s.tmin-o.genes.fur-(o.genes.size-1)*4,tmax=s.tmax-o.genes.fur*0.5;
     const st=o.age<s.mature*0.4?'Baby':o.age<s.mature?`Young · adult at ${(s.mature/365).toFixed(1)} yrs`:o.age>o.life*0.8?'Elderly':'Adult',br=o.age<s.mature?'Not yet':o.preg>0?`Pregnant · ${Math.ceil(o.preg)} days to go`:o.cd>0?`In ${Math.ceil(o.cd)} days`:o.e<s.repE?'Needs more food':'Ready';
-    rows=[['Life',`${(o.age/365).toFixed(1)} of about ${(o.life/365).toFixed(0)} years`],['Stage',st],['Can breed',br],['Home',o.home&&!o.home.gone?`${HOMEK[o.home.hk].n}${o.home.prog<1?' (building)':''} · ${Math.hypot(o.home.x-o.x,o.home.y-o.y).toFixed(0)} away`:homeKind(o.sp)?'None yet':'Roams (no home)'],['Health',o.sick>0?`Sick 🦠 · about ${Math.ceil(o.sick)} days to go`:o.immT>0?`Immune for ${Math.ceil(o.immT)} days`:'Healthy'],...(o.mate?[['Partner',(()=>{const m=S.animals.find(z=>z.id===o.mate&&!z.dead);return m?nameOf(m):'—'})()]]:[]),['Diet',DIETN[s.diet]],['Energy',Math.round(o.e*100)+'%'],['Tiredness',Math.round(Math.min(1,(o.fat||0)/1.6)*100)+'%'+((o.fat||0)>1.15?' · exhausted!':'')],['Water',s.thirst?Math.round(o.w*100)+'%':'—'],['Doing',STATE[o.state]||o.state],['Children',o.kids],['Kills',o.kills+(s.tp==='human'?` · ${o.ky||0} of ${CL.huntQuota} this year`:'')],['Eats',s.diet==='herb'?(s.hab==='water'?'Algae':'Plants'):s.diet==='omni'?'Fruit, fish, small animals, plants':s.tp==='human'?'Almost any animal, from rabbits to mammoths':((L=>L.length>6?L.slice(0,6).join(', ')+` and ${L.length-6} more`:L.join(', '))((s.prey||[]).map(k=>SP[k].pl)))],['Comfort',`${tmin.toFixed(0)} to ${tmax.toFixed(0)} °C`],['Here',`${T.toFixed(0)} °C${o.warm?' · warmed by the campfire':''}${o.outT>0?` · outside its zone: ${Math.round(o.outT/7)} of 60 weeks`:o.stress>1?' (stressed)':''}`]];
+    rows=[['Life',`${(o.age/365).toFixed(1)} of about ${(o.life/365).toFixed(0)} years`],['Stage',st],['Can breed',br],['Home',o.home&&!o.home.gone?`${HOMEK[o.home.hk].n}${o.home.prog<1?' (building)':''} · ${Math.hypot(o.home.x-o.x,o.home.y-o.y).toFixed(0)} away`:homeKind(o.sp)?'None yet':'Roams (no home)'],['Health',o.sick>0?`Sick 🦠 · about ${Math.ceil(o.sick)} days to go`:o.immT>0?`Immune for ${Math.ceil(o.immT)} days`:'Healthy'],...(o.mate?[['Partner',(()=>{const m=S.animals.find(z=>z.id===o.mate&&!z.dead);return m?nameOf(m):'—'})()]]:[]),['Diet',DIETN[s.diet]],['Energy',Math.round(o.e*100)+'%'],['Tiredness',Math.round(Math.min(1,(o.fat||0)/1.6)*100)+'%'+((o.fat||0)>1.15?' · exhausted!':'')],['Water',s.thirst?Math.round(o.w*100)+'%':'—'],['Doing',STATE[o.state]||o.state],['Children',o.kids],['Fights',`${o.wins||0} won · ${o.losses||0} lost${o.hurt>0?' · injured':''} · strength ${strength(o).toFixed(2)}`],['Kills',o.kills+(s.tp==='human'?` · ${o.ky||0} of ${CL.huntQuota} this year`:'')],['Eats',s.diet==='herb'?(s.hab==='water'?'Algae':'Plants'):s.diet==='omni'?'Fruit, fish, small animals, plants':s.tp==='human'?'Almost any animal, from rabbits to mammoths':((L=>L.length>6?L.slice(0,6).join(', ')+` and ${L.length-6} more`:L.join(', '))((s.prey||[]).map(k=>SP[k].pl)))],['Comfort',`${tmin.toFixed(0)} to ${tmax.toFixed(0)} °C`],['Here',`${T.toFixed(0)} °C${o.warm?' · warmed by the campfire':''}${o.outT>0?` · outside its zone: ${Math.round(o.outT/7)} of 60 weeks`:o.stress>1?' (stressed)':''}`]];
     const P=o.par;for(const [k] of GENES){const v=o.genes[k]??1,pv=P?((P.m[k]??1)+(P.f[k]??1))/2:null;R['g_'+k].textContent=(pv!=null?pv.toFixed(2)+'→':'')+v.toFixed(2)}
     for(const k of ['fur','heat']){const v=o.genes[k]??0,pv=P?((P.m[k]??0)+(P.f[k]??0))/2:null;R['g_'+k].textContent=(pv!=null?pv.toFixed(0)+'→':'')+v.toFixed(1)}
     R.coat.textContent=`${coatOf(o.genes)}${o.genes.from?` · ${o.genes.from.m} from mum, ${o.genes.from.f} from dad`:''}`;
@@ -1444,8 +1457,8 @@ function findMatches(q){q=q.toLowerCase().trim();if(!q)return[];const out=[];
   for(const it of all){let best=9;for(const n of it.names){const nl=n.toLowerCase();if(nl.startsWith(q))best=0;else if(nl.includes(q))best=Math.min(best,1);else best=Math.min(best,lev(q,nl.slice(0,Math.max(q.length,3)))+1)}if(best<=2)out.push({...it,score:best})}
   return out.sort((a,b)=>a.score-b.score||(a.t==='sp'?-1:1)).slice(0,7)}
 function renderFind(){const q=$('find').value,L=$('findList');L.textContent='';findItems=[];findSel=0;const ms=findMatches(q);
-  for(const m of ms){if(m.t==='cat'){const c=m.c;findItems.push({label:`${c.ic} Release ${c.pl.toLowerCase()} here`,sm:`${{herb:'herbivore',carn:'carnivore',omni:'omnivore'}[ATPL[c.tp].diet]} · 6 at the centre of the view`,go:()=>{const k=addSpecies(c);const p=nearestHab(k);if(p){const n=spawnAt(k,p[0],p[1],6,true);PLACED[k]=(PLACED[k]||0)+n;toast(`${c.ic} Released ${c.pl.toLowerCase()} · find them under Added in the toolbar`)}else toast(SP[k].hab==='water'?`${c.pl} need water: move the view over a lake or the sea`:'No suitable place in view')}});continue}
-    if(m.t==='sp'){const n=S.animals.filter(a=>!a.dead&&a.sp===m.k).length;if(n)findItems.push({label:`${SP[m.k].ic} Find a ${SP[m.k].n.toLowerCase()}`,sm:`${n} alive`,go:()=>flyTo(m.k)});findItems.push({label:`${SP[m.k].ic} Release ${SP[m.k].pl.toLowerCase()} here`,sm:'6 at the centre of the view',go:()=>{const c=nearestHab(m.k);if(c){spawnAt(m.k,c[0],c[1],6,true);PLACED[m.k]=(PLACED[m.k]||0)+6;toast(`Released ${SP[m.k].pl.toLowerCase()}`)}else toast('No suitable place in view')}})}
+  for(const m of ms){if(m.t==='cat'){const c=m.c;findItems.push({label:`${c.ic} Release ${c.pl.toLowerCase()} here`,sm:`${{herb:'herbivore',carn:'carnivore',omni:'omnivore'}[ATPL[c.tp].diet]} · 6 at the centre of the view`,go:()=>{const k=addSpecies(c);const p=nearestHab(k);if(p){const n=spawnAt(k,p[0],p[1],6,true,undefined,true);PLACED[k]=(PLACED[k]||0)+n;toast(`${c.ic} Released ${c.pl.toLowerCase()} · find them under Added in the toolbar`)}else toast(SP[k].hab==='water'?`${c.pl} need water: move the view over a lake or the sea`:'No suitable place in view')}});continue}
+    if(m.t==='sp'){const n=S.animals.filter(a=>!a.dead&&a.sp===m.k).length;if(n)findItems.push({label:`${SP[m.k].ic} Find a ${SP[m.k].n.toLowerCase()}`,sm:`${n} alive`,go:()=>flyTo(m.k)});findItems.push({label:`${SP[m.k].ic} Release ${SP[m.k].pl.toLowerCase()} here`,sm:'6 at the centre of the view',go:()=>{const c=nearestHab(m.k);if(c){spawnAt(m.k,c[0],c[1],6,true,undefined,true);PLACED[m.k]=(PLACED[m.k]||0)+6;toast(`Released ${SP[m.k].pl.toLowerCase()}`)}else toast('No suitable place in view')}})}
     else if(m.t==='tree')findItems.push({label:`${TK[m.k].ic} Plant ${TK[m.k].n.toLowerCase()}s`,sm:'pick the tool',go:()=>setTool(m.k)});else findItems.push({label:`🌍 World: ${SCEN.find(s=>s.id===m.k).n}`,sm:'load it',go:()=>loadScen(m.k)})}
   if(q&&!findItems.length){const e=document.createElement('div');e.className='note';e.style.padding='6px 8px';e.textContent='No match. Try elephant, tiger, penguin, shark, oak…';L.appendChild(e)}
   findItems.forEach((it,j)=>{const b=document.createElement('button');b.textContent=it.label;const s=document.createElement('small');s.textContent=it.sm;b.appendChild(s);b.className=j===0?'on':'';b.onmousedown=e=>{e.preventDefault();pickFind(j)};L.appendChild(b)});
@@ -1616,6 +1629,8 @@ CC(4.6,{t:'Warm hearths',g:'In the ice age, with the world 6 °C colder, keep at
 CC(3.5,{t:'Ring of fire',g:'Make 30 animals run from a fire you lit.',hint:'Pick 🔥 Fire under Land and paint it near a herd.',setup:scn('savanna'),check:()=>{const n=S.animals.filter(a=>!a.dead&&a.state==='fire').length;CH.ref.m=Math.max(CH.ref.m||0,n);return[CH.ref.m>=30&&FIRELIT>0,Math.min(1,CH.ref.m/30),`${CH.ref.m} of 30 animals running from fire at once`]},stars:byTime(20,60)});
 CC(2.6,{t:'Storm season',g:'Have 40 rain clouds in the sky at once.',hint:'Raise the Rainfall slider, or make clouds with the Rain brush.',setup:scn('meadow'),check:()=>{const n=S.clouds.length;CH.ref.m=Math.max(CH.ref.m||0,n);return[CH.ref.m>=40,Math.min(1,CH.ref.m/40),`${n} clouds now · best ${CH.ref.m} of 40`]},stars:byTime(20,60)});
 CC(3.3,{t:'Browsers',g:'Have animals eat or knock down 60 saplings and trees.',hint:'Deer, giraffes, elephants and other plant-eaters eat saplings and leaves; elephants push trees over. Search for elephant or giraffe and release some among trees.',setup:scn('meadow'),check:()=>{const n=evN('treeeat');return[n>=60,n/60,`${Math.min(n,60)} of 60 trees and saplings eaten`]},stars:byTime(40,100)});
+CC(3.2,{t:'Fight club',g:'Watch 25 fights break out between animals.',hint:'Hunters that fail are often attacked back, rival males fight over mates and scavengers fight over carcasses. You can also start fights with ⚔ Attack nearest.',setup:scn('africa'),check:()=>{const n=evN('fight');return[n>=25,n/25,`${Math.min(n,25)} of 25 fights`]},stars:byTime(40,100)});
+CC(4.4,{t:'The underdog',g:'Have a plant-eater kill a hunter in a fight.',hint:'Big plant-eaters such as buffalo, bison and elephants fight back. Search for elephant or buffalo and release some near lions.',setup:scn('africa'),check:()=>{const ok=CH.events.some(e=>e.k==='fight'&&e.killed&&SP[e.win]&&SP[e.win].diet==='herb'&&SP[e.lose]&&SP[e.lose].diet!=='herb');return[ok,ok?1:0,ok?'A plant-eater won!':'Waiting for a plant-eater to win a fight']},stars:byTime(60,180)});
 // biodiversity and rewilding
 [[8,4.8],[10,6.2],[13,8]].forEach(([n,d])=>CC(d,{t:`${n} species at once`,g:`Have ${n} different species alive at the same time for 2 years.`,hint:'Each species needs its own climate and food. Use different regions of the supercontinent.',setup:scn('pangaea'),check:()=>{const c=speciesAlive().length,p=hold('b',c>=n,2);return[p>=1,p*.8+Math.min(.2,c/n*.2),`${c} species · ${holdTxt(p,2)}`]},stars:byTime(40,120)}));
 [[3,3.6],[6,5.8]].forEach(([n,d])=>CC(d,{t:`Rewild with ${n} species`,g:`On the barren land, have ${n} species with at least 6 animals each, for 2 years.`,hint:'Grow plants first, then plant eaters, then hunters. Seed algae before releasing fish.',setup:scn('barren'),check:()=>{const c=SPK.filter(k=>cnt(k)>=6).length,p=hold('r',c>=n,2);return[p>=1,p*.8+Math.min(.2,c/n*.2),`${c} species with 6+ · ${holdTxt(p,2)}`]},stars:byTime(90,240)}));
@@ -1678,6 +1693,7 @@ const TSTEPS=[
  ['Find an animal','Type fox in the search bar and press Enter.',()=>S.sel&&S.sel.sp==='fox'],
  ['Its genes','The Inspect tab shows its DNA, its parents and the genes it inherited from them. Drag one of the gene sliders.',r=>GENEDIT>r.g,r=>{r.g=GENEDIT}],
  ['Watch evolution','In the World tab, set “Colour animals by gene” to Speed or Coat colour: each animal gets a coloured ring.',r=>GENEVIEW>r.n,r=>{r.n=GENEVIEW}],
+ ['Fight!','Any animal can fight any other. With an animal selected, press ⚔ Attack nearest in the Inspect tab.',r=>FIGHTS>r.n,r=>{r.n=FIGHTS}],
  ['Let go','Press Esc to stop following it.',()=>!S.sel],
  ['Carcasses','When an animal dies it leaves a carcass that hunters and scavengers eat. Find one (a body or bones on the ground) and click it.',()=>S.sel&&!!S.sel.carc],
  ['Sleep','Select any animal and look at its Tiredness in the Inspect tab. Tired animals sleep (a little z), at home if they can; too long without sleep is fatal.',r=>S.sel&&!S.sel.k&&!S.sel.hk&&!S.sel.carc&&!$('pane-insp').hidden&&(r.n=(r.n||0)+1)>4],
