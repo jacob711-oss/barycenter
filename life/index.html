@@ -56,7 +56,7 @@ input[type=range]{accent-color:var(--cool);width:100%}
 .brand .sub{font-size:11px;color:var(--dim)}
 .time{display:flex;gap:12px;align-items:center;padding:8px 12px}
 #pauseBtn{width:40px;height:40px;border-radius:9px;border:1px solid rgba(255,195,90,.55);background:rgba(255,195,90,.12);font-size:16px}
-.spds{display:flex;gap:3px}.spd{font-family:var(--f-mono);font-size:10.5px;padding:3px 7px;border-radius:5px;border:1px solid var(--line);color:var(--dim);white-space:nowrap}
+.spds{display:flex;gap:3px}.spd{font-family:var(--f-mono);font-size:10px;padding:3px 5px;border-radius:5px;border:1px solid var(--line);color:var(--dim);white-space:nowrap}
 .spd:hover{color:var(--ink)}.spd[aria-pressed="true"]{color:var(--ink);border-color:rgba(255,195,90,.6);background:rgba(255,195,90,.14)}
 .tcol{display:flex;flex-direction:column;gap:4px}
 .right{margin-left:auto;display:flex;gap:10px;align-items:center;padding:8px 10px;flex-wrap:wrap;justify-content:flex-end}
@@ -68,7 +68,7 @@ input[type=range]{accent-color:var(--cool);width:100%}
 .findlist small{color:var(--dim);margin-left:6px}
 
 /* tool rail */
-.rail{position:fixed;left:var(--gut);top:calc(var(--top) + 76px);bottom:var(--bot);width:86px;overflow-y:auto;overflow-x:hidden;z-index:4;padding:6px;display:flex;flex-direction:column;gap:3px;scrollbar-width:thin}
+.rail{position:fixed;left:var(--gut);top:calc(var(--top) + var(--hudH,64px) + 10px);bottom:var(--bot);width:86px;overflow-y:auto;overflow-x:hidden;z-index:4;padding:6px;display:flex;flex-direction:column;gap:3px;scrollbar-width:thin}
 .rail h3{font-family:var(--f-mono);font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--dim);margin:8px 2px 2px;font-weight:500}
 .tool{display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 2px;border-radius:7px;border:1px solid transparent;font-size:10.5px;color:#cfdcd3;line-height:1.1;text-align:center}
 .tool .ico{font-size:19px;line-height:1}
@@ -78,7 +78,7 @@ input[type=range]{accent-color:var(--cool);width:100%}
 .seg{display:flex;gap:3px}.seg button{font-family:var(--f-mono);font-size:11px;padding:3px 8px;border-radius:5px;border:1px solid var(--line);color:var(--dim)}.seg button[aria-pressed="true"]{color:var(--ink);border-color:var(--cool);background:rgba(127,224,168,.16)}
 
 /* dock */
-.dock{position:fixed;right:var(--gutR);top:calc(var(--top) + 76px);bottom:var(--bot);width:330px;z-index:4;display:flex;flex-direction:column;overflow:hidden}
+.dock{position:fixed;right:var(--gutR);top:calc(var(--top) + var(--hudH,64px) + 10px);bottom:var(--bot);width:330px;z-index:4;display:flex;flex-direction:column;overflow:hidden}
 .tabs{display:flex;border-bottom:1px solid var(--line)}.tab{flex:1;padding:10px 4px;font-family:var(--f-mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--dim);border-bottom:2px solid transparent}
 .tab[aria-selected="true"]{color:var(--ink);border-color:var(--flare)}
 .pane{padding:12px 14px;overflow:auto;flex:1;display:flex;flex-direction:column;gap:12px}
@@ -99,7 +99,7 @@ input[type=range]{accent-color:var(--cool);width:100%}
 .kv{display:grid;grid-template-columns:1fr 1fr;gap:6px}.kv div{border:1px solid var(--line);border-radius:7px;padding:6px 8px}.kv .k{display:block}.kv .v{font-size:13px}
 .note{font-size:12px;color:var(--dim);line-height:1.5;margin:0}
 #iPic{width:100%;height:120px;border-radius:8px;background:#0c1410;display:block}
-.toasts{position:fixed;left:50%;transform:translateX(-50%);top:calc(var(--top) + 84px);z-index:8;display:flex;flex-direction:column;gap:6px;align-items:center;pointer-events:none}
+.toasts{position:fixed;left:50%;transform:translateX(-50%);top:calc(var(--top) + var(--hudH,64px) + 16px);z-index:8;display:flex;flex-direction:column;gap:6px;align-items:center;pointer-events:none}
 .toast{font-size:13px;padding:8px 14px;border-radius:99px;background:var(--panel);border:1px solid var(--line-strong);animation:tin .25s ease-out}
 @keyframes tin{from{opacity:0;transform:translateY(-6px)}}
 .hint{position:fixed;left:50%;transform:translateX(-50%);bottom:var(--bot);font-family:var(--f-mono);font-size:11.5px;color:var(--dim);background:var(--panel);border:1px solid var(--line);border-radius:99px;padding:7px 14px;white-space:nowrap;z-index:3;pointer-events:none}
@@ -107,7 +107,7 @@ input[type=range]{accent-color:var(--cool);width:100%}
 .zoomb button{width:32px;height:30px;border-radius:6px;border:1px solid var(--line);font-size:15px;color:var(--dim)}.zoomb button:hover{color:var(--ink)}
 
 /* scenarios */
-.scen{position:fixed;right:var(--gutR);top:calc(var(--top) + 76px);width:min(520px,calc(100% - 32px));z-index:7;padding:14px;display:flex;flex-direction:column;gap:10px;max-height:calc(100% - 120px);overflow:auto}
+.scen{position:fixed;right:var(--gutR);top:calc(var(--top) + var(--hudH,64px) + 10px);width:min(520px,calc(100% - 32px));z-index:7;padding:14px;display:flex;flex-direction:column;gap:10px;max-height:calc(100% - 120px);overflow:auto}
 .scgrid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .scb{text-align:left;padding:10px 12px;border-radius:9px;border:1px solid var(--line);display:flex;flex-direction:column;gap:3px}.scb:hover{border-color:var(--cool)}
 .scb b{font-family:var(--f-display);font-weight:500;font-size:15px}.scb span{font-size:12px;color:var(--dim);line-height:1.35}
@@ -150,13 +150,16 @@ body.mDemo .rail,body.mDemo .dock,body.mDemo .placeopts,body.mDemo .hint,body.mD
 .arow input,.aform input{font:inherit;font-size:13px;padding:7px 9px;border-radius:7px;border:1px solid var(--line-strong);background:rgba(0,0,0,.35);color:var(--ink);min-width:0}
 .arow input{width:80px}.aform{display:flex;gap:6px;flex-wrap:wrap}.aform input{flex:1 1 120px}
 .endbox{border:1px solid rgba(255,107,90,.45);background:rgba(60,16,12,.35);border-radius:8px;padding:8px 10px;display:flex;flex-direction:column;gap:4px}.endbox .k{color:#ffb1a6}.endrow{display:flex;justify-content:space-between;font-size:12.5px;text-align:left;padding:2px 0}.endrow b{font-family:var(--f-mono);font-weight:500;color:#ffb1a6}.endrow.ext{opacity:.6;text-decoration:line-through}
-.endbadge{position:fixed;right:calc(var(--gutR) + 342px);top:calc(var(--top) + 86px);z-index:4;padding:7px 12px;border-color:rgba(255,107,90,.55);color:#ffc0b6;font-family:var(--f-mono);font-size:12px}
+.endbadge{position:fixed;right:calc(var(--gutR) + 342px);top:calc(var(--top) + var(--hudH,64px) + 12px);z-index:4;padding:7px 12px;border-color:rgba(255,107,90,.55);color:#ffc0b6;font-family:var(--f-mono);font-size:12px}
 @media (max-width:760px){.endbadge{right:var(--gutR);top:auto;bottom:calc(var(--bot) + 230px)}}
 body.mHome .endbadge,body.mDemo .endbadge{display:none!important}
 .dna{width:100%;height:28px;display:block;border-radius:6px;background:rgba(0,0,0,.25)}.fam{display:flex;gap:6px;flex-wrap:wrap;align-items:center}.gsel,.coatsel{font:inherit;font-size:12px;background:rgba(0,0,0,.35);color:var(--ink);border:1px solid var(--line-strong);border-radius:6px;padding:4px 6px}
+.legend{position:fixed;left:calc(var(--gut) + 96px);top:calc(var(--top) + var(--hudH,64px) + 12px);z-index:4;padding:8px 12px;width:220px;display:flex;flex-direction:column;gap:5px}.legend .lbar{height:10px;border-radius:5px}.legend .lticks{display:flex;justify-content:space-between;font-family:var(--f-mono);font-size:10.5px;color:var(--dim)}
+body.mHome .legend,body.mDemo .legend{display:none!important}@media (max-width:760px){.legend{left:var(--gut);top:auto;bottom:calc(var(--bot) + 190px)}}
 .pbig{font-family:var(--f-display);font-size:54px;line-height:1;color:var(--flare)}
 
-@media (max-width:1300px){.right .stat{display:none}.brand .sub{display:none}.find{width:170px}}
+@media (max-width:1600px){.right .stat{display:none}.find{width:170px}}
+@media (max-width:1300px){.brand .sub{display:none}.find{width:140px}.brand{padding:10px}}
 @media (max-width:760px){
   .hud-top{flex-wrap:wrap}.brand{display:none}.time{flex:1 1 100%}.right{flex:1 1 100%;justify-content:space-between}.findwrap{flex:1 1 100%;order:-1}.find{width:100%;box-sizing:border-box}
   .rail{top:auto;left:var(--gut);right:var(--gutR);bottom:var(--bot);width:auto;height:64px;flex-direction:row;overflow-x:auto;overflow-y:hidden}
@@ -186,7 +189,7 @@ body.mHome .endbadge,body.mDemo .endbadge{display:none!important}
       <div class="spds" id="spds"></div>
       <span class="v" id="rateTxt">1 week / s</span>
     </div>
-    <div class="tcol"><span class="k">Date</span><span class="v" id="dateTxt">Year 1, spring</span><span class="v" id="tempTxt" style="font-size:11px;color:var(--dim)"></span></div>
+    <div class="tcol"><span class="k">Date</span><span class="v" id="dateTxt" style="white-space:nowrap">Year 1, spring</span><span class="v" id="tempTxt" style="font-size:11px;color:var(--dim)"></span></div>
   </div>
   <div class="right panel">
     <div class="stat"><span class="k">Animals</span><span id="nAnimals" class="v">0</span></div>
@@ -242,6 +245,7 @@ body.mHome .endbadge,body.mDemo .endbadge{display:none!important}
   </div>
 </aside>
 <div class="zoomb panel"><button id="zIn" title="Zoom in">+</button><button id="zOut" title="Zoom out">−</button><button id="zFit" title="Show the whole world">⤢</button></div>
+<div id="legend" class="legend panel" hidden><span class="k"></span><div class="lbar"></div><div class="lticks"><span></span><span></span><span></span></div></div>
 <div class="hint" id="hint">Drag to look around · scroll to zoom · click an animal to inspect it</div>
 <div class="toasts" id="toasts" aria-live="polite"></div>
 <button id="endBadge" class="endbadge panel" hidden title="Species with fewer than 15 alive"></button>
@@ -361,7 +365,7 @@ const isWater=i=>hgt[i]<sea();
 const idx=(x,y)=>((y|0)<0||(y|0)>=GH||(x|0)<0||(x|0)>=GW)?-1:(y|0)*GW+(x|0);
 function computeDW(){const s=sea(),q=new Int32Array(N);let h=0,t=0;for(let i=0;i<N;i++){if(hgt[i]<s){dw[i]=0;q[t++]=i}else dw[i]=255}
   while(h<t){const i=q[h++],x=i%GW,d=dw[i]+1;if(d>=255)continue;const nb=[x>0?i-1:-1,x<GW-1?i+1:-1,i-GW,i+GW];for(const j of nb)if(j>=0&&j<N&&dw[j]>d){dw[j]=d;q[t++]=j}}}
-function terrainChanged(){computeDW();computeClimate();S.terrainDirty=true}
+function terrainChanged(){computeDW();computeClimate();S.terrainDirty=true;S.tvNow=true}
 
 function genTerrain(o){const n1=makeNoise(o.seed),n2=makeNoise(o.seed+7),n3=makeNoise(o.seed+13);const raw=new Float32Array(N);
   for(let y=0;y<GH;y++)for(let x=0;x<GW;x++){const i=y*GW+x,nx=x/GW,ny=y/GH;let v=fbm(n1,nx*o.freq,ny*o.freq*0.63,6);
@@ -658,7 +662,7 @@ function stepWeather(dt){const W=S.wind||(S.wind={a:rnd()*TAU,v:6});W.a+=gauss()
   let tries=0;while(S.clouds.length<target&&tries++<8&&rnd()<Math.min(1,3*dt)){const p=randomCell(i=>rnd()<moist[i]*0.9+0.05,40);if(!p)break;S.clouds.push({x:p[0],y:p[1],r:rr(7,20),life:rr(2,7),age:0,int:rr(0.4,1),id:S.nextId++})}
   for(const c of S.clouds){c.age+=dt;c.x+=Math.cos(W.a)*W.v*dt;c.y+=Math.sin(W.a)*W.v*dt*0.6;
     const R=c.r,f=Math.min(1,c.age,Math.max(0,c.life-c.age))*c.int*0.06*dt;
-    if(f>0){for(let yy=-R;yy<=R;yy+=2)for(let xx=-R;xx<=R;xx+=2){if(xx*xx+yy*yy>R*R)continue;const j=idx(c.x+xx,c.y+yy);if(j<0||isWater(j))continue;wet[j]=Math.min(1.3,wet[j]+f*2);if(j+1<N)wet[j+1]=Math.min(1.3,wet[j+1]+f*2);if(j+GW<N)wet[j+GW]=Math.min(1.3,wet[j+GW]+f*2)}}
+    if(f>0){const R2=R*R;for(let yy=-R;yy<=R;yy++)for(let xx=-R;xx<=R;xx++){const d2=xx*xx+yy*yy;if(d2>R2)continue;const j=idx(c.x+xx,c.y+yy);if(j<0||isWater(j))continue;wet[j]=Math.min(1.3,wet[j]+f*(1.6-d2/R2))}}// soft, round patches of rain
     // a strong storm over dry ground can start a fire with lightning
     if(c.int>0.92&&rnd()<0.004*dt){const j=idx(c.x+gauss()*R*0.4,c.y+gauss()*R*0.4);if(j>=0&&rainAt(j)<0.5&&veg[j]>0.4&&ignite(j)){S.flashL={x:c.x,y:c.y,t:1};chEv('fire',{})}}}
   S.clouds=S.clouds.filter(c=>c.age<c.life&&c.x>-30&&c.y>-30&&c.x<GW+30&&c.y<GH+30)}
@@ -1053,7 +1057,9 @@ function stepTerrainJob(budget){const J=tvJob;if(!J)return;const t0=performance.
 function drawTerrain(now){const hi=Math.min(DPR,Math.sqrt(4000000/(W*H))),lo=Math.min(hi,Math.sqrt(300000/(W*H)));
   const c=tvInfo,moved=!c||c.z!==cam.z||c.x!==cam.x||c.y!==cam.y||c.ox!==cam.ox||c.W!==W||c.H!==H;
   if(moved)tvStill=now;
-  if(!c){startTerrainJob(lo);stepTerrainJob(1e9)}
+  if(S.tvNow&&c){// something the player did changed the ground: show it straight away
+    S.tvNow=false;if(S.terrainDirty){paintTerrain();S.terrainDirty=false}startTerrainJob(lo);stepTerrainJob(1e9);tvStill=now}
+  else if(!c){startTerrainJob(lo);stepTerrainJob(1e9)}
   else{// how stale is what we have?
     const k=cam.z/c.z,gone=k>1.7||k<0.6||Math.abs(wxOf(W/2)-(c.wx0+tvFront.width*c.inv/2))>tvFront.width*c.inv*0.3||Math.abs(wyOf(H/2)-(c.wy0+tvFront.height*c.inv/2))>tvFront.height*c.inv*0.3;
     if(!tvJob){if(moved&&gone)startTerrainJob(lo);else if(!moved&&now-tvStill>90&&(c.RS<hi||c.z!==cam.z||c.x!==cam.x||c.y!==cam.y))startTerrainJob(hi);else if(S.tvDirty&&now-tvLastFull>2500&&!moved){startTerrainJob(hi);S.tvDirty=false;tvLastFull=now}}
@@ -1061,7 +1067,8 @@ function drawTerrain(now){const hi=Math.min(DPR,Math.sqrt(4000000/(W*H))),lo=Mat
     stepTerrainJob(tvJob&&tvJob.RS<=lo+1e-9?8:4)}
   const ci=tvInfo,k=ci.inv*CELL*cam.z;ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality=ci.RS<hi?'low':'high';ctx.drawImage(tvFront,sx(ci.wx0),sy(ci.wy0),tvFront.width*k,tvFront.height*k)}
 let texPat=null;
-function resize(){DPR=Math.min(2,devicePixelRatio||1);W=innerWidth;H=innerHeight;cv.width=W*DPR;cv.height=H*DPR;ctx.setTransform(DPR,0,0,DPR,0,0)}
+function measureHud(){const e=document.querySelector('.hud-top');if(e)document.documentElement.style.setProperty('--hudH',e.offsetHeight+'px')}
+function resize(){measureHud();DPR=Math.min(2,devicePixelRatio||1);W=innerWidth;H=innerHeight;cv.width=W*DPR;cv.height=H*DPR;ctx.setTransform(DPR,0,0,DPR,0,0)}
 const sx=wx=>(wx*CELL-cam.x)*cam.z+W/2+cam.ox,sy=wy=>(wy*CELL-cam.y)*cam.z+H/2;
 const wxOf=px=>((px-W/2-cam.ox)/cam.z+cam.x)/CELL,wyOf=py=>((py-H/2)/cam.z+cam.y)/CELL;
 function fitWorld(){cam.z=Math.min(W/(GW*CELL),H/(GH*CELL))*1.02;cam.x=GW*CELL/2;cam.y=GH*CELL/2}
@@ -1083,7 +1090,7 @@ function paintTerrain(i0=0,i1=N){const d=img.data,s=sea(),v=S.view;
       if(scar[i]>0){const c=scar[i]*0.8;r=lerp(r,34,c);g=lerp(g,30,c);b=lerp(b,26,c)}
       if(T<-3||ek>3.8){const sn=clamp(Math.max((-3-T)/4,(ek-3.8)*1.5),0,1)*(R>0.12?1:0.4);r=lerp(r,238,sn);g=lerp(g,242,sn);b=lerp(b,246,sn)}
       }
-    SH[i]=h<s&&v==='normal'?1:shade;const o=i*4;d[o]=r;d[o+1]=g;d[o+2]=b;d[o+3]=255;const o3=i*3;
+    SH[i]=v!=='normal'||h<s?1:shade;const o=i*4;d[o]=r;d[o+1]=g;d[o+2]=b;d[o+3]=255;const o3=i*3;
     if(v!=='normal'){LC[o3]=WC[o3]=r;LC[o3+1]=WC[o3+1]=g;LC[o3+2]=WC[o3+2]=b}
     else if(h<s){WC[o3]=r;WC[o3+1]=g;WC[o3+2]=b;LC[o3]=214;LC[o3+1]=196;LC[o3+2]=146}
     else{LC[o3]=r;LC[o3+1]=g;LC[o3+2]=b;const T=cellT(i);if(T<-3){WC[o3]=214;WC[o3+1]=228;WC[o3+2]=238}else{WC[o3]=70;WC[o3+1]=150;WC[o3+2]=168}}}
@@ -1256,7 +1263,7 @@ function applyTool(px,py,first){const x=wxOf(px),y=wyOf(py),t=S.tool,i=idx(x,y);
     else if(t==='remove'){veg[j]*=0.5}}
   if(t==='plague'){let n=0;near(x,y,R,a=>{if(!a.sick&&!(a.immT>0)&&rnd()<.7){a.sick=rr(15,35);n++}});if(n&&first)toast(`🦠 ${n} animals infected · it spreads to neighbours of the same species`)}
   if(t==='remove'){near(x,y,R,a=>kill(a,'removed'));for(const tr of S.trees)if(Math.hypot(tr.x-x,tr.y-y)<R){tr.dead=true;tr.cause='removed'}S.trees=S.trees.filter(q=>!q.dead);S.animals=S.animals.filter(q=>!q.dead)}
-  if(changed)terrainChangedSoon();S.terrainDirty=true}
+  if(changed)terrainChangedSoon();S.terrainDirty=true;S.tvNow=true}
 let FIRELIT=0,PLACED={},WATERED=0,RAINED=0,tcTimer=0,rtTimer=0;
 function terrainChangedSoon(){clearTimeout(tcTimer);tcTimer=setTimeout(terrainChanged,120)}
 function rebuildTreesSoon(){clearTimeout(rtTimer);rtTimer=setTimeout(rebuildTrees,50)}
@@ -1313,7 +1320,11 @@ function updateEventButtons(){document.querySelectorAll('[data-ev]').forEach(b=>
 let EVSTOP=0;
 document.querySelectorAll('[data-ev]').forEach(b=>b.onclick=()=>climateEvent(b.dataset.ev));
 document.querySelectorAll('[data-view]').forEach(b=>b.onclick=()=>setView(b.dataset.view));
-function setView(v){S.view=v;S.terrainDirty=true;document.querySelectorAll('[data-view]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.view===v?'true':'false'));VIEWCH++}
+const LEGENDS={temp:['Temperature','linear-gradient(90deg,rgb(40,60,170),rgb(60,150,220),rgb(120,200,140),rgb(240,220,90),rgb(235,120,50),rgb(180,30,40))','−30 °C','0 °C','+45 °C'],
+  food:['Food for plant-eaters','linear-gradient(90deg,rgb(60,45,35),rgb(50,130,48),rgb(40,210,60))','none','some','lots'],
+  rain:['Rain and moisture','linear-gradient(90deg,rgb(200,170,110),rgb(115,140,165),rgb(30,110,220))','dry','','wet']};
+function setView(v){const L=LEGENDS[v],g=$('legend');g.hidden=!L;if(L){g.children[0].textContent=L[0];g.children[1].style.background=L[1];g.children[2].children[0].textContent=L[2];g.children[2].children[1].textContent=L[3];g.children[2].children[2].textContent=L[4]}
+  S.view=v;S.terrainDirty=true;S.tvNow=true;document.querySelectorAll('[data-view]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.view===v?'true':'false'));VIEWCH++}
 let VIEWCH=0;
 $('brush').oninput=e=>{S.brush=+e.target.value;$('brushV').textContent=S.brush};
 document.querySelectorAll('#cntSeg button').forEach(b=>b.onclick=()=>{S.count=+b.dataset.n;document.querySelectorAll('#cntSeg button').forEach(x=>x.setAttribute('aria-pressed',x===b?'true':'false'))});
@@ -1722,7 +1733,7 @@ function renderEndangered(c){const st=S.status||{},box=$('endBox'),end=SPK.filte
   box.textContent='';const h=document.createElement('span');h.className='k';h.textContent=`Endangered: fewer than ${ENDANGERED} left`;box.appendChild(h);
   for(const k of [...end,...ext]){const r=document.createElement('button');r.className='endrow'+(st[k]==='extinct'?' ext':'');r.innerHTML='<span></span><b></b>';r.children[0].textContent=`${SP[k].ic} ${SP[k].pl}`;r.children[1].textContent=st[k]==='extinct'?'extinct':c[k];r.onclick=()=>{if(c[k])flyTo(k)};box.appendChild(r)}}
 $('endBadge').onclick=()=>{showTab('life');document.body.classList.add('dockOpen')};
-function updateHud(){updateEventButtons();const c=counts();let n=0,sp=0;for(const k of SPK){n+=c[k];if(c[k])sp++}$('nAnimals').textContent=n;{let sp=0;for(const t of S.trees)if(t.size<0.3)sp++;$('nTrees').textContent=sp?`${S.trees.length} (${sp} 🌱)`:S.trees.length}$('nSpecies').textContent=sp;
+function updateHud(){updateEventButtons();measureHud();const c=counts();let n=0,sp=0;for(const k of SPK){n+=c[k];if(c[k])sp++}$('nAnimals').textContent=n;{let sp=0;for(const t of S.trees)if(t.size<0.3)sp++;$('nTrees').textContent=sp?`${S.trees.length} (${sp} 🌱)`:S.trees.length}$('nSpecies').textContent=sp;
   $('dateTxt').textContent=dateTxt();const ci=idx(wxOf(W/2),wyOf(H/2));$('tempTxt').textContent=ci>=0?`${cellT(ci).toFixed(0)} °C at the centre${CL.dust>0.5?' · dusty sky':''}`:'';
   $('rateTxt').textContent=S.paused?'Paused':fmtRate(S.speed)+(S.achieved<S.speed*0.85&&S.speed>30?` (running ${fmtRate(Math.max(0.01,S.achieved))})`:'');
   checkEndangered(c);if(!$('pane-life').hidden)renderLife();updateInspector();chTick();
