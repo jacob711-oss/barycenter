@@ -350,6 +350,7 @@ body.mDemo .rail,body.mDemo .campad,body.mDemo .hint,body.mDemo .insp,body.mDemo
   <div id="infoPane" class="pane">
   <dl class="facts">
     <div><dt>Mass</dt><dd id="iMass">—</dd></div>
+    <div id="iEHw" hidden><dt>Event horizon</dt><dd id="iEH">—</dd></div>
     <div><dt>Speed</dt><dd id="iSpeed">—</dd></div>
     <div class="wide"><dt>Orbiting</dt><dd id="iParent">—</dd></div>
     <div><dt>Semi-major axis</dt><dd id="iA">—</dd></div>
@@ -1320,6 +1321,11 @@ function drawBody(b,X,Y,s,now){
     ctx.fillStyle='#000';ctx.beginPath();ctx.arc(X,Y,px,0,7);ctx.fill();
     ctx.strokeStyle='rgba(255,236,210,.9)';ctx.lineWidth=Math.max(0.8,px*0.05);ctx.beginPath();ctx.arc(X,Y,px*1.04,0,7);ctx.stroke();
     half(true);
+    // the event horizon (the edge of no return), the photon sphere (1.5x, where light orbits) and the innermost stable orbit (3x)
+    if(b===S.sel||px>22){const lab=px>18&&S.labels!==false;ctx.save();ctx.setLineDash([Math.max(3,px*0.08),Math.max(3,px*0.06)]);
+      const ringL=(r,col,w,txt,ang)=>{ctx.strokeStyle=col;ctx.lineWidth=w;ctx.beginPath();ctx.arc(X,Y,r,0,7);ctx.stroke();if(lab){ctx.setLineDash([]);ctx.font='11px IBM Plex Mono, monospace';const lx=X+Math.cos(ang)*r,ly=Y+Math.sin(ang)*r;ctx.fillStyle='rgba(6,8,16,.7)';const tw=ctx.measureText(txt).width;ctx.fillRect(lx+4,ly-8,tw+8,15);ctx.fillStyle=col;ctx.fillText(txt,lx+8,ly+3);ctx.setLineDash([Math.max(3,px*0.08),Math.max(3,px*0.06)])}};
+      const km=2.953*b.m,fk=km<1e6?Math.round(km).toLocaleString()+' km':(km/1e6).toFixed(1)+' million km';
+      ringL(px*3,'rgba(127,178,255,.55)',1,'Innermost stable orbit',2.5);ringL(px*1.5,'rgba(255,214,140,.7)',1,'Photon sphere',-1.0);ringL(px,'rgba(255,107,90,.95)',1.6,'Event horizon · '+fk,0.9);ctx.restore()}
   }else{
     if(b.ring&&px>=1)drawRing(b,X,Y,px,false);
     drawPlanet(b,X,Y,px);
@@ -2380,6 +2386,7 @@ function updateInspector(){
   $('iName').textContent=b.name||classify(b);$('iType').textContent=classify(b);
   const d=$('iDot');d.className='dot'+(b.type==='star'||b.type==='dwarf'?' star':b.type==='blackhole'?' bh':'');d.style.setProperty('--c',b.color);
   $('iMass').textContent=fmtMass(b.m);
+  {const bh=b.type==='blackhole';$('iEHw').hidden=!bh;if(bh){const km=2.953*b.m,f=v=>v<1e6?Math.round(v).toLocaleString()+' km':v<1.5e8*0.05?(v/1e6).toFixed(1)+' million km':(v/1.496e8).toFixed(2)+' AU';$('iEH').textContent=`radius ${f(km)} · photon sphere ${f(km*1.5)} · closest stable orbit ${f(km*3)}`}}
   updateClimate(b);updateRotation(b);updateTemp(b);updateMag(b);updateLife(b);drawPortrait(b);
   const rb=$('aRing');rb.hidden=b.type!=='rock';rb.textContent=b.ring?'Remove rings':'Add rings';
   const boom=$('aBoom');boom.hidden=b.type==='blackhole'||b.type==='neutron';boom.textContent=b.type==='star'?'Go supernova':b.type==='dwarf'?'Detonate':'Shatter';
@@ -3094,6 +3101,7 @@ CCN(2.05,{t:'On the board',g:'Open the 🏆 leaderboard (👤 at the top, then W
   setup:()=>{scen('solar')();CH.ref.n=LBOPEN},
   check:()=>{const seen=LBOPEN>CH.ref.n;const P=BN('Mars'),gp=P&&parentOf(P),hill=gp?orb(P,gp).a*Math.cbrt(P.m/(3*gp.m)):Infinity;const ok=!!(seen&&P&&mine().some(b=>{if(b===P)return false;const o=orb(b,P);return o.bound&&o.d<hill}));
     const p=hold('o',ok,3);return[p>=1,seen?0.3+0.7*p:0,seen?(ok?holdTxt(p,3):'Leaderboard checked · now give Mars a moon'):'Open the leaderboard first']},fail:()=>BN('Mars')?'':'Mars was destroyed',stars:byTime(90,200)});
+CCN(1.45,{t:'Edge of no return',g:'Find Sagittarius A*, the black hole at the centre of our galaxy, and look at its event horizon.',hint:'Type Sagittarius A* (or sgr a) in the search bar and press Enter or Add. Its event horizon is the dashed red ring.',setup:scen('solar'),check:()=>{const ok=S.sel&&S.sel.type==='blackhole'&&/Sagittarius/.test(S.sel.name||'');return[ok,ok?1:0,ok?'You are looking at the event horizon':'Not found yet']},stars:byTime(30,70)});
 CHALS.sort((a,b)=>a.diff-b.diff);
 loadProg();
 const NCH=CHALS.length;
@@ -3164,6 +3172,7 @@ const TSTEPS=[
  ['Black hole','Pick Black hole and click near the Sun. Watch it pull things in (and drag it around).',()=>S.bodies.some(b=>b.type==='blackhole')],
  ['Save your progress','Click 👤 in the top bar and create an account (a PIN is optional). Your stars and plays save on this device.',r=>ACCN>r.n||!!curAcc()&&r.had===false,r=>{r.n=ACCN;r.had=!!curAcc()}],
  ['Leaderboard','Open 👤 in the top bar and press 🏆 World leaderboard to see the players with the most stars.',r=>LBOPEN>r.n,r=>{r.n=LBOPEN}],
+ ['Event horizon','Click a black hole: the dashed red ring is its event horizon, the edge nothing can escape. The info panel shows how big it is.',()=>S.sel&&S.sel.type==='blackhole'],
  ['Views','Try the toolbar views: turn on Zones (habitable zones), Heat (temperature map) or Sky (background stars).',r=>S.zones!==r.z||S.heat!==r.h||S.sky!==r.s,r=>{r.z=S.zones;r.h=S.heat;r.s=S.sky}],
 ];
 function startTutorial(){leaveHome();countPlay('tut');$('chDone').hidden=true;CH.loading=true;load(SCEN.find(x=>x.id==='solar'));CH.loading=false;TUT.on=true;TUT.i=0;TUT.finished=false;tutStep()}
