@@ -225,7 +225,7 @@ body.mHome .legend,body.mDemo .legend{display:none!important}@media (max-width:7
       <button class="btn" data-ev="fire">🔥 Wildfire</button><button class="btn" data-ev="normal">↺ Stop all events</button>
     </div>
     <span class="k">Views</span>
-    <div class="views" id="views"><button class="btn" data-view="normal" aria-pressed="true">Natural</button><button class="btn" data-view="temp" aria-pressed="false">Temperature</button><button class="btn" data-view="food" aria-pressed="false">Food</button><button class="btn" data-view="rain" aria-pressed="false">Rain</button></div>
+    <div class="views" id="views"><button class="btn" data-view="normal" aria-pressed="true">Natural</button><button class="btn" data-view="temp" aria-pressed="false">Temperature</button><button class="btn" data-view="food" aria-pressed="false">Food</button><button class="btn" data-view="rain" aria-pressed="false">Rain</button><button class="btn" data-view="microbe" aria-pressed="false">Microbes</button></div>
     <div class="row"><span class="k">Colour animals by gene</span><select id="geneSel" class="gsel"><option value="">Off</option><option value="speed">Speed</option><option value="size">Size</option><option value="sense">Senses</option><option value="fur">Fur</option><option value="heat">Heat tolerance</option><option value="life">Lifespan</option><option value="fert">Fertility</option><option value="immune">Immunity</option><option value="coat">Coat colour</option></select></div>
     <div class="row"><span class="k">Species badges when zoomed in</span><button class="btn" id="lblBtn" aria-pressed="true">On</button></div>
     <p class="note">Plants grow where it is warm and wet enough. Animals need food, water and a bearable temperature. Every baby inherits its parents' genes with small random changes, so species slowly adapt: that is evolution.</p>
@@ -233,6 +233,7 @@ body.mHome .legend,body.mDemo .legend{display:none!important}@media (max-width:7
   <div class="pane" id="pane-life" hidden>
     <div id="endBox" class="endbox" hidden></div>
     <p class="note" id="dietSum" style="color:var(--ink)"></p>
+    <p class="note" id="micSum"></p>
     <p class="note" id="lifeSum"></p>
     <span class="k">Population over time</span>
     <canvas id="graph"></canvas>
@@ -312,7 +313,8 @@ function seeded(s){let a=s>>>0||1;return()=>{a|=0;a=a+0x6D2B79F5|0;let t=Math.im
 
 /* world grid: GW x GH cells, positions are in cell units */
 const GW=540,GH=340,N=GW*GH,CELL=6;// a big world: about three times the old area
-const hgt=new Float32Array(N),moist=new Float32Array(N),veg=new Float32Array(N),alg=new Float32Array(N),wet=new Float32Array(N),scar=new Float32Array(N),burn=new Float32Array(N),tBase=new Float32Array(N),sAmp=new Float32Array(N);
+// mic: microbes (soil bacteria and fungi on land, plankton in water); fert: soil nutrients that microbes release from dead matter
+const mic=new Float32Array(N),fert=new Float32Array(N),hgt=new Float32Array(N),moist=new Float32Array(N),veg=new Float32Array(N),alg=new Float32Array(N),wet=new Float32Array(N),scar=new Float32Array(N),burn=new Float32Array(N),tBase=new Float32Array(N),sAmp=new Float32Array(N);
 const dw=new Uint8Array(N);
 const SEA0=0.34;
 const CL={huntQuota:20,temp:0,rain:1,seaM:0,seasons:true,dust:0,t0:0,tc:16,latK:20};
@@ -397,8 +399,12 @@ function updateVegSliced(dt){for(let k=0;k<VEG_PARTS;k++)vegAcc[k]+=dt;const k=v
 function updateVeg(dt,i0=0,i1=N){const s=sea();
   for(let i=i0;i<i1;i++){
     if(hgt[i]<s){veg[i]=0;const T=Math.max(3,cellT(i)),cap=T<1?0.05:T<30?Math.min(1,(s-hgt[i])<0.06?1:0.45):0.5;let a=alg[i];
-      if(a<0.01){a=0.01}a=a<cap?cap/(1+(cap-a)/a*Math.exp(-0.035*dt)):a+(cap-a)*Math.min(1,0.03*dt);alg[i]=a;continue}
-    alg[i]=0;const T=cellT(i),R=wetAt(i),cap=capOf(T,R);let v=veg[i];
+      if(a<0.01){a=0.01}a=a<cap?cap/(1+(cap-a)/a*Math.exp(-0.035*dt)):a+(cap-a)*Math.min(1,0.03*dt);alg[i]=a;
+      mic[i]+=((cellT(i)>0?0.25+0.7*a:0.1)-mic[i])*Math.min(1,0.06*dt);continue}// plankton thrive where algae grow
+    alg[i]=0;const T=cellT(i),R=wetAt(i);let v=veg[i];
+    // soil life: bacteria and fungi like warm, damp ground with roots; they turn dead matter into nutrients that feed plants
+    {const fm=T<-5?0.1:T<35?1:0.35,mc=clamp(fm*(0.15+0.45*Math.min(1,R)+0.45*v+0.25*Math.min(1,fert[i])),0,1);mic[i]+=(mc-mic[i])*Math.min(1,0.05*dt);if(fert[i]>0)fert[i]=Math.max(0,fert[i]-fert[i]*0.004*dt*(0.4+mic[i]))}
+    const cap=capOf(T,R)*(1+0.35*Math.min(1,fert[i])*(0.3+0.7*mic[i]));
     if(v<0.003){if(cap>0.05){const x=i%GW;const nb=(x>0?veg[i-1]:0)+(x<GW-1?veg[i+1]:0)+(i>=GW?veg[i-GW]:0)+(i<N-GW?veg[i+GW]:0);if(nb>0.25&&rnd()<0.08*dt)v=0.03}}
     else if(cap>v)v=cap/(1+(cap-v)/v*Math.exp(-0.05*dt));
     else{const floor=Math.min(v,0.12*capOf(meanT(i),R));v=Math.max(floor,v-(v-cap)*Math.min(1,0.03*dt))}
@@ -542,7 +548,7 @@ function feed(a,s,g,i,sense,dt){
       let best=null,bd=1e9;nearTrees(a.x,a.y,sense,(t,d2)=>{if(TK[t.k].fruit&&t.fruit>0.15&&d2<bd){bd=d2;best=t}});
       if(best){if(bd<2.5){const take=Math.min(best.fruit,0.5*dt);best.fruit-=take;a.e=Math.min(1,a.e+take*1.2);return 'eat'}a.dir=Math.atan2(best.y-a.y,best.x-a.x);return 'forage'}}
     if(s.hab==='water'){if(alg[i]>0.12){const take=Math.min(alg[i]-0.05,s.eat*dt);alg[i]-=take;a.e=Math.min(1,a.e+take*s.conv);return 'eat'}}
-    else if(s.diet==='herb'||!s.prey){const thr=s.sparse?0.05:s.mass>1?0.07:0.13;if(veg[i]>thr){const take=Math.min(veg[i]-thr*0.5,s.eat*dt);veg[i]-=take;a.e=Math.min(1,a.e+take*s.conv*(s.sparse&&veg[i]<0.2?1.4:1));return 'eat'}}
+    else if(s.diet==='herb'||!s.prey){const thr=s.sparse?0.05:s.mass>1?0.07:0.13;if(veg[i]>thr){const take=Math.min(veg[i]-thr*0.5,s.eat*dt);veg[i]-=take;fert[i]=Math.min(3,fert[i]+take*0.12);a.e=Math.min(1,a.e+take*s.conv*(s.sparse&&veg[i]<0.2?1.4:1));return 'eat'}}
     if(s.hab==='land'||s.hab==='amph'){// eat saplings, browse leaves, and the giants push trees over
       let sap=null,tr=null;nearTrees(a.x,a.y,1.6,t=>{if(t.dead)return;if(t.k==='cactus'&&a.sp!=='camel')return;if(t.size<0.3){if(!sap)sap=t}else if(!tr)tr=t});
       if(sap&&s.mass>0.08){sap.dead=true;sap.cause='eaten';a.e=Math.min(1,a.e+0.12+0.1*Math.min(1,s.mass));chEv('treeeat',{sp:a.sp});return 'eat'}
@@ -670,7 +676,10 @@ function buildHome(a,done){const k=homeKind(a.sp);if(!k||S.homes.length>=MAXH)re
 const CB=8,CBW=Math.ceil(GW/CB);let cbuckets=new Map();
 function rebuildCarc(){cbuckets=new Map();for(const c of S.carcasses){const k=((c.y/CB)|0)*CBW+((c.x/CB)|0);let L=cbuckets.get(k);if(!L)cbuckets.set(k,L=[]);L.push(c)}}
 function carcNear(x,y,r){const out=[],x0=Math.max(0,((x-r)/CB)|0),x1=((x+r)/CB)|0,y0=Math.max(0,((y-r)/CB)|0),y1=((y+r)/CB)|0;for(let by=y0;by<=y1;by++)for(let bx=x0;bx<=x1;bx++){const L=cbuckets.get(by*CBW+bx);if(L)for(const c of L)out.push(c)}return out}
-function stepCarcasses(dt){for(const c of S.carcasses){c.meat-=c.m0*0.035*dt}S.carcasses=S.carcasses.filter(c=>c.meat>0.01&&S.t-c.t<40)}
+function stepCarcasses(dt){for(const c of S.carcasses){const i=idx(c.x,c.y),mm=i>=0?mic[i]:0.3,loss=Math.min(c.meat,c.m0*0.025*dt*(0.4+1.8*mm));c.meat-=loss;
+    if(i>=0){const f=loss*0.8;for(const j of [i,idx(c.x+1,c.y),idx(c.x-1,c.y),idx(c.x,c.y+1),idx(c.x,c.y-1)])if(j>=0&&!isWater(j)){fert[j]=Math.min(3,fert[j]+f/5);mic[j]=Math.min(1,mic[j]+loss*0.3)}}
+    if(c.meat<=0.01&&!c.done){c.done=1;S.decomposed=(S.decomposed||0)+1;chEv('decomposed',{})}}
+  S.carcasses=S.carcasses.filter(c=>c.meat>0.01&&S.t-c.t<60)}
 function stepCampfires(dt){for(const v of S.villages){const i=idx(v.x,v.y);if(i>=0&&rainAt(i)<0.45&&rnd()<0.0006*dt*(0.45-rainAt(i))/0.45*10){const ang=rnd()*TAU,j=idx(v.x+Math.cos(ang)*(4+Math.sqrt(v.huts)*1.3),v.y+Math.sin(ang)*(4+Math.sqrt(v.huts)*1.3));if(j>=0&&veg[j]>0.3&&ignite(j)){chEv('fire',{});if(typeof toast==='function'&&!CH.loading)toast(`🔥 A spark from ${v.name}'s campfire started a wildfire`)}}}}
 function stepHomes(dt){stepCampfires(dt);for(const h of S.homes){if(h.gone)continue;const i=idx(h.x,h.y);
   if(i<0||(isWater(i)&&h.hk!=='lodge')){h.gone='flooded'}else if(burn[i]>0&&h.hk!=='burrow'){h.gone='burned'}else if(S.t-h.last>300){h.gone='abandoned'}}
@@ -1029,7 +1038,7 @@ function addSpecies(c,quiet){if(SP[c.key])return c.key;const T=ATPL[c.tp],m=c.ma
     life,mature:clamp(life*0.13,25,5000),gest:clamp(45*Math.pow(m,0.35),12,650),litter:m<0.1?[3,7]:m<0.5?[2,4]:m<2?[1,2]:[1,1],repE:.7,
     eat:herb||T.diet==='omni'?clamp(0.08*Math.pow(m,0.35),0.02,1.2):undefined,conv:herb||T.diet==='omni'?clamp(6*Math.pow(m,-0.25),1.5,9):undefined,sparse:c.cl==='D'?1:undefined,
     tmin,tmax,mass:m,prey:T.diet==='herb'?undefined:[]};
-  SP[c.key]=s;SPK.push(c.key);SPCAP[c.key]=m>=4?60:m>=1.5?150:300;
+  SP[c.key]=s;SPK.push(c.key);SPCAP[c.key]=m>=4?60:m>=1.5?150:m<0.01?90:m<0.1?130:260;// tiny animals are capped lower so the world stays fast
   if(s.prey)s.prey=SPK.filter(q=>fitsPrey(c.key,q));
   for(const k of SPK)if(k!==c.key&&SP[k].prey&&fitsPrey(k,c.key))SP[k].prey.push(c.key);
   for(const k of SPK)PREDS[k]=SPK.filter(p=>(SP[p].prey||[]).includes(k));
@@ -1108,6 +1117,7 @@ function paintTerrain(i0=0,i1=N){const d=img.data,s=sea(),v=S.view;
     const hl=hgt[idx(x-1,y-1)],hr=hgt[idx(x+1,y+1)];const shade=1+clamp((hl-hr)*11,-.38,.38);
     if(v==='temp'){[r,g,b]=heatCol(cellT(i));if(h<s){r*=.7;g*=.7;b*=.8}}
     else if(v==='rain'){const R=clamp(rainAt(i)/1.4,0,1);r=lerp(200,30,R);g=lerp(170,110,R);b=lerp(110,220,R);if(h<s){r=20;g=40;b=80}}
+    else if(v==='microbe'){const m=mic[i];if(h<s){r=lerp(10,40,m);g=lerp(30,200,m);b=lerp(70,170,m)}else{const f=Math.min(1,fert[i]);r=lerp(40,190,m)*(0.8+0.2*f);g=lerp(30,90,m)+f*60;b=lerp(28,230,m)}}
     else if(v==='food'){if(h<s){const a=alg[i];r=10;g=30+a*120;b=60+a*80}else{const f=veg[i];r=lerp(60,40,f);g=lerp(45,210,f);b=lerp(35,60,f)}}
     else if(h<s){const dep=clamp((s-h)/0.12,0,1),T=cellT(i),a=alg[i];r=lerp(62,14,dep);g=lerp(140,48,dep);b=lerp(160,92,dep);g+=a*22*(1-dep*0.5);r-=a*8;
       if(T<-3){const ice=clamp((-3-T)/6,0,1)*(dep<0.7?1:0.4);r=lerp(r,214,ice);g=lerp(g,228,ice);b=lerp(b,238,ice)}}
@@ -1181,6 +1191,14 @@ function render(now){ctx.fillStyle='#08100c';ctx.fillRect(0,0,W,H);
   const z=cam.z,vx0=wxOf(-40),vx1=wxOf(W+40),vy0=wyOf(-40),vy1=wyOf(H+40);
   // fire
   if(S.burning.size){for(const i of S.burning){const x=i%GW,y=(i/GW)|0;if(!inV(x,y))continue;const f=.6+.4*Math.sin(performance.now()/90+i);ctx.fillStyle=`rgba(255,${120+60*f|0},40,${.55+.3*f})`;ctx.fillRect(sx(x)-1,sy(y)-1,CELL*z+2,CELL*z+2)}}
+  // microscope: zoomed right in, the microbes in the soil and water become visible
+  if(z>=6){const now3=performance.now()/1000,cx0=Math.floor(wxOf(0)),cy0=Math.floor(wyOf(0)),cx1=Math.ceil(wxOf(W)),cy1=Math.ceil(wyOf(H));let drawn=0;
+    for(let yy=cy0;yy<=cy1&&drawn<1600;yy++)for(let xx=cx0;xx<=cx1&&drawn<1600;xx++){const i=idx(xx,yy);if(i<0)continue;const m=mic[i],wat=isWater(i),n=Math.round(m*7);
+      for(let k=0;k<n;k++){const hsh=((xx*73856093)^(yy*19349663)^(k*83492791))>>>0,u1=(hsh%1000)/1000,u2=((hsh>>10)%1000)/1000,u3=((hsh>>20)%1000)/1000;
+        const X=sxr(xx+u1)+Math.sin(now3*1.3+hsh)*z*0.25,Y=syr(yy+u2)+Math.cos(now3*1.1+hsh)*z*0.25,L2=z*(0.45+u3*0.35);drawn++;
+        if(wat){ctx.strokeStyle=u3<0.5?'rgba(150,240,200,.7)':'rgba(200,220,120,.65)';ctx.lineWidth=1;ctx.beginPath();ctx.arc(X,Y,L2*0.5,0,TAU);ctx.stroke();if(u3<0.5){ctx.beginPath();ctx.moveTo(X-L2*0.5,Y);ctx.lineTo(X+L2*0.5,Y);ctx.stroke()}}
+        else if(u3<0.25){ctx.strokeStyle='rgba(235,225,200,.55)';ctx.lineWidth=Math.max(0.8,z*0.04);ctx.beginPath();ctx.moveTo(X,Y);ctx.quadraticCurveTo(X+L2*1.5,Y-L2,X+L2*3,Y+L2*0.4);ctx.stroke()}// fungal thread
+        else{ctx.save();ctx.translate(X,Y);ctx.rotate(hsh%6+now3*0.3);ctx.fillStyle=u3<0.6?'rgba(200,120,240,.75)':'rgba(120,230,150,.75)';ctx.beginPath();if(u3<0.6)ctx.ellipse(0,0,L2*0.7,L2*0.28,0,0,TAU);else ctx.arc(0,0,L2*0.3,0,TAU);ctx.fill();ctx.restore()}}}}
   // carcasses: a fallen body that turns to bones as it is eaten or rots away
   if(z>0.5)for(const c of S.carcasses){if(!inV(c.x,c.y))continue;const X=sx(c.x),Y=sy(c.y),L=Math.max(5,SP[c.sp].len*z*0.9),f=c.meat/c.m0;ctx.save();ctx.translate(X,Y);ctx.rotate(c.dir);
     if(f>0.3){ctx.globalAlpha=0.85;ctx.fillStyle='#5a4638';ctx.beginPath();ctx.ellipse(0,0,L/2,L*0.22,0,0,TAU);ctx.fill();ctx.fillStyle='#7a2e22';ctx.beginPath();ctx.ellipse(-L*.05,0,L*.18*(1-f)+L*.05,L*.1,0,0,TAU);ctx.fill()}
@@ -1239,18 +1257,18 @@ const DIETG=[['herb','Plant eaters'],['carn','Meat eaters'],['omni','Omnivores']
 function animalTools(){const out=[];for(const [d,lab] of DIETG){const L=SPK.filter(k=>SP[k].diet===d&&(!SP[k].cat||SP[k].tp==='human'||PLACEDEVER.has(k)));L.forEach((k,j)=>out.push([k,SP[k].n,SP[k].ic,j===0?lab:0]))}return out}
 const PLACEDEVER=new Set();
 const TOOLS0=()=>[['select','Select','🖐','Tools'],
- ['grass','Grass','🌱','Plants'],['oak','Oak','🌳'],['pine','Pine','🌲'],['palm','Palm','🌴'],['cactus','Cactus','🌵'],['bush','Berries','🫐'],['algae','Algae','🌿'],
+ ['grass','Grass','🌱','Plants'],['oak','Oak','🌳'],['pine','Pine','🌲'],['palm','Palm','🌴'],['cactus','Cactus','🌵'],['bush','Berries','🫐'],['algae','Algae','🌿'],['microbes','Microbes','🧫'],
  ...animalTools(),
  ['raise','Raise','⛰','Land'],['lower','Lower','🕳'],['water','Water','💧'],['rain','Rain','🌧'],['fire','Fire','🔥'],['meteor','Meteor','☄'],['hut','Hut','🛖'],['plague','Disease','🦠'],['remove','Remove','✖']];
 const TOOLS=TOOLS0();
-const BRUSH_TOOLS=new Set(['grass','algae','raise','lower','water','rain','fire','plague','remove']);
+const BRUSH_TOOLS=new Set(['microbes','grass','algae','raise','lower','water','rain','fire','plague','remove']);
 let railAdded=false;
 function addRailTool(k){PLACEDEVER.add(k);const keep=S.tool;TOOLS.splice(0,TOOLS.length,...TOOLS0());buildRail();setTool(keep);return;const r=$('rail');if(!railAdded){const h=document.createElement('h3');h.textContent='Added';h.id='railAdded';r.appendChild(h);railAdded=true}const b=document.createElement('button');b.className='tool';b.dataset.tool=k;b.setAttribute('aria-pressed','false');b.title=toolTip(k);b.innerHTML='<span class="ico"></span><span></span>';b.children[0].textContent=SP[k].ic;b.children[1].textContent=SP[k].n;b.onclick=()=>setTool(k);r.appendChild(b)}
 function buildRail(){railAdded=false;const r=$('rail');r.textContent='';for(const [id,label,ic,grp] of TOOLS){if(grp){const h=document.createElement('h3');h.textContent=grp;r.appendChild(h)}
   const b=document.createElement('button');b.className='tool';b.dataset.tool=id;b.setAttribute('aria-pressed','false');b.title=toolTip(id);b.innerHTML='<span class="ico"></span><span></span>';b.children[0].textContent=ic;b.children[1].textContent=label;b.onclick=()=>setTool(id);r.appendChild(b)}}
 const DIETN={herb:'Herbivore (plant eater)',carn:'Carnivore (meat eater)',omni:'Omnivore (eats plants and animals)'};
 function toolTip(id){if(SP[id])return`${SP[id].n}: click to release ${SP[id].pl.toLowerCase()} · ${DIETN[SP[id].diet]}`;if(TK[id])return`${TK[id].n}: click to plant (grows where the climate suits it)`;
-  return{select:'Select, inspect and look around (1)',grass:'Paint grass seeds',algae:'Seed algae in water (fish food)',raise:'Raise the land (makes hills and mountains)',lower:'Lower the land',water:'Flood an area to make lakes',rain:'Make an area wetter',fire:'Start a fire',meteor:'Drop a meteor',plague:'Spread a disease',remove:'Remove life in an area',hut:'Build a hut: click in a village to add a hut and a family of two hunters, or on open land to found a new village'}[id]||id}
+  return{select:'Select, inspect and look around (1)',grass:'Paint grass seeds',algae:'Seed algae in water (fish food)',microbes:'Seed microbes: soil bacteria and fungi that rot dead matter into nutrients so plants grow better',raise:'Raise the land (makes hills and mountains)',lower:'Lower the land',water:'Flood an area to make lakes',rain:'Make an area wetter',fire:'Start a fire',meteor:'Drop a meteor',plague:'Spread a disease',remove:'Remove life in an area',hut:'Build a hut: click in a village to add a hut and a family of two hunters, or on open land to found a new village'}[id]||id}
 function setTool(t){S.tool=t;document.querySelectorAll('.tool').forEach(b=>b.setAttribute('aria-pressed',b.dataset.tool===t?'true':'false'));cv.classList.toggle('place',t!=='select');
   $('placeopts').hidden=t==='select';$('cntK').hidden=$('cntSeg').hidden=!SP[t];
   $('hint').textContent=t==='select'?'Drag to look around · scroll to zoom · click an animal to inspect it':SP[t]?`Click to release ${SP[t].pl.toLowerCase()} · right-drag or WASD to move the camera`:TK[t]?'Click or drag to plant · it only grows in a suitable climate':t==='meteor'?'Click where the meteor should hit':'Drag to paint · change the brush size at the bottom'}
@@ -1288,6 +1306,7 @@ function applyTool(px,py,first){const x=wrapX(wxOf(px)),y=wrapY(wyOf(py)),t=S.to
   for(let yy=-R;yy<=R;yy++)for(let xx=-R;xx<=R;xx++){const d=Math.hypot(xx,yy);if(d>R)continue;const j=idx(x+xx,y+yy);if(j<0)continue;const f=1-d/(R+1);
     if(t==='grass'){if(!isWater(j))veg[j]=Math.max(veg[j],0.25*f+0.05)}
     else if(t==='algae'){if(isWater(j))alg[j]=Math.max(alg[j],0.5)}
+    else if(t==='microbes'){mic[j]=Math.max(mic[j],0.9);if(!isWater(j))fert[j]=Math.min(3,fert[j]+0.3*f);MICS++}
     else if(t==='raise'){hgt[j]=Math.min(1,hgt[j]+0.012*f);changed=true}
     else if(t==='lower'){hgt[j]=Math.max(0.01,hgt[j]-0.012*f);changed=true}
     else if(t==='water'){if(!isWater(j)){hgt[j]=sea()-0.006-0.02*f;changed=true;WATERED++}}
@@ -1297,7 +1316,7 @@ function applyTool(px,py,first){const x=wrapX(wxOf(px)),y=wrapY(wyOf(py)),t=S.to
   if(t==='plague'){let n=0;near(x,y,R,a=>{if(!a.sick&&!(a.immT>0)&&rnd()<.7){a.sick=rr(15,35);n++}});if(n&&first)toast(`🦠 ${n} animals infected · it spreads to neighbours of the same species`)}
   if(t==='remove'){near(x,y,R,a=>kill(a,'removed'));for(const tr of S.trees)if(Math.hypot(tr.x-x,tr.y-y)<R){tr.dead=true;tr.cause='removed'}S.trees=S.trees.filter(q=>!q.dead);S.animals=S.animals.filter(q=>!q.dead)}
   if(changed)terrainChangedSoon();S.terrainDirty=true;S.tvNow=true}
-let FEEDS=0,CLONES=0,BOATS=0,FIGHTS=0,HUTS=0,FIRELIT=0,PLACED={},WATERED=0,RAINED=0,tcTimer=0,rtTimer=0;
+let MICS=0,FEEDS=0,CLONES=0,BOATS=0,FIGHTS=0,HUTS=0,FIRELIT=0,PLACED={},WATERED=0,RAINED=0,tcTimer=0,rtTimer=0;
 function addHutToVillage(v){const p=hutSpot(v);if(!p)return null;setupHuman();const fam=SURN[Math.floor(Math.random()*SURN.length)];
   const m=addAnimal('x_human_hunter',p[0],p[1],{sex:'m',e:.9}),f=addAnimal('x_human_hunter',p[0]+.3,p[1]+.2,{sex:'f',e:.9});if(!m||!f)return null;
   m.fam=f.fam=fam;m.mate=f.id;f.mate=m.id;const h={id:S.nextId++,hk:'hut',x:p[0],y:p[1],owner:m.id,oname:'x_human_hunter',prog:1,born:S.t,last:S.t,kids:0,vil:v.id,fam};
@@ -1360,7 +1379,7 @@ function updateEventButtons(){document.querySelectorAll('[data-ev]').forEach(b=>
 let EVSTOP=0;
 document.querySelectorAll('[data-ev]').forEach(b=>b.onclick=()=>climateEvent(b.dataset.ev));
 document.querySelectorAll('[data-view]').forEach(b=>b.onclick=()=>setView(b.dataset.view));
-const LEGENDS={temp:['Temperature','linear-gradient(90deg,rgb(40,60,170),rgb(60,150,220),rgb(120,200,140),rgb(240,220,90),rgb(235,120,50),rgb(180,30,40))','−30 °C','0 °C','+45 °C'],
+const LEGENDS={microbe:['Microbes: bacteria, fungi and plankton','linear-gradient(90deg,rgb(40,30,28),rgb(115,70,140),rgb(190,120,230))','few','','teeming'],temp:['Temperature','linear-gradient(90deg,rgb(40,60,170),rgb(60,150,220),rgb(120,200,140),rgb(240,220,90),rgb(235,120,50),rgb(180,30,40))','−30 °C','0 °C','+45 °C'],
   food:['Food for plant-eaters','linear-gradient(90deg,rgb(60,45,35),rgb(50,130,48),rgb(40,210,60))','none','some','lots'],
   rain:['Rain and moisture','linear-gradient(90deg,rgb(200,170,110),rgb(115,140,165),rgb(30,110,220))','dry','','wet']};
 function setView(v){const L=LEGENDS[v],g=$('legend');g.hidden=!L;if(L){g.children[0].textContent=L[0];g.children[1].style.background=L[1];g.children[2].children[0].textContent=L[2];g.children[2].children[1].textContent=L[3];g.children[2].children[2].textContent=L[4]}
@@ -1373,7 +1392,7 @@ $('dockBtn').onclick=()=>document.body.classList.toggle('dockOpen');
 /* species list and graph */
 const SPCOL={rabbit:'#d8b48a',mouse:'#a99886',deer:'#c98a52',bison:'#8a6346',zebra:'#e9e5dc',camel:'#e0bd7a',fox:'#ff8a3d',wolf:'#a9a6a2',lion:'#f0c36a',bear:'#9c6a44',hawk:'#c9a070',fish:'#8fd0ff',otter:'#7ea0b8',trees:'#5fbf5f',x_human_hunter:'#e0b080'};
 function coatShare(sp){let w=0,d=0,n=0;for(const a of S.animals)if(!a.dead&&a.sp===sp){n++;const c=coatOf(a.genes);if(c==='white')w++;else if(c==='dark')d++}return n?`${Math.round(w/n*100)}% white, ${Math.round(d/n*100)}% dark`:''}
-function renderLife(){const c=counts(),L=$('splist');{const hc={};for(const h of S.homes)if(h.prog>=1)hc[h.hk]=(hc[h.hk]||0)+1;{const dn={herb:0,carn:0,omni:0};for(const a of S.animals)if(!a.dead)dn[SP[a.sp].diet]++;let sick=0;for(const a of S.animals)if(!a.dead&&a.sick>0)sick++;$('dietSum').textContent=`🌿 ${dn.herb} herbivores · 🥩 ${dn.carn} carnivores · 🍓 ${dn.omni} omnivores`+(sick?` · 🦠 ${sick} sick`:'')}$('lifeSum').textContent=`Born: ${S.born} · died of old age: ${S.oldAge||0} · homes: ${Object.values(hc).reduce((a,b)=>a+b,0)}`+(Object.keys(hc).length?` (${Object.entries(hc).map(([k,n])=>n+' '+HOMEK[k].n.toLowerCase()+(n>1?(k==='hut'?'s':k==='burrow'?'s':'s'):'')).join(', ')})`:'')}if(L.dataset.n!=SPK.length){L.textContent='';L.dataset.n=SPK.length}renderEndangered(c);if(!L.children.length){for(const k of [...SPK,'trees']){const r=document.createElement('button');r.className='sprow';r.dataset.k=k;r.innerHTML='<i></i><span></span><b></b>';r.children[0].style.background=SPCOL[k];r.onclick=()=>k==='trees'?flyTree():flyTo(k);L.appendChild(r)}}
+function renderLife(){const c=counts(),L=$('splist');{const hc={};for(const h of S.homes)if(h.prog>=1)hc[h.hk]=(hc[h.hk]||0)+1;{const dn={herb:0,carn:0,omni:0};for(const a of S.animals)if(!a.dead)dn[SP[a.sp].diet]++;let sick=0;for(const a of S.animals)if(!a.dead&&a.sick>0)sick++;$('dietSum').textContent=`🌿 ${dn.herb} herbivores · 🥩 ${dn.carn} carnivores · 🍓 ${dn.omni} omnivores`+(sick?` · 🦠 ${sick} sick`:'')}{let ms=0,fs=0,ws=0,nl=0,nw=0;for(let i=0;i<N;i+=11){if(isWater(i)){ws+=mic[i];nw++}else{ms+=mic[i];fs+=Math.min(1,fert[i]);nl++}}$('micSum').textContent=`🧫 Soil microbes ${Math.round(ms/Math.max(1,nl)*100)}% · plankton ${Math.round(ws/Math.max(1,nw)*100)}% · soil richness ${Math.round(fs/Math.max(1,nl)*100)}% · ${S.decomposed||0} carcasses rotted away`}$('lifeSum').textContent=`Born: ${S.born} · died of old age: ${S.oldAge||0} · homes: ${Object.values(hc).reduce((a,b)=>a+b,0)}`+(Object.keys(hc).length?` (${Object.entries(hc).map(([k,n])=>n+' '+HOMEK[k].n.toLowerCase()+(n>1?(k==='hut'?'s':k==='burrow'?'s':'s'):'')).join(', ')})`:'')}if(L.dataset.n!=SPK.length){L.textContent='';L.dataset.n=SPK.length}renderEndangered(c);if(!L.children.length){for(const k of [...SPK,'trees']){const r=document.createElement('button');r.className='sprow';r.dataset.k=k;r.innerHTML='<i></i><span></span><b></b>';r.children[0].style.background=SPCOL[k];r.onclick=()=>k==='trees'?flyTree():flyTo(k);L.appendChild(r)}}
   for(const r of L.children){const k=r.dataset.k;const n=k==='trees'?S.trees.length:c[k];r.classList.toggle('zero',!n);
     r.style.display=k!=='trees'&&!n&&!(S.seen||{})[k]?'none':'';r.children[1].textContent=k==='trees'?'🌳 Trees':`${SP[k].ic} ${SP[k].pl}`+(n?` · speed ${avgGene(k,'speed').toFixed(2)} · fur ${avgGene(k,'fur').toFixed(0)}° · ${coatShare(k)}`:'');r.children[2].textContent=n}
   drawGraph()}
@@ -1481,7 +1500,7 @@ $('find').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();
 
 /* ================= worlds ================= */
 const SCEN=[
- {id:'meadow',n:'Temperate meadow',d:'Woods, grassland and lakes: rabbits, deer, foxes, wolves, bears and hawks.',ter:{seed:11,freq:3.2,land:.62,mount:.35,edge:3,center:.2,moist:.62,peak:1.6,lakes:[[.42,.5,6],[.6,.38,4],[.3,.62,4]]},t0:0,trees:{oak:220,pine:60,bush:80},an:{rabbit:220,mouse:180,deer:80,fox:8,wolf:3,bear:6,hawk:8,fish:250,otter:8}},
+ {id:'meadow',n:'Temperate meadow',d:'Woods, grassland and lakes: rabbits, deer, foxes, wolves, bears and hawks.',ter:{seed:11,freq:3.2,land:.62,mount:.35,edge:3,center:.2,moist:.62,peak:1.6,lakes:[[.42,.5,6],[.6,.38,4],[.3,.62,4]]},t0:0,trees:{oak:220,pine:60,bush:80},an:{rabbit:220,mouse:180,deer:100,fox:10,wolf:3,bear:6,hawk:8,fish:250,otter:8,x_squirrel:40,x_hedgehog:20,x_badger:8,x_owl:6,x_frog:50,x_duck:30,x_bee:40,x_butterfly:40,x_beaver:10,x_wild_boar:16,x_robin:30,x_snake:8}},
  {id:'savanna',n:'Savanna',d:'Hot dry grassland with herds of zebras and bison, prides of lions and a few waterholes.',ter:{seed:23,freq:2.6,land:.72,mount:.4,edge:3,center:.25,moist:.42,lakes:[[.35,.45,6],[.62,.55,6],[.5,.3,4],[.25,.65,5],[.75,.35,5],[.5,.72,5],[.15,.35,4],[.85,.6,4]]},t0:8,trees:{palm:60,bush:30,cactus:20,oak:20},an:{zebra:110,bison:50,lion:6,mouse:150,hawk:4,fish:150,rabbit:60}},
  {id:'arctic',n:'Arctic',d:'A frozen land: only the thickest fur survives. Wolves hunt deer and bears fish the coast.',ter:{seed:37,freq:3,land:.6,mount:1,edge:3,center:.2,moist:.55},t0:-7,trees:{pine:180},an:{rabbit:160,deer:90,wolf:3,bear:3,fox:5,fish:200,otter:4},adapt:1},
  {id:'rainforest',n:'Rainforest',d:'Hot, wet and packed with life. Palms and oaks crowd the rivers.',ter:{seed:41,freq:3.4,land:.64,mount:.6,edge:3,center:.2,moist:.98},t0:10,trees:{palm:300,oak:80,bush:100},an:{deer:60,mouse:180,rabbit:120,bear:3,hawk:5,fish:250,otter:6,lion:4}},
@@ -1504,7 +1523,7 @@ function loadScen(id,opts={}){const sc=SCEN.find(s=>s.id===id)||SCEN[0];RNG=seed
   genTerrain(sc.ter);SEASON=seasonF();
   // grow the vegetation in for a while so the world starts lush
   if(!sc.bare){for(let i=0;i<N;i++)veg[i]=isWater(i)?0:capOf(meanT(i),rainAt(i))*rr(.5,.9);for(let k=0;k<8;k++)updateVeg(10)}else{veg.fill(0)}
-  for(let i=0;i<N;i++)alg[i]=isWater(i)?(sc.bare?0.02:0.5):0;
+  for(let i=0;i<N;i++){alg[i]=isWater(i)?(sc.bare?0.02:0.5):0;mic[i]=isWater(i)?(sc.bare?0.1:0.5):sc.bare?0.08:0.25+0.45*veg[i];fert[i]=sc.bare?0:0.2}
   for(const [k,n0] of Object.entries(sc.trees)){const n=Math.round(n0*2.2);let made=0;for(let q=0;q<n*20&&made<n;q++){const p=randomCell(i=>treeOK(k,i),50);if(!p)continue;let c=0;nearTrees(p[0],p[1],1.2,()=>c++);if(c)continue;addTree(k,p[0],p[1]);made++;if(made%20===0)rebuildTrees()}rebuildTrees()}
   for(const k of Object.keys(sc.an)){if(!SP[k]){const c=CATA.find(c=>c.key===k);if(c)addSpecies(c)}}
   S.seen={};S.status={};S.statusReady=false;
@@ -1625,7 +1644,7 @@ CC(4.7,{t:'Jurassic balance',g:'Keep a T. rex and at least 6 triceratops alive t
 CC(6.3,{t:'Nobody endangered',g:'In the African savanna, have no endangered or extinct species for 2 years in a row.',hint:'Watch the endangered list in the Life tab and help any species that drops below 15.',setup:scn('africa'),check:()=>{const st=S.status||{},bad=SPK.filter(k=>st[k]==='endangered'||st[k]==='extinct'),p=hold('n',!bad.length,2);return[p>=1,p,bad.length?`${bad.length} endangered or extinct: ${bad.slice(0,3).map(k=>SP[k].pl).join(', ')}`:holdTxt(p,2)]},stars:byTime(90,240)});
 CC(2.3,{t:'Circle of life',g:'Watch 40 animals be born and 10 die of old age.',hint:'Speed up time. Small animals like mice breed and age fastest.',setup:scn('meadow'),check:()=>{const b=evN('birth'),o=CH.events.filter(e=>e.k==='death'&&e.cause==='old age').length;return[b>=40&&o>=10,Math.min(1,b/40)*.5+Math.min(1,o/10)*.5,`${Math.min(b,40)} of 40 births · ${Math.min(o,10)} of 10 old-age deaths`]},stars:byTime(30,90)});
 CC(2.7,{t:'Home builders',g:'Have 60 more finished homes than at the start.',hint:'Animals build burrows, nests and dens once they are grown and well fed. Give them food and time.',setup:scn('meadow',()=>{CH.ref.h0=S.homes.filter(h=>h.prog>=1).length}),check:()=>{const n=S.homes.filter(h=>h.prog>=1).length-CH.ref.h0;return[n>=60,Math.max(0,n)/60,`${Math.max(0,n)} of 60 new homes`]},stars:byTime(40,100)});
-CC(3.9,{t:'Dam builders',g:'Release beavers (search: beaver) and have 4 beaver lodges built.',hint:'Beavers build lodges right at the water’s edge. Release them next to a lake.',setup:scn('meadow'),check:()=>{const n=S.homes.filter(h=>h.hk==='lodge'&&h.prog>=1).length;return[n>=4,n/4,`${n} of 4 lodges`]},stars:byTime(60,150)});
+CC(3.9,{t:'Dam builders',g:'Have beavers build 4 new lodges.',hint:'Beavers build lodges right at the water’s edge. Release them next to a lake.',setup:scn('meadow',()=>{CH.ref.l0=S.homes.filter(h=>h.hk==='lodge'&&h.prog>=1).length}),check:()=>{const n=Math.max(0,S.homes.filter(h=>h.hk==='lodge'&&h.prog>=1).length-CH.ref.l0);return[n>=4,n/4,`${n} of 4 new lodges`]},stars:byTime(60,150)});
 CC(3.4,{t:'Hunter babies',g:'Have 5 babies born to human hunter couples.',hint:'Humans eat both plants and meat. Couples share a hut and raise their children there. Keep them fed and safe.',setup:scn('farm'),check:()=>{const n=CH.events.filter(e=>e.k==='birth'&&e.sp==='x_human_hunter').length;return[n>=5,n/5,`${Math.min(n,5)} of 5 babies born`]},fail:()=>cnt('x_human_hunter')?'':'The hunters died out',stars:byTime(60,160)});
 CC(3.0,{t:'Town builder',g:'Grow a village to 15 huts. You can build huts yourself with the Hut tool.',hint:'Pick 🛖 Hut under Land and click inside a village, or use Build a hut in the village panel. Hunters need prey nearby to feed their families.',setup:scn('farm'),check:()=>{const m=Math.max(0,...S.villages.map(v=>v.huts));return[m>=15,m/15,`Biggest village: ${m} of 15 huts`]},stars:byTime(40,120)});
 CC(3.7,{t:'Village families',g:'Have one human village with huts belonging to 8 different families.',hint:'Each new family builds its own hut around the campfire. Keep the hunters well fed so their children grow up and start families.',setup:scn('farm'),check:()=>{let m=0;for(const v of S.villages){const f=new Set(S.homes.filter(h=>h.vil===v.id&&h.fam).map(h=>h.fam));m=Math.max(m,f.size)}return[m>=8,m/8,`Most families in one village: ${m} of 8`]},stars:byTime(60,160)});
@@ -1648,6 +1667,8 @@ CC(3.2,{t:'Fight club',g:'Watch 25 fights break out between animals.',hint:'Hunt
 CC(4.4,{t:'The underdog',g:'Have a plant-eater kill a hunter in a fight.',hint:'Big plant-eaters such as buffalo, bison and elephants fight back. Search for elephant or buffalo and release some near lions.',setup:scn('africa'),check:()=>{const ok=CH.events.some(e=>e.k==='fight'&&e.killed&&SP[e.win]&&SP[e.win].diet==='herb'&&SP[e.lose]&&SP[e.lose].diet!=='herb');return[ok,ok?1:0,ok?'A plant-eater won!':'Waiting for a plant-eater to win a fight']},stars:byTime(60,180)});
 CC(3.9,{t:'Fishing fleet',g:'Have human hunters catch 15 fish from their boats.',hint:'Grown-up hunters build boats at the shore by themselves, or press ⛵ Build a boat. Hungry sailors fish.',setup:scn('farm'),check:()=>{const n=CH.events.filter(e=>e.k==='kill'&&e.pred==='x_human_hunter'&&SP[e.prey]&&SP[e.prey].hab==='water').length;return[n>=15,n/15,`${Math.min(n,15)} of 15 fish caught`]},fail:()=>cnt('x_human_hunter')?'':'The hunters died out',stars:byTime(60,160)});
 CC(5.3,{t:'Across the sea',g:'Have human hunters found a second village at least 60 squares from the first.',hint:'Hunters with boats sail to new coasts and settle there. Give a few hunters boats and let time pass.',setup:scn('farm'),check:()=>{let far=0;for(const a of S.villages)for(const b of S.villages){const d=Math.hypot(dWX(a.x-b.x),dWY(a.y-b.y));if(d>far)far=d}return[far>=60,Math.min(1,far/60),S.villages.length>1?`Villages ${Math.round(far)} squares apart`:'Only one village so far']},stars:byTime(90,240)});
+CC(2.8,{t:'Decomposers',g:'Have microbes rot away 20 carcasses, turning them into rich soil.',hint:'Animals that die leave carcasses; soil microbes break down what scavengers leave. Warm, damp ground with lots of microbes rots them fastest.',setup:scn('meadow'),check:()=>{const n=evN('decomposed');return[n>=20,n/20,`${Math.min(n,20)} of 20 carcasses rotted away`]},stars:byTime(40,100)});
+CC(3.5,{t:'Living soil',g:'Bring the barren land’s soil to life: raise its average soil microbes to 50%.',hint:'Microbes need plants, water and dead matter. Grow grass, make rain, or seed them with the Microbes brush.',setup:scn('barren'),check:()=>{let m=0,n=0;for(let i=0;i<N;i+=9)if(!isWater(i)){m+=mic[i];n++}const v=n?m/n:0;return[v>=0.5,v/0.5,`Soil microbes: ${Math.round(v*100)}% of 50%`]},stars:byTime(40,120)});
 // biodiversity and rewilding
 [[8,4.8],[10,6.2],[13,8]].forEach(([n,d])=>CC(d,{t:`${n} species at once`,g:`Have ${n} different species alive at the same time for 2 years.`,hint:'Each species needs its own climate and food. Use different regions of the supercontinent.',setup:scn('pangaea'),check:()=>{const c=speciesAlive().length,p=hold('b',c>=n,2);return[p>=1,p*.8+Math.min(.2,c/n*.2),`${c} species · ${holdTxt(p,2)}`]},stars:byTime(40,120)}));
 [[3,3.6],[6,5.8]].forEach(([n,d])=>CC(d,{t:`Rewild with ${n} species`,g:`On the barren land, have ${n} species with at least 6 animals each, for 2 years.`,hint:'Grow plants first, then plant eaters, then hunters. Seed algae before releasing fish.',setup:scn('barren'),check:()=>{const c=SPK.filter(k=>cnt(k)>=6).length,p=hold('r',c>=n,2);return[p>=1,p*.8+Math.min(.2,c/n*.2),`${c} species with 6+ · ${holdTxt(p,2)}`]},stars:byTime(90,240)}));
@@ -1728,6 +1749,7 @@ const TSTEPS=[
  ['Cause an event','Press one of the events, such as 🔥 Wildfire or ☄ Meteor.',r=>EVN>r.n,r=>{r.n=EVN}],
  ['Stop the event','Press the same event button again (it now says ■ Stop) to stop it.',r=>EVSTOP>r.n,r=>{r.n=EVSTOP}],
  ['Watch the populations','Open the Life tab to see every species, the population graph and the endangered list (fewer than 15 left).',r=>LIFEOPEN>r.n,r=>{r.n=LIFEOPEN}],
+ ['Microbes','Tiny life is everywhere. Switch to the Microbes view in the World tab, or zoom right in to see bacteria and fungi in the soil.',()=>S.view==='microbe'||cam.z>=6],
  ['Views','In the World tab, switch to the Temperature or Food view.',r=>VIEWCH>r.n,r=>{r.n=VIEWCH}],
  ['Save your progress','Click 👤 in the top bar and create an account (a PIN is optional). Your stars save on this device.',r=>ACCN>r.n,r=>{r.n=ACCN}],
 ];

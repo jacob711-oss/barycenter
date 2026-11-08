@@ -116,6 +116,7 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--cool);outline-o
 .ctl .btn{padding:5px 8px;text-align:center}
 
 /* scenarios */
+.trrow{display:flex;gap:6px;padding:4px 6px}.trrow input,.trrow select{flex:1;min-width:0;font:inherit;font-size:13px;padding:7px 8px;border-radius:7px;border:1px solid var(--line-strong);background:rgba(0,0,0,.35);color:var(--ink)}.trnow{margin:4px 6px;font-size:12px;color:var(--dim);line-height:1.45}.trlist{display:flex;flex-direction:column;gap:2px;padding:0 4px}.trlist button{display:flex;justify-content:space-between;gap:8px;text-align:left;padding:6px 8px;border-radius:6px;font-size:12.5px}.trlist button:hover{background:rgba(127,178,255,.12)}.trlist small{color:var(--dim);font-family:var(--f-mono);font-size:11px}
 .scen{position:fixed;right:var(--gutR);top:calc(var(--top) + 76px);width:340px;max-height:calc(100% - 120px);overflow:auto;padding:8px;z-index:7;display:flex;flex-direction:column;gap:2px}
 .scen h2{font-family:var(--f-mono);font-weight:500;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--dim);margin:6px 10px 6px}
 .scen button{text-align:left;padding:10px 12px;border-radius:7px;display:flex;flex-direction:column;gap:3px}
@@ -295,6 +296,7 @@ body.mDemo .rail,body.mDemo .campad,body.mDemo .hint,body.mDemo .insp,body.mDemo
     <button id="homeBtn" class="btn" title="Back to the home page">⌂ Home</button>
     <button id="acctBtn" class="btn" title="Account: save your progress on this device">👤</button>
     <button id="createBtn" class="btn" aria-expanded="false" aria-controls="create">Create</button>
+    <button id="travelBtn" class="btn" aria-expanded="false" aria-controls="travel" title="Travel a chosen distance away from the Sun">Travel</button>
     <button id="scenBtn" class="btn" aria-expanded="false" aria-controls="scen">Scenarios</button>
   </div>
 </header>
@@ -499,6 +501,16 @@ body.mDemo .rail,body.mDemo .campad,body.mDemo .hint,body.mDemo .insp,body.mDemo
   <div class="actions"><button id="xExport" class="btn">Export scene</button><button id="xCopy" class="btn">Copy</button><button id="xLoad" class="btn">Load from text</button></div>
 </div>
 
+<div id="travel" class="scen panel" hidden role="dialog" aria-label="Travel">
+  <div class="k" style="padding:6px 6px 2px">Travel away from the Sun</div>
+  <div class="trrow"><input id="trDist" type="number" min="0" step="any" value="4.24" aria-label="Distance"><select id="trUnit" aria-label="Unit"><option value="km">km</option><option value="au">AU</option><option value="lm">light-minutes</option><option value="lh">light-hours</option><option value="ld">light-days</option><option value="ly" selected>light-years</option><option value="pc">parsecs</option></select></div>
+  <div class="trrow"><select id="trDir" aria-label="Direction"><option value="look">Where I am looking</option><option value="acen">Toward Alpha Centauri</option><option value="gc">Toward the centre of the galaxy</option><option value="up">Straight up, out of the planets' plane</option><option value="rand">Any direction</option></select></div>
+  <div class="trrow"><button id="trGo" class="btn primary">Go</button><button id="trHome" class="btn">Back to the Sun</button></div>
+  <p id="trNow" class="trnow">You are at the Sun.</p>
+  <div class="k" style="padding:6px 6px 2px">Famous trips</div>
+  <div id="trList" class="trlist"></div>
+  <p class="trnow">Space is mostly empty: turn on Sky in the toolbar to see the stars around you.</p>
+</div>
 <div id="scen" class="scen panel" hidden>
   <h2>Load a scenario</h2>
 </div>
@@ -1846,6 +1858,26 @@ function addNebula(N,opt={}){const R=Math.max(12,cam.dist*(opt.at?0.1:0.13));
     const clear2=S.bodies.every(b=>b.anon||b.m<=1e-7||Math.hypot(b.x-c[0],b.y-c[1],b.z-c[2])>R*6);
     if(clear2){if(snr&&/Crab/.test(N.n))addBody({type:'neutron',m:1.4,name:'Crab Pulsar',x:c[0],y:c[1],z:c[2]});else if(!snr)addBody({type:'dwarf',m:0.6,name:N.n+' core',x:c[0],y:c[1],z:c[2]})}}
   NEBADD++;chEv('nebula',{k:N.k});S.dirty=true;toast(`Added the ${N.n}`)}
+/* ---------- travel: fly a typed distance away from the Sun ---------- */
+const UNIT_AU={km:1/1.496e8,au:1,lm:0.120239,lh:7.21436,ld:173.145,ly:63241.1,pc:206265};
+const TRIPS=[['The Moon',384400,'km',null],['Mars (at its closest)',0.52,'au',null],['Pluto',39.5,'au',null],['Voyager 1, the farthest spacecraft',165,'au',null],['The Oort Cloud of comets',2000,'au',null],
+ ['Proxima Centauri, the nearest star',4.24,'ly','Proxima Centauri'],['Sirius, the brightest star in our sky',8.6,'ly','Sirius'],['Vega',25,'ly','Vega'],['Betelgeuse, a red supergiant',548,'ly','Betelgeuse'],
+ ['The Orion Nebula',1344,'ly','@Orion Nebula'],['The centre of the Milky Way',26000,'ly','Sagittarius A*'],['The Andromeda Galaxy',2.5e6,'ly','M31*']];
+let TRAVELS=0,trPending=null;
+function sunPos(){const sun=S.bodies.find(b=>b.name==='Sun')||S.bodies.filter(b=>b.type==='star').sort((a,b)=>b.m-a.m)[0];return sun?[sun.x,sun.y,sun.z]:[0,0,0]}
+function fmtTravel(au){const ly=au/63241.1;if(au<0.05)return Math.round(au*1.496e8).toLocaleString()+' km';if(au<2000)return(au<10?au.toFixed(2):Math.round(au).toLocaleString())+' AU';if(ly<1e6)return(ly<10?ly.toFixed(2):Math.round(ly).toLocaleString())+' light-years';return(ly/1e6).toFixed(2)+' million light-years'}
+function travelTo(au,dirKey,addName){const o=sunPos();let d;
+  if(dirKey==='acen')d=eq2w(219.9,-60.8);else if(dirKey==='gc')d=eq2w(266.4,-29.0);else if(dirKey==='up')d=[0,0,1];else if(dirKey==='rand')d=randDir();
+  else{d=[cam.tx-C.ex,cam.ty-C.ey,cam.tz-C.ez];const l=Math.hypot(...d)||1;d=d.map(v=>v/l)}
+  if(S.follow){S.follow=false;syncFollow()}select(null);
+  const t=[o[0]+d[0]*au,o[1]+d[1]*au,o[2]+d[2]*au];cam.goT={tx:t[0],ty:t[1],tz:t[2]};cam.distT=clampD(au<0.05?Math.max(1e-4,au*0.6):Math.min(60,Math.max(0.5,au*0.02)));
+  trPending=addName?{name:addName,t}:null;TRAVELS++;chEv('travel',{au});toast(`Travelling ${fmtTravel(au)} from the Sun…`)}
+function travelTick(){if(trPending&&!cam.goT){const p=trPending;trPending=null;
+    if(p.name[0]==='@'){const N=NEBCAT.find(n=>n.n===p.name.slice(1));if(N)addNebula(N,{at:p.t})}else{const c=CAT.find(c=>c.n===p.name);if(c&&!S.bodies.some(b=>(b.name||'').startsWith(p.name))){const o=c.mk();o.name=uniqueName(c.n);const sp=S.bodies.find(b=>b.name==='Sun')||{vx:0,vy:0,vz:0};Object.assign(o,{x:p.t[0],y:p.t[1],z:p.t[2],vx:sp.vx,vy:sp.vy,vz:sp.vz});const nb=addBody(o);ensureTimestep(nb);select(nb);toast(`Arrived at ${p.name}, ${fmtTravel(Math.hypot(p.t[0]-sunPos()[0],p.t[1]-sunPos()[1],p.t[2]-sunPos()[2]))} from the Sun`)}}}
+  const o=sunPos(),d=Math.hypot(cam.tx-o[0],cam.ty-o[1],cam.tz-o[2]);$('trNow').textContent=d<1?'You are in the inner Solar System.':`You are ${fmtTravel(d)} from the Sun.`}
+// when far away, mark where the Sun is
+function drawSunMarker(){const o=sunPos(),d=Math.hypot(cam.tx-o[0],cam.ty-o[1],cam.tz-o[2]);if(d<200)return;const P=proj(o[0],o[1],o[2]);if(!P)return;const X=P[0],Y=P[1];
+  ctx.strokeStyle='rgba(255,210,122,.8)';ctx.lineWidth=1.2;ctx.beginPath();ctx.arc(X,Y,7,0,7);ctx.stroke();ctx.font='11px IBM Plex Mono, monospace';ctx.fillStyle='rgba(255,210,122,.95)';ctx.fillText(`☀ Sun · ${fmtTravel(d)}`,X+11,Y+4)}
 function gasStep(simDt,rdt){
   if(!S.gas.length)return;
   const hot=S.bodies.filter(b=>b.type==='star'&&b.m>=6&&!b.giant);
@@ -1912,7 +1944,7 @@ function draw(now,rdt){
     const s=F/cz,X=W2+(dx*rx+dy*ry+dz*rz)*s,Y=H2-(dx*ux+dy*uy+dz*uz)*s;if(X<-2||X>W+2||Y<-2||Y>H+2)continue;
     ctx.globalAlpha=p.life===Infinity?0.75:Math.max(0,Math.min(1,p.life/p.max*1.4));ctx.fillStyle=p.color;ctx.fillRect(X-p.s/2,Y-p.s/2,p.s,p.s)}
   ctx.globalAlpha=1;
-  drawGas();
+  drawGas();drawSunMarker();
   drawComets();
   for(const f of S.flashes){f.t+=rdt;const P=proj(f.x,f.y,f.z);if(!P)continue;const k=f.t/f.dur,X=P[0],Y=P[1],r0=Math.max(4,f.r*P[2]);
     const g=ctx.createRadialGradient(X,Y,0,X,Y,r0*2+30);g.addColorStop(0,rgba(f.color,0.9*(1-k)**2));g.addColorStop(1,rgba(f.color,0));
@@ -2952,6 +2984,7 @@ function orbitBy(dx,dy){cam.yaw-=dx*0.006;cam.pitch=Math.max(-1.5,Math.min(1.5,c
 cv.addEventListener('contextmenu',e=>e.preventDefault());
 cv.addEventListener('pointerdown',e=>{
   cv.setPointerCapture(e.pointerId);ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY});
+  if(!$('travel').hidden){$('travel').hidden=true;$('travelBtn').setAttribute('aria-expanded','false')}
   if(!scenEl.hidden||!$('create').hidden){closeScen();if(S.sel)$('insp').hidden=false}
   if(ptrs.size===2){const [a,b]=[...ptrs.values()];pinch={d:Math.hypot(a.x-b.x,a.y-b.y)||1,dist:cam.dist,mx:(a.x+b.x)/2,my:(a.y+b.y)/2};drag=null;return}
   const pan=e.button===1||(e.button===0&&e.shiftKey)||(e.button===2&&S.tool==='select');
@@ -3161,6 +3194,7 @@ CCN(2.05,{t:'On the board',g:'Open the 🏆 leaderboard (👤 at the top, then W
     const p=hold('o',ok,3);return[p>=1,seen?0.3+0.7*p:0,seen?(ok?holdTxt(p,3):'Leaderboard checked · now give Mars a moon'):'Open the leaderboard first']},fail:()=>BN('Mars')?'':'Mars was destroyed',stars:byTime(90,200)});
 CCN(1.45,{t:'Edge of no return',g:'Find Sagittarius A*, the black hole at the centre of our galaxy, and look at its event horizon.',hint:'Type Sagittarius A* (or sgr a) in the search bar and press Enter or Add. Its event horizon is the dashed red ring.',setup:scen('solar'),check:()=>{const ok=S.sel&&S.sel.type==='blackhole'&&/Sagittarius/.test(S.sel.name||'');return[ok,ok?1:0,ok?'You are looking at the event horizon':'Not found yet']},stars:byTime(30,70)});
 CCN(2.2,{t:'Star factory',g:'Add a star-forming nebula and watch 3 new stars ignite inside it.',hint:'Search for Orion Nebula, Eagle Nebula or a molecular cloud and press Add, then speed up time.',setup:scen('empty'),check:()=>{const n=evHas?CH.events.filter(e=>e.k==='newstar').length:0;return[n>=3,n/3,`${Math.min(n,3)} of 3 new stars`]},stars:byTime(40,100)});
+CCN(1.6,{t:'Interstellar',g:'Travel more than one light-year away from the Sun.',hint:'Press Travel in the top bar, type 1.5 and choose light-years, then press Go.',setup:scen('solar'),check:()=>{const o=sunPos(),d=Math.hypot(cam.tx-o[0],cam.ty-o[1],cam.tz-o[2])/63241.1;return[d>1,Math.min(1,d),`${d<0.01?'Still near the Sun':d.toFixed(2)+' light-years out'}`]},stars:byTime(25,60)});
 CHALS.sort((a,b)=>a.diff-b.diff);
 loadProg();
 const NCH=CHALS.length;
@@ -3178,6 +3212,11 @@ function showHome(){stopDemo(true);if(CH.active)endChallenge();if(TUT.on)endTuto
   select(null);setMode('home');$('home').hidden=false;homeView('hMain')}
 function leaveHome(){VIEW_OX=0;$('home').hidden=true;setMode('');setTog('labels','tLabels',true);setTog('spin','tSpin',false)}
 $('homeBtn').addEventListener('click',showHome);
+$('travelBtn').addEventListener('click',()=>{const t=$('travel');t.hidden=!t.hidden;$('travelBtn').setAttribute('aria-expanded',!t.hidden);if(!t.hidden){closeScen();const L=$('trList');if(!L.children.length)for(const [n,v,u,add] of TRIPS){const b=document.createElement('button');b.innerHTML='<span></span><small></small>';b.children[0].textContent=n;b.children[1].textContent=fmtTravel(v*UNIT_AU[u]);b.onclick=()=>{$('trDist').value=v;$('trUnit').value=u;travelTo(v*UNIT_AU[u],add==='Sagittarius A*'?'gc':add==='Proxima Centauri'?'acen':$('trDir').value,add)};L.appendChild(b)}}});
+$('trGo').addEventListener('click',()=>{const v=parseFloat($('trDist').value);if(!(v>0)){toast('Type a distance first');return}travelTo(v*UNIT_AU[$('trUnit').value],$('trDir').value,null)});
+$('trDist').addEventListener('keydown',e=>{if(e.key==='Enter')$('trGo').click()});
+$('trHome').addEventListener('click',()=>{const o=sunPos();if(S.follow){S.follow=false;syncFollow()}cam.goT={tx:o[0],ty:o[1],tz:o[2]};cam.distT=clampD(80);trPending=null;toast('Heading back to the Sun')});
+setInterval(travelTick,250);
 document.querySelectorAll('.hback').forEach(b=>b.addEventListener('click',()=>homeView('hMain')));
 $('hChal').addEventListener('click',()=>homeView('hChalView'));
 $('hDemo').addEventListener('click',()=>homeView('hDemoView'));
@@ -3233,6 +3272,7 @@ const TSTEPS=[
  ['Leaderboard','Open 👤 in the top bar and press 🏆 World leaderboard to see the players with the most stars.',r=>LBOPEN>r.n,r=>{r.n=LBOPEN}],
  ['Event horizon','Click a black hole: the dashed red ring is its event horizon, the edge nothing can escape. The info panel shows how big it is.',()=>S.sel&&S.sel.type==='blackhole'],
  ['Nebulas','Pick Nebula in the toolbar and click in space (or search for Orion Nebula and press Add). New stars form inside star-forming nebulas.',r=>NEBADD>r.n,r=>{r.n=NEBADD}],
+ ['Travel','Press Travel in the top bar, type a distance (try 4.24 light-years) and press Go.',r=>TRAVELS>r.n,r=>{r.n=TRAVELS}],
  ['Views','Try the toolbar views: turn on Zones (habitable zones), Heat (temperature map) or Sky (background stars).',r=>S.zones!==r.z||S.heat!==r.h||S.sky!==r.s,r=>{r.z=S.zones;r.h=S.heat;r.s=S.sky}],
 ];
 function startTutorial(){leaveHome();countPlay('tut');$('chDone').hidden=true;CH.loading=true;load(SCEN.find(x=>x.id==='solar'));CH.loading=false;TUT.on=true;TUT.i=0;TUT.finished=false;tutStep()}
