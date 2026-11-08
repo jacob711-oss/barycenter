@@ -471,6 +471,16 @@ body.mDemo .rail,body.mDemo .campad,body.mDemo .hint,body.mDemo .insp,body.mDemo
       <div id="eOrbitFields" class="ef" style="margin:0"><div class="row3"><label class="fl">Distance (AU)<input id="eA" type="number" step="any" min="0"></label><label class="fl">Eccentricity<input id="eE" type="number" step="0.01" min="0" max="0.95"></label><label class="fl">Incl. (°)<input id="eI" type="number" step="any"></label></div>
       <div class="actions"><button class="btn" id="eApply">Apply orbit</button><button class="btn" id="eSlow">Slower</button><button class="btn" id="eFast">Faster</button><button class="btn" id="eRev">Reverse</button><button class="btn" id="eStop">Stop</button></div></div>
     </div></details>
+    <details class="grp" id="gTemp" open><summary>Average temperature</summary><div class="ef">
+      <div class="fl">Now <output id="eTNow">—</output></div>
+      <div class="row2" style="grid-template-columns:1fr auto auto"><label class="fl"><span id="eTLab">Set average (°C)</span><input id="eTSet" type="number" step="any"></label><button class="btn" id="eTGo" style="align-self:end">Set</button><button class="btn" id="eTNat" style="align-self:end">Natural</button></div>
+      <p id="eTNote" class="note"></p>
+    </div></details>
+    <details class="grp" id="gColl" open><summary>Collide with</summary><div class="ef">
+      <p class="note">Send this object straight at another one. It homes in on its target until they crash.</p>
+      <div class="row2" style="grid-template-columns:1fr auto"><label class="fl">Target<select id="eCollT"></select></label><button class="btn danger" id="eCollGo" style="align-self:end">Collide</button></div>
+      <p id="eCollNote" class="note"></p>
+    </div></details>
     <details class="grp" id="gReplace"><summary>Replace with…</summary><div class="ef">
       <p class="note">Swap this object for anything: a kind of object, a famous one, or a copy of something in the scene. The new object takes its place and its motion.</p>
       <input id="eRepl" class="find" style="width:100%" placeholder="Black hole, gas giant, Antares, a copy of Earth…" autocomplete="off" spellcheck="false" aria-label="Replace with">
@@ -694,7 +704,7 @@ function addBody(o){
     const e=b.m/ME;
     b.water=o.water??(e<0.01?rnd(0,0.15):e<0.5?rnd(0,0.4):rnd(0.3,0.85));
     b.atm=o.atm??(e<0.01?0:e<0.5?rnd(0,0.3):rnd(0.5,2));
-    b.heat=o.heat||0;b.T=null;b.climate='';b.cool=0;
+    b.heat=o.heat||0;b.tOff=o.tOff||0;b.T=null;b.climate='';b.cool=0;
     const tilt=(o.tilt??Math.abs(rnd(-1,1)*rnd(0,1))*34)*DEG;
     const rotP=o.rotP??(e>=10?rnd(0.38,0.7):e<0.001?rnd(0.1,0.6):rnd(0.6,2));
     b.axis=o.axisN?o.axisN.slice():norm(orient(orient([0,0,1],tilt,rnd(0,Math.PI*2)),o.inc??0,o.node??0));
@@ -782,6 +792,7 @@ function twoBody(o,dt){const e2=S.soft*S.soft,n=Math.min(4000,Math.max(1,Math.ce
   for(let k=0;k<n;k++){vx+=f*x*h/2;vy+=f*y*h/2;vz+=f*z*h/2;x+=vx*h;y+=vy*h;z+=vz*h;r2=x*x+y*y+z*z+e2;f=-mu/(r2*Math.sqrt(r2));vx+=f*x*h/2;vy+=f*y*h/2;vz+=f*z*h/2}
   o.rx=x;o.ry=y;o.rz=z;o.vx=vx;o.vy=vy;o.vz=vz}
 function step(dt,sats){
+  if(HOMERS.length)homingStep();
   const h=dt*0.5,B=S.bodies,isSat=new Set(sats.map(o=>o.s));
   if(S.dirty){accel();S.dirty=false}
   for(const o of sats){const s=o.s,p=o.p;o.rx=s.x-p.x;o.ry=s.y-p.y;o.rz=s.z-p.z;o.vx=s.vx-p.vx;o.vy=s.vy-p.vy;o.vz=s.vz-p.vz;tidal(o);o.vx+=o.tx*h;o.vy+=o.ty*h;o.vz+=o.tz*h}
@@ -1059,7 +1070,7 @@ function climateOf(b,T){
 function targetTemp(b,T){
   const F=fluxAt(b),A=albedo(b,T),tau=tauOf(b,T);
   const Teq=278.6*Math.pow(F*(1-A),0.25);
-  return{T:Math.pow(Teq**4*(1+0.75*tau)+40**4+(b.tint||0)**4,0.25)+b.heat,F,A,tau,Teq};
+  return{T:Math.pow(Teq**4*(1+0.75*tau)+40**4+(b.tint||0)**4,0.25)+b.heat+(b.tOff||0),F,A,tau,Teq};
 }
 function cometActivity(b){const F=fluxAt(b);return Math.pow(Math.max(0,Math.min(1,(F-0.06)/1.2)),0.55)}
 function brightestStar(b){let best=null,bs=0;for(const s of S.bodies){const L=lum(s);if(!L)continue;const v=L/((s.x-b.x)**2+(s.y-b.y)**2+(s.z-b.z)**2+1e-12);if(v>bs){bs=v;best=s}}return best}
@@ -2112,7 +2123,7 @@ function updateClimate(b){
   $('cMark').style.left=thermPos(b.T)*100+'%';
   if(isGas(b)){$('cWater').textContent='—';$('cAtm').textContent='Deep envelope'}
   else{$('cWater').textContent=b.water<0.005?'None':Math.round(b.water*100)+'% '+(b.T<273?'ice':'ocean');$('cAtm').textContent=fmtAtm(b.atm)}
-  $('cAlb').textContent=t.A.toFixed(2);$('cGh').textContent='+'+Math.max(0,Math.round(t.T-b.heat-t.Teq))+' K';
+  $('cAlb').textContent=t.A.toFixed(2);$('cGh').textContent='+'+Math.max(0,Math.round(t.T-b.heat-(b.tOff||0)-t.Teq))+' K';
 }
 function fmtDur(d){if(!isFinite(d))return 'Endless';if(d<1)return (d*24).toFixed(d*24<10?2:1)+' h';if(d<730)return d.toFixed(d<10?2:0)+' days';return (d/365.25).toFixed(1)+' yr'}
 function updateRotation(b){
@@ -2258,8 +2269,47 @@ function fillEdit(b){
   if(p){const {r,v,n}=orbitFrame(b,p),d=Math.hypot(...r),v2=dot(v,v),mu=G*(p.m+b.m),E=v2/2-mu/d,h=Math.hypot(...cross(r,v));
     const a=E<0?-mu/(2*E):d,e=E<0?Math.sqrt(Math.max(0,1+2*E*h*h/(mu*mu))):0;
     $('eA').value=+a.toPrecision(4);$('eE').value=Math.min(0.95,e).toFixed(3);$('eI').value=(Math.acos(Math.max(-1,Math.min(1,n[2])))/DEG).toFixed(1)}
+  fillTemp(b);fillColl(b);
 }
 const edited=fn=>()=>{const b=S.sel;if(!b)return;fn(b);S.dirty=true;updateInspector()};
+// ---- Average temperature (any object) ----
+let TEMPSET=0,COLLS=0;const HOMERS=[];
+const avgTempOf=b=>b.type==='rock'?b.T:b.type==='blackhole'?6.17e-8/b.m:starTemp(b);
+function naturalT(b){return targetTemp(b,b.T).T-(b.tOff||0)}
+function fillTemp(b){const T=avgTempOf(b),bh=b.type==='blackhole',rock=b.type==='rock';
+  $('eTNow').textContent=T==null?'—':bh?(T<0.01?T.toExponential(1):sig(T))+' K':fmtTK(T);$('eTNow').style.color=T==null||bh?'':heatColor(rock?T:Math.min(1500,T/5));
+  $('eTLab').textContent=rock?'Set average (°C)':'Set surface temperature (K)';
+  $('eTSet').disabled=$('eTGo').disabled=bh||T==null;$('eTNat').hidden=bh||!(rock?Math.abs(b.tOff||0)>0.5:'TeffNat' in b);
+  if(document.activeElement!==$('eTSet'))$('eTSet').value=T==null||bh?'':rock?Math.round(T-273.15):Math.round(T);
+  $('eTNote').textContent=bh?'Black holes only glow by Hawking radiation: far colder than space itself. Their temperature cannot be set.':
+    rock?(T==null?'':Math.abs(b.tOff||0)>0.5?`Held ${Math.round(Math.abs(b.tOff))} K ${b.tOff>0?'warmer':'colder'} than it would naturally be (${fmtTK(naturalT(b))}). Water boils or freezes to match.`:'Mean surface temperature from its sunlight, air and greenhouse gases. Type a value to heat or cool it.'):
+    'Surface temperature sets the colour: about 3000 K is red, 5800 K yellow-white (the Sun), 10000 K and up blue-white.'}
+$('eTGo').addEventListener('click',edited(b=>{const v=parseFloat($('eTSet').value);if(!Number.isFinite(v)||b.type==='blackhole')return;
+  if(b.type==='rock'){if(b.T==null)return;const K=Math.max(3,Math.min(5000,v+273.15));b.heat=0;b.tOff=b.tOff||0;for(let i=0;i<8;i++)b.tOff+=K-targetTemp(b,K).T;b.T=b.Tday=b.Tnight=K;b.climate=climateOf(b,K);
+    toast(`${b.name||classify(b)} now averages ${fmtTK(K)}`);chEv('settemp',{name:b.name,T:K})}
+  else{const K=Math.max(500,Math.min(200000,v));if(!('TeffNat' in b))b.TeffNat=b.Teff||0;b.Teff=K;if(b.type==='star'||b.type==='dwarf')b.color=tempColor(K);
+    toast(`${b.name||classify(b)} now has a ${Math.round(K)} K surface`);chEv('settemp',{name:b.name,T:K,star:1})}
+  TEMPSET++;fillTemp(b)}));
+$('eTSet').addEventListener('keydown',e=>{if(e.key==='Enter')$('eTGo').click()});
+$('eTNat').addEventListener('click',edited(b=>{if(b.type==='rock'){b.tOff=0}else if('TeffNat' in b){b.Teff=b.TeffNat||undefined;delete b.TeffNat;if(b.type==='star'||b.type==='dwarf')b.color=tempColor(starTemp(b))}$('eTSet').blur();fillTemp(b)}));
+// ---- Collide with ----
+function fillColl(b){const sel=$('eCollT'),keep=b.homeT&&!b.homeT.dead?b.homeT:null;sel.textContent='';
+  const opts=S.bodies.filter(q=>q!==b&&(q.name||q.type!=='rock')).map(q=>[q,Math.hypot(q.x-b.x,q.y-b.y,q.z-b.z)]).sort((x,y)=>x[1]-y[1]).slice(0,200);
+  if(!opts.length){const o=document.createElement('option');o.value='';o.textContent='Nothing else to hit';sel.appendChild(o)}
+  for(const [q,d] of opts){const o=document.createElement('option');o.value=String(q.id);o.textContent=`${q.name||classify(q)} · ${fmtDist(d)}`;sel.appendChild(o)}
+  if(keep)sel.value=String(keep.id);$('eCollGo').disabled=!opts.length;
+  $('eCollGo').textContent=keep?'Stop':'Collide';$('eCollNote').textContent=keep?`On a collision course with ${keep.name||classify(keep)}. Let time run to see the impact.`:''}
+function homingStep(){for(let i=HOMERS.length-1;i>=0;i--){const b=HOMERS[i],q=b.homeT;
+  if(b.dead||!q||q.dead){b.homeT=null;HOMERS.splice(i,1);continue}
+  const r=[q.x-b.x,q.y-b.y,q.z-b.z],d=Math.hypot(...r)||1e-12,s=b.homeV;b.vx=q.vx+r[0]/d*s;b.vy=q.vy+r[1]/d*s;b.vz=q.vz+r[2]/d*s}}
+$('eCollT').addEventListener('change',()=>{const b=S.sel;if(b&&b.homeT){b.homeT=null;fillColl(b)}});
+$('eCollGo').addEventListener('click',edited(b=>{
+  if(b.homeT){b.homeT=null;const i=HOMERS.indexOf(b);if(i>=0)HOMERS.splice(i,1);toast('Collision course cancelled: it keeps its current speed');fillColl(b);return}
+  const q=S.bodies.find(x=>String(x.id)===$('eCollT').value);if(!q)return;
+  const d=Math.hypot(q.x-b.x,q.y-b.y,q.z-b.z),vr=Math.hypot(b.vx-q.vx,b.vy-q.vy,b.vz-q.vz),esc=Math.sqrt(2*G*(b.m+q.m)/Math.max(d,1e-9));
+  b.homeV=Math.max(vr,d/(0.08*Math.max(1,Math.sqrt(d))),1.3*esc);b.homeT=q;if(!HOMERS.includes(b))HOMERS.push(b);b.locked=false;b.forceLock=false;
+  COLLS++;chEv('aim',{a:b.name,b:q.name});if(S.paused)toast(`Aimed at ${q.name||classify(q)}: press play to watch the crash`);else toast(`${b.name||classify(b)} is heading for ${q.name||classify(q)} at ${Math.round(b.homeV*KMS)} km/s`);
+  fillColl(b)}));
 $('eWater').addEventListener('input',edited(b=>{if(b.type!=='rock')return;b.water=$('eWater').value/100;$('eWaterO').textContent=$('eWater').value+'%';if(b.tex)b.tex.key=''}));
 $('eAtm').addEventListener('input',edited(b=>{if(b.type!=='rock')return;b.atm=atmFromSlider(+$('eAtm').value);$('eAtmO').textContent=fmtAtm(b.atm)}));
 $('eRing').addEventListener('change',edited(b=>{if(b.type!=='rock')return;const k=$('eRing').value;b.ring=k?makeRing(k):null}));
@@ -2338,9 +2388,9 @@ $('eDup').addEventListener('click',edited(b=>{const p=parentOf(b),o=snapBody(b);
   else pos=[b.x+b.r*6,b.y,b.z];
   const c=restoreBody({...o,x:pos[0],y:pos[1],z:pos[2],vx:vel[0],vy:vel[1],vz:vel[2],name:(b.name||classify(b))+' II'});select(c);toast(`Placed ${c.name} on the opposite side of the orbit`)}));
 /* ---------- saving and sharing ---------- */
-const NUMK=['m','x','y','z','vx','vy','vz','rScale','water','atm','heat','tint','tail','w','spin'];
+const NUMK=['m','x','y','z','vx','vy','vz','rScale','water','atm','heat','tint','tOff','tail','w','spin'];
 function snapBody(b){return{bd:b.bd,black:b.black,rTrue:b.rTrue,Lsun:b.Lsun,Teff:b.Teff,cat:b.cat,type:b.type,m:b.m,x:b.x,y:b.y,z:b.z,vx:b.vx,vy:b.vy,vz:b.vz,name:b.name,anon:b.anon,color:b.color,rScale:b.rScale,kindLabel:b.kindLabel,style:b.style,giant:b.giant,
-  water:b.water,atm:b.atm,heat:b.heat,tint:b.tint,gases:b.gases,mag:b.mag,magTilt:b.magTilt,veg:b.veg,cities:b.cities,contrast:b.contrast,surf:b.surf,gasLook:b.gasLook,texSeed:b.texSeed,forceLock:b.forceLock,showField:b.showField,comet:b.comet,tail:b.tailLen,shape:b.shape,axis:b.axis,w:b.w,spin:b.spin,locked:b.locked,
+  water:b.water,atm:b.atm,heat:b.heat,tint:b.tint,tOff:b.tOff,gases:b.gases,mag:b.mag,magTilt:b.magTilt,veg:b.veg,cities:b.cities,contrast:b.contrast,surf:b.surf,gasLook:b.gasLook,texSeed:b.texSeed,forceLock:b.forceLock,showField:b.showField,comet:b.comet,tail:b.tailLen,shape:b.shape,axis:b.axis,w:b.w,spin:b.spin,locked:b.locked,
   ring:b.ring?{kind:b.ring.kind,inner:b.ring.inner,outer:b.ring.outer,seed:b.ring.seed,radii:b.ring.radii,w:b.ring.w}:null}}
 function restoreBody(o){
   const ok=['rock','star','dwarf','neutron','blackhole'].includes(o.type)&&['m','x','y','z','vx','vy','vz'].every(k=>Number.isFinite(o[k]))&&o.m>0;if(!ok)return null;
@@ -2348,7 +2398,7 @@ function restoreBody(o){
   const ax=Array.isArray(o.axis)&&o.axis.length===3&&o.axis.every(Number.isFinite)?norm(o.axis):undefined;
   const rg=o.ring&&typeof o.ring==='object'&&['saturn','thin','icy','narrow'].includes(o.ring.kind)?{kind:o.ring.kind,inner:+o.ring.inner||1.3,outer:+o.ring.outer||2.2,seed:+o.ring.seed||1,radii:Array.isArray(o.ring.radii)?o.ring.radii.map(Number).filter(Number.isFinite):undefined,w:+o.ring.w||0.03}:null;
   const b=addBody({bd:!!o.bd,black:!!o.black,rTrue:+o.rTrue>0?+o.rTrue:undefined,Lsun:+o.Lsun>0?+o.Lsun:undefined,Teff:+o.Teff>0?+o.Teff:undefined,cat:+o.cat>0?+o.cat:undefined,type:o.type,m:o.m,x:o.x,y:o.y,z:o.z,vx:o.vx,vy:o.vy,vz:o.vz,name:String(o.name||'').slice(0,40),anon:!!o.anon,color:/^#[0-9a-f]{6}$/i.test(o.color)?o.color:undefined,
-    rScale:o.rScale,kindLabel:String(o.kindLabel||'').slice(0,30),style:String(o.style||'').slice(0,16),giant:!!o.giant,water:o.water,atm:o.atm,heat:o.heat,tint:o.tint,comet:!!o.comet,tail:o.tail,
+    rScale:o.rScale,kindLabel:String(o.kindLabel||'').slice(0,30),style:String(o.style||'').slice(0,16),giant:!!o.giant,water:o.water,atm:o.atm,heat:o.heat,tint:o.tint,tOff:+o.tOff||0,comet:!!o.comet,tail:o.tail,
     shape:Array.isArray(o.shape)&&o.shape.length===3&&o.shape.every(Number.isFinite)?o.shape:undefined,axisN:ax,ringObj:rg||undefined,ring:rg?undefined:false});
   if(b.type==='rock'){
     if(o.gases&&typeof o.gases==='object'){const gs={};for(const [g] of GASES){const v=+o.gases[g];if(v>0)gs[g]=Math.min(100,v)}if(Object.keys(gs).length)b.gases=gs}
@@ -2967,7 +3017,7 @@ const scenEl=$('scen');
 for(const s of SCEN){const b=document.createElement('button');b.innerHTML=`<span class="t">${s.t}</span><span class="d">${s.d}</span>`;
   b.addEventListener('click',()=>{load(s);closeScen()});scenEl.appendChild(b)}
 function setReal(v){S.realSize=v;$('tReal').setAttribute('aria-pressed',v);for(const b of S.bodies)b.r=radiusFor(b);S.dirty=true}
-function load(s){if(CH.active&&!CH.loading)endChallenge();if(TUT.on&&!CH.loading)endTutorial();clear();if(s.exag&&S.realSize){setReal(false);toast('This scene uses enlarged sizes so bodies can collide')}setTog('zones','tZones',!!s.zones);if(s.id!=='empty')setTool('select');s.run();setPaused(false)}
+function load(s){HOMERS.length=0;if(CH.active&&!CH.loading)endChallenge();if(TUT.on&&!CH.loading)endTutorial();clear();if(s.exag&&S.realSize){setReal(false);toast('This scene uses enlarged sizes so bodies can collide')}setTog('zones','tZones',!!s.zones);if(s.id!=='empty')setTool('select');s.run();setPaused(false)}
 function closeScen(){scenEl.hidden=true;$('scenBtn').setAttribute('aria-expanded','false');$('create').hidden=true;$('createBtn').setAttribute('aria-expanded','false')}
 $('createBtn').addEventListener('click',()=>{const open=$('create').hidden;closeScen();$('create').hidden=!open;$('createBtn').setAttribute('aria-expanded',open);if(open){$('insp').hidden=true;renderSaved()}else if(S.sel)$('insp').hidden=false});
 $('scenBtn').addEventListener('click',()=>{const open=scenEl.hidden;$('create').hidden=true;$('createBtn').setAttribute('aria-expanded','false');scenEl.hidden=!open;$('scenBtn').setAttribute('aria-expanded',open);if(open)$('insp').hidden=true;else if(S.sel)$('insp').hidden=false});
@@ -3195,6 +3245,8 @@ CCN(2.05,{t:'On the board',g:'Open the 🏆 leaderboard (👤 at the top, then W
 CCN(1.45,{t:'Edge of no return',g:'Find Sagittarius A*, the black hole at the centre of our galaxy, and look at its event horizon.',hint:'Type Sagittarius A* (or sgr a) in the search bar and press Enter or Add. Its event horizon is the dashed red ring.',setup:scen('solar'),check:()=>{const ok=S.sel&&S.sel.type==='blackhole'&&/Sagittarius/.test(S.sel.name||'');return[ok,ok?1:0,ok?'You are looking at the event horizon':'Not found yet']},stars:byTime(30,70)});
 CCN(2.2,{t:'Star factory',g:'Add a star-forming nebula and watch 3 new stars ignite inside it.',hint:'Search for Orion Nebula, Eagle Nebula or a molecular cloud and press Add, then speed up time.',setup:scen('empty'),check:()=>{const n=evHas?CH.events.filter(e=>e.k==='newstar').length:0;return[n>=3,n/3,`${Math.min(n,3)} of 3 new stars`]},stars:byTime(40,100)});
 CCN(1.6,{t:'Interstellar',g:'Travel more than one light-year away from the Sun.',hint:'Press Travel in the top bar, type 1.5 and choose light-years, then press Go.',setup:scen('solar'),check:()=>{const o=sunPos(),d=Math.hypot(cam.tx-o[0],cam.ty-o[1],cam.tz-o[2])/63241.1;return[d>1,Math.min(1,d),`${d<0.01?'Still near the Sun':d.toFixed(2)+' light-years out'}`]},stars:byTime(25,60)});
+CCN(1.5,{t:'Bullseye',g:'Use Collide with to crash Mars into Jupiter.',hint:'Click Mars, open the Edit tab, choose Jupiter under Collide with, press Collide, then press play.',setup:scen('solar'),check:()=>{const ok=merged('Mars','Jupiter');const aim=evHas(e=>e.k==='aim'&&e.a==='Mars');return[ok,ok?1:aim?0.5:0,ok?'Direct hit!':aim?'Mars is on its way…':'Mars is still in orbit']},stars:byTime(25,60)});
+CCN(1.2,{t:'Blue Sun',g:'Turn the Sun blue-white by raising its surface temperature above 10,000 K.',hint:'Click the Sun, open the Edit tab and type 12000 under Average temperature, then press Set.',setup:scen('solar'),check:()=>{const b=BN('Sun'),T=b?starTemp(b):0;return[T>10000,Math.min(1,Math.max(0,(T-5772)/(10000-5772))),`Surface ${Math.round(T)} K`]},stars:byTime(20,50)});
 CHALS.sort((a,b)=>a.diff-b.diff);
 loadProg();
 const NCH=CHALS.length;
@@ -3273,6 +3325,8 @@ const TSTEPS=[
  ['Event horizon','Click a black hole: the dashed red ring is its event horizon, the edge nothing can escape. The info panel shows how big it is.',()=>S.sel&&S.sel.type==='blackhole'],
  ['Nebulas','Pick Nebula in the toolbar and click in space (or search for Orion Nebula and press Add). New stars form inside star-forming nebulas.',r=>NEBADD>r.n,r=>{r.n=NEBADD}],
  ['Travel','Press Travel in the top bar, type a distance (try 4.24 light-years) and press Go.',r=>TRAVELS>r.n,r=>{r.n=TRAVELS}],
+ ['Collide with','Click a planet, open Edit, choose a target under Collide with and press Collide. Let time run to watch the crash.',r=>COLLS>r.n,r=>{r.n=COLLS}],
+ ['Average temperature','In Edit, type a new value under Average temperature (try 20 °C on Mars) and press Set. It works on stars too.',r=>TEMPSET>r.n,r=>{r.n=TEMPSET}],
  ['Views','Try the toolbar views: turn on Zones (habitable zones), Heat (temperature map) or Sky (background stars).',r=>S.zones!==r.z||S.heat!==r.h||S.sky!==r.s,r=>{r.z=S.zones;r.h=S.heat;r.s=S.sky}],
 ];
 function startTutorial(){leaveHome();countPlay('tut');$('chDone').hidden=true;CH.loading=true;load(SCEN.find(x=>x.id==='solar'));CH.loading=false;TUT.on=true;TUT.i=0;TUT.finished=false;tutStep()}
