@@ -256,7 +256,7 @@ body.mHome .legend,body.mDemo .legend{display:none!important}@media (max-width:7
       <div class="hacct"><button class="chip" id="hAcctBtn">👤 <span id="hAcctName">Guest</span></button><button class="chip" id="hPlays" title="Total plays by everyone">▶ <b id="hPlaysN">0</b> <span id="hPlaysL">plays</span></button><button class="chip" id="hLb" title="Leaderboard">🏆 Leaderboard</button><style>.sims{position:relative;display:inline-block;z-index:70}.hhead{position:relative;z-index:20}.sims>summary{list-style:none;cursor:pointer}.sims>summary::-webkit-details-marker{display:none}
 .sims[open]>summary{background:rgba(255,255,255,.08)}.simsP{position:absolute;left:0;top:calc(100% + 6px);z-index:60;width:min(320px,86vw);padding:8px;border-radius:12px;background:#0c101c;border:1px solid rgba(255,255,255,.14);box-shadow:0 12px 40px rgba(0,0,0,.55);display:grid;gap:6px;text-align:left}
 .simsP a{display:grid;grid-template-columns:auto 1fr;gap:2px 10px;align-items:center;padding:9px 10px;border-radius:9px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.03);color:#e3e8f4;text-decoration:none;font:inherit}
-.simsP a:hover,.simsP a:focus-visible{background:rgba(255,255,255,.08);border-color:var(--sc,#7fe0a8)}.simsP .si{grid-row:span 2;font-size:24px}.simsP b{color:var(--sc,#fff);font-size:14px}.simsP small{color:#8b95ae;font-size:11.5px;line-height:1.3}.simsP .sn{color:#8b95ae;font-size:11px;padding:2px 4px}</style><details class="sims" id="hSims"><summary class="chip" title="Our other simulators">🧪 Try our other simulators ▾</summary><div class="simsP" id="hSimsP"></div></details><script>(()=>{const ME="troposphere",LIST=[{"id": "barycenter", "icon": "🪐", "name": "Barycenter", "tag": "Gravity, planets, stars and black holes", "url": "https://jacob711-oss.github.io/barycenter/", "color": "#e8b04a"}, {"id": "biosphere", "icon": "🌿", "name": "Biosphere", "tag": "A living world of animals, plants and people", "url": "https://jacob711-oss.github.io/barycenter/life/", "color": "#7fe0a8"}, {"id": "lithosphere", "icon": "🌋", "name": "Lithosphere", "tag": "Drift continents, raise mountains and set off volcanoes", "url": "https://jacob711-oss.github.io/barycenter/lithosphere/", "color": "#ff8a5c"}, {"id": "troposphere", "icon": "🌀", "name": "Troposphere", "tag": "Steer winds, brew hurricanes and change the climate", "url": "https://jacob711-oss.github.io/barycenter/troposphere/", "color": "#60d6e6"}, {"id": "catalyst", "icon": "⚛️", "name": "Catalyst", "tag": "Mix atoms, spark reactions and build molecules", "url": "https://jacob711-oss.github.io/barycenter/catalyst/", "color": "#c48bff"}],P=document.getElementById('hSimsP'),D=document.getElementById('hSims');
+.simsP a:hover,.simsP a:focus-visible{background:rgba(255,255,255,.08);border-color:var(--sc,#7fe0a8)}.simsP .si{grid-row:span 2;font-size:24px}.simsP b{color:var(--sc,#fff);font-size:14px}.simsP small{color:#8b95ae;font-size:11.5px;line-height:1.3}.simsP .sn{color:#8b95ae;font-size:11px;padding:2px 4px}</style><details class="sims" id="hSims"><summary class="chip" title="Our other simulators">🧪 Try our other simulators ▾</summary><div class="simsP" id="hSimsP"></div></details><script>(()=>{const ME="troposphere",LIST=[{"id": "barycenter", "icon": "🪐", "name": "Barycenter", "tag": "Gravity, planets, stars and black holes", "url": "https://jacob711-oss.github.io/barycenter/", "color": "#e8b04a"}, {"id": "biosphere", "icon": "🌿", "name": "Biosphere", "tag": "A living world of animals, plants and people", "url": "https://jacob711-oss.github.io/barycenter/life/", "color": "#7fe0a8"}, {"id": "lithosphere", "icon": "🌋", "name": "Lithosphere", "tag": "Drift continents, raise mountains and set off volcanoes", "url": "https://jacob711-oss.github.io/barycenter/lithosphere/", "color": "#ff8a5c"}, {"id": "troposphere", "icon": "🌀", "name": "Troposphere", "tag": "Steer winds, brew hurricanes and change the climate", "url": "https://jacob711-oss.github.io/barycenter/troposphere/", "color": "#60d6e6"}, {"id": "catalyst", "icon": "⚛️", "name": "Catalyst", "tag": "Mix atoms, spark reactions and build molecules", "url": "https://jacob711-oss.github.io/barycenter/catalyst/", "color": "#c48bff"}, {"id": "abyssal", "icon": "🐋", "name": "Abyssal", "tag": "Dive into a living ocean, from coral reefs to the deep sea", "url": "https://jacob711-oss.github.io/barycenter/abyssal/", "color": "#4fa3ff"}],P=document.getElementById('hSimsP'),D=document.getElementById('hSims');
 const draw=l=>{P.textContent='';for(const s of l){if(s.id===ME||!s.url)continue;const a=document.createElement('a');a.href=s.url;a.target='_blank';a.rel='noopener';a.style.setProperty('--sc',s.color||'#7fe0a8');
 a.innerHTML='<span class="si"></span><b></b><small></small>';a.children[0].textContent=s.icon||'🧪';a.children[1].textContent=s.name;a.children[2].textContent=s.tag||'';P.appendChild(a)}
 const n=document.createElement('div');n.className='sn';n.textContent='More simulators coming soon.';P.appendChild(n)};draw(LIST);
@@ -313,6 +313,7 @@ document.addEventListener('pointerdown',e=>{if(D.open&&!D.contains(e.target))D.o
     <div class="hbar"><h2>🏆 Leaderboard</h2><button class="btn" id="lbClose" aria-label="Close">×</button></div>
     <div class="lbtabs" id="lbTabs"></div>
     <p class="hfoot" id="lbMe"></p>
+    <div class="row" id="lbTogRow"><label class="hfoot" style="display:flex;gap:8px;align-items:center;margin:0"><input type="checkbox" id="lbWorld"> Show me on the world leaderboard</label><button class="btn" id="lbOut">↩ Sign out</button></div>
     <div id="lbList" class="hview" style="gap:4px"></div>
     <p class="hfoot" id="lbNote"></p>
   </div>
@@ -320,7 +321,7 @@ document.addEventListener('pointerdown',e=>{if(D.open&&!D.contains(e.target))D.o
 
 
 <script>
-const SIMLIST=[{"id": "barycenter", "icon": "🪐", "name": "Barycenter", "tag": "Gravity, planets, stars and black holes", "url": "https://jacob711-oss.github.io/barycenter/", "color": "#e8b04a"}, {"id": "biosphere", "icon": "🌿", "name": "Biosphere", "tag": "A living world of animals, plants and people", "url": "https://jacob711-oss.github.io/barycenter/life/", "color": "#7fe0a8"}, {"id": "lithosphere", "icon": "🌋", "name": "Lithosphere", "tag": "Drift continents, raise mountains and set off volcanoes", "url": "https://jacob711-oss.github.io/barycenter/lithosphere/", "color": "#ff8a5c"}, {"id": "troposphere", "icon": "🌀", "name": "Troposphere", "tag": "Steer winds, brew hurricanes and change the climate", "url": "https://jacob711-oss.github.io/barycenter/troposphere/", "color": "#60d6e6"}, {"id": "catalyst", "icon": "⚛️", "name": "Catalyst", "tag": "Mix atoms, spark reactions and build molecules", "url": "https://jacob711-oss.github.io/barycenter/catalyst/", "color": "#c48bff"}],LB_GAME="troposphere";
+const SIMLIST=[{"id": "barycenter", "icon": "🪐", "name": "Barycenter", "tag": "Gravity, planets, stars and black holes", "url": "https://jacob711-oss.github.io/barycenter/", "color": "#e8b04a"}, {"id": "biosphere", "icon": "🌿", "name": "Biosphere", "tag": "A living world of animals, plants and people", "url": "https://jacob711-oss.github.io/barycenter/life/", "color": "#7fe0a8"}, {"id": "lithosphere", "icon": "🌋", "name": "Lithosphere", "tag": "Drift continents, raise mountains and set off volcanoes", "url": "https://jacob711-oss.github.io/barycenter/lithosphere/", "color": "#ff8a5c"}, {"id": "troposphere", "icon": "🌀", "name": "Troposphere", "tag": "Steer winds, brew hurricanes and change the climate", "url": "https://jacob711-oss.github.io/barycenter/troposphere/", "color": "#60d6e6"}, {"id": "catalyst", "icon": "⚛️", "name": "Catalyst", "tag": "Mix atoms, spark reactions and build molecules", "url": "https://jacob711-oss.github.io/barycenter/catalyst/", "color": "#c48bff"}, {"id": "abyssal", "icon": "🐋", "name": "Abyssal", "tag": "Dive into a living ocean, from coral reefs to the deep sea", "url": "https://jacob711-oss.github.io/barycenter/abyssal/", "color": "#4fa3ff"}],LB_GAME="troposphere";
 /* ===== simulator kit: core helpers shared by every simulator ===== */
 const $=id=>document.getElementById(id);
 const clamp=(v,a,b)=>v<a?a:v>b?b:v,lerp=(a,b,t)=>a+(b-a)*t,rr=(a,b)=>a+Math.random()*(b-a),ri=(a,b)=>Math.floor(rr(a,b+1)),pick=a=>a[Math.floor(Math.random()*a.length)];
@@ -828,7 +829,7 @@ cv.addEventListener('pointermove',e=>{const p=ptrs.get(e.pointerId);if(p){p.x=e.
   const dx=e.clientX-drag.lx,dy=e.clientY-drag.ly;drag.lx=e.clientX;drag.ly=e.clientY;drag.moved+=Math.abs(dx)+Math.abs(dy);
   if(drag.pan){S.follow=false;cam.x-=dx/cam.z;cam.y-=dy/cam.z;clampCam();CNT.moved+=Math.abs(dx)+Math.abs(dy)}else SIM.pointer('drag',wxOf(e.clientX),wyOf(e.clientY),e)});
 function endPtr(e){ptrs.delete(e.pointerId);if(ptrs.size<2)pinch=null;if(!drag)return;const d=drag;drag=null;
-  if(d.tool)SIM.pointer('up',wxOf(e.clientX),wyOf(e.clientY),e);else if(d.moved<6&&e.button!==2){S.follow=false;S.sel=SIM.pick(wxOf(e.clientX),wyOf(e.clientY))||null;if(S.sel&&SIM.inspectTab){showTab(SIM.inspectTab);document.body.classList.add('dockOpen')}if(SIM.selChanged)SIM.selChanged()}}
+  if(d.tool)SIM.pointer('up',wxOf(e.clientX),wyOf(e.clientY),e);else if(d.moved<6&&e.button!==2){S.follow=false;S.sel=SIM.pick(wxOf(e.clientX),wyOf(e.clientY))||null;if(S.sel&&SIM.inspectTab){showTab(SIM.inspectTab);document.body.classList.add('dockOpen')}if(SIM.selChanged)SIM.selChanged();deselBtn()}}
 cv.addEventListener('pointerup',endPtr);cv.addEventListener('pointercancel',endPtr);
 cv.addEventListener('dblclick',e=>{if(S.sel&&S.tool==='select'&&SIM.canFollow){S.follow=true;cam.z=Math.max(cam.z,SIM.world.followZ||cam.z)}});
 cv.addEventListener('wheel',e=>{e.preventDefault();zoomAt(Math.exp(-e.deltaY*0.0015),e.clientX,e.clientY)},{passive:false});
@@ -937,7 +938,7 @@ $('hWatch').onclick=startDemo;$('demoExit').onclick=()=>stopDemo();$('demoNext')
 let last=performance.now(),uiT=0,achAcc=0,achT=0,renderMs=4,stepMs=1;S.achieved=1;
 function frame(now){const dtR=Math.min(0.1,(now-last)/1000);last=now;camKeys(dtR);
   try{
-    if(!S.paused){const want=S.speed*dtR,step=SIM.stepSize(S.speed),t0=performance.now(),budget=clamp(12.5-renderMs,2.5,9);let done=0;
+    if(!S.paused){const want=S.speed*dtR,step=SIM.stepSize(S.speed),t0=performance.now(),budget=clamp((SIM.budget||12.5)-renderMs,2,9);let done=0;
       while(done<want-1e-12){const el=performance.now()-t0;if(el+stepMs*0.9>budget&&done>0)break;const s0=performance.now(),d=Math.min(step,want-done);SIM.step(d);S.t+=d;done+=d;stepMs=stepMs*0.8+(performance.now()-s0)*0.2}
       achAcc+=done}
     achT+=dtR;if(achT>=0.5){S.achieved=achAcc/achT;achAcc=0;achT=0}
@@ -947,7 +948,9 @@ function frame(now){const dtR=Math.min(0.1,(now-last)/1000);last=now;camKeys(dtR
     uiT+=dtR;if(uiT>0.25){uiT=0;updateHud()}
   }catch(err){console.error('['+SIM.name+']',err)}
   requestAnimationFrame(frame)}
-function updateHud(){measureHud();const st=SIM.stats(),box=$('stats');if(box.children.length!==st.length){box.textContent='';for(const [k] of st){const d=document.createElement('div');d.className='stat';d.innerHTML='<span class="k"></span><span class="v"></span>';d.children[0].textContent=k;box.appendChild(d)}}
+function deselect(){S.sel=null;S.follow=false;if(SIM.selChanged)SIM.selChanged()}
+function deselBtn(){const p=$('pane-insp');if(!p)return;let b=$('kitDesel');if(!b){b=document.createElement('button');b.id='kitDesel';b.className='btn';b.textContent='✕ Stop inspecting';b.onclick=deselect;p.insertBefore(b,p.firstChild)}b.hidden=!S.sel}
+function updateHud(){deselBtn();measureHud();const st=SIM.stats(),box=$('stats');if(box.children.length!==st.length){box.textContent='';for(const [k] of st){const d=document.createElement('div');d.className='stat';d.innerHTML='<span class="k"></span><span class="v"></span>';d.children[0].textContent=k;box.appendChild(d)}}
   st.forEach(([k,v],i)=>{box.children[i].children[1].textContent=v});$('dateTxt').textContent=SIM.dateTxt();$('dateSub').textContent=SIM.dateSub?SIM.dateSub():'';updateRate();SIM.hud();chTick();
   if(document.visibilityState==='visible'&&$('home').hidden)PROG.secs=(PROG.secs||0)+0.25}
 addEventListener('resize',resize);addEventListener('pagehide',saveProg);
@@ -956,11 +959,27 @@ resize();buildRail();buildSpeeds();buildScen();if(SIM.init)SIM.init();setSpeed(S
 /* ===== leaderboard: every account's stars, in this simulator and across all of them (shared by every simulator) ===== */
 // needs: LB_GAME (this game's id), SIMLIST (all games), ACC, lsGet, curAcc, toast
 let LBOPEN=0,LBTAB=LB_GAME;
+// world leaderboard: an online table shared by every game (see supabase-setup.sql). Empty until the database is connected.
+const LB_URL='',LB_KEY='';const lbWorldOn=()=>!!(LB_URL&&LB_KEY);let lbWorldCache={};
+function lbFetch(path,body){const h={apikey:LB_KEY,'content-type':'application/json'};if(/^eyJ/.test(LB_KEY))h.authorization='Bearer '+LB_KEY;const ctl=new AbortController();setTimeout(()=>ctl.abort(),8000);
+  return fetch(LB_URL.replace(/\/$/,'')+path,{method:body?'POST':'GET',headers:h,body:body?JSON.stringify(body):undefined,signal:ctl.signal,cache:'no-store'}).then(r=>{if(!r.ok)throw new Error('HTTP '+r.status);return r.status===204?null:r.json()})}
+function lbIds(a){if(!a.uid){a.uid=(crypto.randomUUID?crypto.randomUUID():'xxxxxxxx-xxxx-4xxx-8xxx-xxxxxxxxxxxx'.replace(/x/g,()=>(Math.random()*16|0).toString(16)));a.sec=Math.random().toString(36).slice(2)+Math.random().toString(36).slice(2);if(typeof saveAcc==='function')saveAcc()}}
+function lbPost(){const a=curAcc();if(!a||!lbWorldOn())return;lbIds(a);const r=lbStars(LB_GAME,a.id);
+  if(a.lb)lbFetch('/rest/v1/rpc/submit_game_score',{p_id:a.uid,p_secret:a.sec,p_game:LB_GAME,p_name:a.name,p_stars:r.stars,p_done:r.done}).then(()=>{lbWorldCache={}}).catch(()=>{});
+  else lbFetch('/rest/v1/rpc/remove_game_score',{p_id:a.uid,p_secret:a.sec,p_game:LB_GAME}).catch(()=>{})}
 const lbStars=(game,accId)=>{const k=game+'.progress'+(accId==='guest'?'':'.'+accId);let v=null;try{v=JSON.parse(localStorage.getItem(k)||'null')}catch(e){}const st=(v&&v.stars)||{};return{stars:Object.values(st).reduce((a,b)=>a+(+b||0),0),done:Object.values(st).filter(x=>x>0).length}};
 function lbRow(i,name,stars,sub,me){const r=document.createElement('div');r.className='lbrow'+(me?' me':'')+(i<3&&stars>0?' top'+(i+1):'');
   r.innerHTML='<span class="r"></span><span class="nm"></span><span class="st"></span><span class="dn"></span>';r.children[0].textContent=i<3&&stars>0?['🥇','🥈','🥉'][i]:'#'+(i+1);r.children[1].textContent=name+(me?' (you)':'');r.children[2].textContent='★ '+stars;r.children[3].textContent=sub;return r}
 function renderLb(){if(typeof saveProg==='function')saveProg();const T=$('lbTabs');T.textContent='';
-  for(const [id,lab] of [[LB_GAME,(SIMLIST.find(s=>s.id===LB_GAME)||{name:'This game'}).name],['all','All simulators'],...SIMLIST.filter(s=>s.id!==LB_GAME).map(s=>[s.id,s.name])]){const b=document.createElement('button');b.textContent=lab;b.setAttribute('aria-pressed',LBTAB===id);b.onclick=()=>{LBTAB=id;renderLb()};T.appendChild(b)}
+  for(const [id,lab] of [['world','🌍 World'],[LB_GAME,(SIMLIST.find(s=>s.id===LB_GAME)||{name:'This game'}).name],['all','All simulators'],...SIMLIST.filter(s=>s.id!==LB_GAME).map(s=>[s.id,s.name])]){const b=document.createElement('button');b.textContent=lab;b.setAttribute('aria-pressed',LBTAB===id);b.onclick=()=>{LBTAB=id;renderLb()};T.appendChild(b)}
+  const a0=curAcc();$('lbTogRow').hidden=!a0;if(a0)$('lbWorld').checked=!!a0.lb;
+  if(LBTAB==='world'){const L=$('lbList');L.textContent='';const msg=t=>{const e=document.createElement('p');e.className='hfoot';e.textContent=t;L.appendChild(e)};
+    $('lbMe').textContent=a0?`You: ${a0.name}${a0.lb?' · on the world board':' · tick the box below to join the world board'}`:'Sign in (👤) to join the world leaderboard.';
+    if(!lbWorldOn()){msg('The worldwide leaderboard is switched off until its online database is connected. Your choice to appear on it is saved, and your stars will be posted as soon as it is switched on.');$('lbNote').textContent='';return}
+    const show=list=>{L.textContent='';if(!list.length)msg('Nobody yet: finish a challenge to be first!');list.forEach((x,i)=>L.appendChild(lbRow(i,x.name,x.stars,x.done+' done',a0&&x.id===a0.uid)))};
+    if(lbWorldCache[LB_GAME])show(lbWorldCache[LB_GAME]);else msg('Loading…');
+    lbFetch(`/rest/v1/game_scores_top?select=id,name,stars,done&game=eq.${LB_GAME}&order=stars.desc,updated_at.asc&limit=50`).then(l=>{lbWorldCache[LB_GAME]=l||[];if(LBTAB==='world'&&!$('lbBox').hidden)show(lbWorldCache[LB_GAME])}).catch(()=>{if(!lbWorldCache[LB_GAME]){L.textContent='';msg('Could not reach the world leaderboard. Check your internet connection.')}});
+    $('lbNote').textContent='Top players worldwide in this simulator.';return}
   const games=LBTAB==='all'?SIMLIST.map(s=>s.id):[LBTAB],L=$('lbList');L.textContent='';
   const rows=ACC.list.map(a=>{let st=0,dn=0,gp=0;for(const g of games){const r=lbStars(g,a.id);st+=r.stars;dn+=r.done;if(r.stars)gp++}return{name:a.name,stars:st,sub:LBTAB==='all'?`${gp} game${gp===1?'':'s'}`:`${dn} done`,me:a.id===ACC.cur}}).sort((x,y)=>y.stars-x.stars||x.name.localeCompare(y.name));
   rows.forEach((x,i)=>L.appendChild(lbRow(i,x.name,x.stars,x.sub,x.me)));
@@ -970,6 +989,12 @@ function renderLb(){if(typeof saveProg==='function')saveProg();const T=$('lbTabs
 function openLb(){LBOPEN++;if($('acct'))$('acct').hidden=true;$('lbBox').hidden=false;renderLb();if(typeof chEv==='function')chEv('leaderboard',{})}
 $('lbClose').onclick=()=>$('lbBox').hidden=true;$('lbBox').addEventListener('click',e=>{if(e.target.id==='lbBox')$('lbBox').hidden=true});
 for(const id of ['hLb','acctLb','dLb'])if($(id))$(id).addEventListener('click',openLb);
+$('lbWorld').addEventListener('change',()=>{const a=curAcc();if(!a)return;a.lb=$('lbWorld').checked;if(typeof saveAcc==='function')saveAcc();lbPost();toast(a.lb?'🌍 You are on the world leaderboard':'Hidden from the world leaderboard');renderLb()});
+$('lbOut').onclick=()=>{switchAcc('guest');renderLb()};
+// a sign-out button on the home page while signed in
+{const h=$('hAcctBtn');if(h&&!$('hOut')){const b=document.createElement('button');b.className='chip';b.id='hOut';b.textContent='↩ Sign out';b.title='Sign out (back to guest)';b.onclick=()=>switchAcc('guest');h.after(b)}
+  setInterval(()=>{const b=$('hOut');if(b)b.hidden=!curAcc()},500)}
+setInterval(lbPost,60000);setTimeout(lbPost,3000);
 
 </script>
 </body>

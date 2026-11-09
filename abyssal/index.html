@@ -1,0 +1,919 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="Dive into a living ocean: reefs, kelp forests, whales and sharks, and the strange creatures of the deep">
+<title>Abyssal Sandbox</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Oxanium:wght@500;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Simulator kit: shared with Barycenter and Biosphere */
+:root{
+  --voidRGB:3,8,18;--deepRGB:5,12,26;--accRGB:79,163,255;--lineRGB:140,180,230;--panel:rgba(6,14,30,.86);--ink:#e4eefa;--ink2:#c9d8ea;--dim:#8a9db6;
+  --void:rgb(var(--voidRGB));
+  --line:rgba(var(--lineRGB),.16);
+  --line-strong:rgba(var(--lineRGB),.34);
+  --flare:#ffc35a;
+  --cool:rgb(var(--accRGB));
+  --danger:#ff6b5a;
+  --f-display:'Oxanium','Segoe UI',system-ui,sans-serif;
+  --f-body:'IBM Plex Sans',system-ui,-apple-system,sans-serif;
+  --f-mono:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+  --gut:max(16px, env(safe-area-inset-left, 0px));
+  --gutR:max(16px, env(safe-area-inset-right, 0px));
+  --top:calc(env(safe-area-inset-top, 0px) + 12px);
+  --bot:calc(env(safe-area-inset-bottom, 0px) + 12px);
+  color-scheme:dark;
+}
+[hidden]{display:none!important}
+html,body{height:100%;margin:0}
+body{background:var(--void);color:var(--ink);font-family:var(--f-body);overflow:hidden;-webkit-user-select:none;user-select:none}
+#world{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:none;cursor:grab}
+#world.place{cursor:crosshair}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+.k{font-family:var(--f-mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--dim)}
+.v{font-family:var(--f-mono);font-size:13px;font-variant-numeric:tabular-nums;color:var(--ink)}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+button:focus-visible,input:focus-visible{outline:2px solid var(--cool);outline-offset:2px}
+.btn{font-family:var(--f-mono);font-size:12px;padding:7px 11px;border:1px solid var(--line-strong);border-radius:7px;color:var(--ink);background:rgba(var(--accRGB),.06);white-space:nowrap}
+.btn:hover{background:rgba(var(--accRGB),.14)}
+.btn[aria-pressed="true"]{background:rgba(var(--accRGB),.22);border-color:var(--cool)}
+.btn.primary{background:rgba(255,195,90,.16);border-color:rgba(255,195,90,.6);color:#ffe6b8}
+.btn.danger{border-color:rgba(255,107,90,.5);color:#ffb1a6}
+.btn.ghost{border-color:transparent;color:var(--dim)}
+input[type=range]{accent-color:var(--cool);width:100%}
+
+/* top bar */
+.hud-top{position:fixed;top:var(--top);left:var(--gut);right:var(--gutR);display:flex;gap:10px;align-items:stretch;z-index:5;pointer-events:none}
+.hud-top>*{pointer-events:auto}
+.brand{padding:10px 14px;display:flex;flex-direction:column;justify-content:center}
+.brand h1{font-family:var(--f-display);font-weight:700;font-size:18px;letter-spacing:.1em;margin:0;text-transform:uppercase}.brand h1 b{color:var(--flare)}
+.brand .sub{font-size:11px;color:var(--dim)}
+.time{display:flex;gap:12px;align-items:center;padding:8px 12px}
+#pauseBtn{width:40px;height:40px;border-radius:9px;border:1px solid rgba(255,195,90,.55);background:rgba(255,195,90,.12);font-size:16px}
+.spds{display:flex;gap:3px}.spd{font-family:var(--f-mono);font-size:10px;padding:3px 5px;border-radius:5px;border:1px solid var(--line);color:var(--dim);white-space:nowrap}
+.spd:hover{color:var(--ink)}.spd[aria-pressed="true"]{color:var(--ink);border-color:rgba(255,195,90,.6);background:rgba(255,195,90,.14)}
+.tcol{display:flex;flex-direction:column;gap:4px}
+.right{margin-left:auto;display:flex;gap:10px;align-items:center;padding:8px 10px;flex-wrap:wrap;justify-content:flex-end}
+.stat{display:flex;flex-direction:column;gap:2px;min-width:54px}
+.findwrap{position:relative}
+.find{width:210px;font:inherit;font-size:13px;padding:8px 10px;border-radius:8px;border:1px solid var(--line-strong);background:rgba(0,0,0,.35);color:var(--ink)}
+.findlist{position:absolute;top:calc(100% + 4px);left:0;right:0;z-index:9;padding:4px;display:flex;flex-direction:column;gap:2px;max-height:300px;overflow:auto}
+.findlist button{text-align:left;padding:7px 9px;border-radius:6px;font-size:13px}.findlist button:hover,.findlist button.on{background:rgba(var(--accRGB),.14)}
+.findlist small{color:var(--dim);margin-left:6px}
+
+/* tool rail */
+.rail{position:fixed;left:var(--gut);top:calc(var(--top) + var(--hudH,64px) + 10px);bottom:var(--bot);width:86px;overflow-y:auto;overflow-x:hidden;z-index:4;padding:6px;display:flex;flex-direction:column;gap:3px;scrollbar-width:thin}
+.rail h3{font-family:var(--f-mono);font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--dim);margin:8px 2px 2px;font-weight:500}
+.tool{display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 2px;border-radius:7px;border:1px solid transparent;font-size:10.5px;color:var(--ink2);line-height:1.1;text-align:center}
+.tool .ico{font-size:19px;line-height:1}
+.tool:hover{background:rgba(var(--accRGB),.1)}.tool[aria-pressed="true"]{background:rgba(255,195,90,.15);border-color:rgba(255,195,90,.55);color:#fff}
+.placeopts{position:fixed;left:calc(var(--gut) + 96px);bottom:var(--bot);z-index:4;padding:8px 12px;display:flex;gap:14px;align-items:center;font-size:12px}
+.placeopts label{display:flex;gap:6px;align-items:center;color:var(--dim)}.placeopts input[type=range]{width:110px}
+.seg{display:flex;gap:3px}.seg button{font-family:var(--f-mono);font-size:11px;padding:3px 8px;border-radius:5px;border:1px solid var(--line);color:var(--dim)}.seg button[aria-pressed="true"]{color:var(--ink);border-color:var(--cool);background:rgba(var(--accRGB),.16)}
+
+/* dock */
+.dock{position:fixed;right:var(--gutR);top:calc(var(--top) + var(--hudH,64px) + 10px);bottom:var(--bot);width:330px;z-index:4;display:flex;flex-direction:column;overflow:hidden}
+.tabs{display:flex;border-bottom:1px solid var(--line)}.tab{flex:1;padding:10px 4px;font-family:var(--f-mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--dim);border-bottom:2px solid transparent}
+.tab[aria-selected="true"]{color:var(--ink);border-color:var(--flare)}
+.pane{padding:12px 14px;overflow:auto;flex:1;display:flex;flex-direction:column;gap:12px}
+.row{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.sl{display:flex;flex-direction:column;gap:4px}.sl .row span:last-child{font-family:var(--f-mono);font-size:12px}
+.evs{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.views{display:flex;gap:4px;flex-wrap:wrap}
+.splist{display:flex;flex-direction:column;gap:3px}
+.sprow{display:grid;grid-template-columns:14px 1fr auto;gap:8px;align-items:center;font-size:12.5px;padding:3px 4px;border-radius:5px}
+.sprow:hover{background:rgba(var(--accRGB),.08)}.sprow i{width:10px;height:10px;border-radius:50%;display:block}.sprow b{font-family:var(--f-mono);font-weight:500;font-size:12px}
+.sprow.zero{opacity:.4}
+#graph{width:100%;height:150px;display:block;border:1px solid var(--line);border-radius:8px;background:rgba(0,0,0,.25)}
+.gene{display:grid;grid-template-columns:86px 1fr 46px;gap:8px;align-items:center;font-size:12px}
+.gene .bar{height:6px;border-radius:3px;background:rgba(var(--accRGB),.12);overflow:hidden}.gene .bar span{display:block;height:100%;background:var(--cool)}
+.gene input{margin:0}
+.ititle{font-family:var(--f-display);font-weight:500;font-size:22px;margin:0}
+.isub{font-size:12.5px;color:var(--dim);margin-top:-8px}
+.kv{display:grid;grid-template-columns:1fr 1fr;gap:6px}.kv div{border:1px solid var(--line);border-radius:7px;padding:6px 8px}.kv .k{display:block}.kv .v{font-size:13px}
+.note{font-size:12px;color:var(--dim);line-height:1.5;margin:0}
+#iPic{width:100%;height:120px;border-radius:8px;background:rgb(var(--deepRGB));display:block}
+.toasts{position:fixed;left:50%;transform:translateX(-50%);top:calc(var(--top) + var(--hudH,64px) + 16px);z-index:8;display:flex;flex-direction:column;gap:6px;align-items:center;pointer-events:none}
+.toast{font-size:13px;padding:8px 14px;border-radius:99px;background:var(--panel);border:1px solid var(--line-strong);animation:tin .25s ease-out}
+@keyframes tin{from{opacity:0;transform:translateY(-6px)}}
+.hint{position:fixed;left:50%;transform:translateX(-50%);bottom:var(--bot);font-family:var(--f-mono);font-size:11.5px;color:var(--dim);background:var(--panel);border:1px solid var(--line);border-radius:99px;padding:7px 14px;white-space:nowrap;z-index:3;pointer-events:none}
+.zoomb{position:fixed;right:calc(var(--gutR) + 342px);bottom:var(--bot);z-index:4;display:flex;flex-direction:column;gap:4px;padding:4px}
+.zoomb button{width:32px;height:30px;border-radius:6px;border:1px solid var(--line);font-size:15px;color:var(--dim)}.zoomb button:hover{color:var(--ink)}
+
+/* scenarios */
+.scen{position:fixed;right:var(--gutR);top:calc(var(--top) + var(--hudH,64px) + 10px);width:min(520px,calc(100% - 32px));z-index:7;padding:14px;display:flex;flex-direction:column;gap:10px;max-height:calc(100% - 120px);overflow:auto}
+.scgrid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.scb{text-align:left;padding:10px 12px;border-radius:9px;border:1px solid var(--line);display:flex;flex-direction:column;gap:3px}.scb:hover{border-color:var(--cool)}
+.scb b{font-family:var(--f-display);font-weight:500;font-size:15px}.scb span{font-size:12px;color:var(--dim);line-height:1.35}
+
+/* home */
+.home{position:fixed;inset:0;z-index:20;pointer-events:none;background:linear-gradient(90deg,rgba(var(--voidRGB),.93) 0,rgba(var(--voidRGB),.78) 34%,rgba(var(--voidRGB),0) 62%)}
+.hcard{pointer-events:auto;position:absolute;left:var(--gut);top:calc(var(--top) + 16px);bottom:calc(var(--bot) + 16px);width:min(560px,calc(100% - 32px));overflow:auto;display:flex;flex-direction:column;gap:22px;padding:8px 4px}
+.htitle{font-family:var(--f-display);font-weight:700;font-size:clamp(40px,7vw,72px);letter-spacing:.08em;text-transform:uppercase;margin:0;line-height:1}.htitle b{color:var(--flare)}
+.htag{margin:10px 0 0;color:var(--dim);font-size:16px}
+.hacct{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+.chip{display:inline-flex;align-items:center;gap:6px;font-family:var(--f-mono);font-size:12px;padding:7px 12px;border-radius:99px;border:1px solid var(--line-strong);background:rgba(var(--deepRGB),.82);color:var(--ink);text-decoration:none}
+.chip:hover{border-color:var(--cool)}.chip b{color:var(--flare);font-weight:600}.chip.other{border-color:rgba(127,178,255,.5);color:#cfe0ff}
+.hview{display:flex;flex-direction:column;gap:12px}
+.hb{display:flex;flex-direction:column;align-items:flex-start;gap:4px;text-align:left;padding:18px 20px;border-radius:12px;border:1px solid var(--line-strong);background:rgba(var(--deepRGB),.84)}
+.hb:hover{border-color:var(--cool);background:rgba(var(--accRGB),.10)}.hb .ht{font-family:var(--f-display);font-weight:500;font-size:22px}.hb .hd{font-size:13px;color:var(--dim);line-height:1.4}
+.hb.primary{border-color:rgba(255,195,90,.6);background:rgba(40,30,12,.86)}.hb.primary:hover{background:rgba(60,44,14,.92)}
+.hfoot{margin:0;font-size:12px;color:var(--dim);line-height:1.5}
+.hbar{display:flex;align-items:center;gap:14px}.hbar h2{font-family:var(--f-display);font-weight:500;font-size:24px;margin:0;flex:1}.hstars{font-family:var(--f-mono);font-size:12px;color:var(--flare)}
+.hgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:6px}
+.ct{display:flex;flex-direction:column;align-items:flex-start;gap:3px;padding:8px 9px;border-radius:8px;border:1px solid var(--line);background:rgba(var(--deepRGB),.86);text-align:left;min-height:70px}
+.ct:hover:not(:disabled){border-color:var(--cool)}.ct:disabled{opacity:.45;cursor:not-allowed}.ct .cn{font-family:var(--f-mono);font-size:10px;color:var(--dim)}.ct .ctt{font-size:11.5px;line-height:1.25}
+.ct .cs{font-size:12px;color:var(--flare);letter-spacing:1px;margin-top:auto}.ct.next{border-color:rgba(255,195,90,.7);box-shadow:0 0 0 1px rgba(255,195,90,.3)}
+body.mHome .hud-top,body.mHome .rail,body.mHome .dock,body.mHome .placeopts,body.mHome .hint,body.mHome .zoomb,body.mHome .scen,body.mHome #chHud,body.mHome .toasts{display:none!important}
+body.mDemo .rail,body.mDemo .dock,body.mDemo .placeopts,body.mDemo .hint,body.mDemo .zoomb,body.mDemo .hud-top{display:none!important}
+.chhud{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(var(--bot) + 52px);width:min(600px,calc(100% - 480px));min-width:300px;padding:12px 14px;z-index:6;display:flex;flex-direction:column;gap:6px}
+.chtop{display:flex;justify-content:space-between}.chtitle{font-family:var(--f-display);font-weight:500;font-size:17px}.chgoal{font-size:13px;line-height:1.45;color:var(--ink2)}
+.chbarw{height:6px;border-radius:3px;background:rgba(var(--accRGB),.12);overflow:hidden}#chBar{display:block;height:100%;width:0;background:var(--flare);transition:width .25s}
+.chrow{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}.chprog{font-family:var(--f-mono);font-size:11.5px;color:var(--dim)}.chbtns{display:flex;gap:6px}
+.donebg{pointer-events:auto;display:grid;place-items:center;background:rgba(var(--voidRGB),.6)}
+.donecard{width:min(440px,calc(100% - 32px));padding:24px;text-align:center;display:flex;flex-direction:column;gap:10px}.donecard h2{font-family:var(--f-display);font-weight:500;margin:0}
+.dstars{font-size:34px;color:var(--flare);letter-spacing:4px}.dstars .off{color:rgba(255,255,255,.15)}
+.actions{display:flex;gap:8px;flex-wrap:wrap}
+.democap{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(var(--bot) + 10px);width:min(640px,calc(100% - 32px));padding:14px 18px;z-index:21;display:flex;flex-direction:column;gap:6px}
+.democap h2{font-family:var(--f-display);font-weight:500;font-size:22px;margin:0}.democap p{margin:0;font-size:14px;color:var(--ink2)}
+.ovl{position:fixed;inset:0;z-index:30;display:grid;place-items:center;background:rgba(var(--voidRGB),.6)}
+.obox{width:min(460px,calc(100% - 32px));max-height:min(80vh,640px);overflow:auto;padding:18px;display:flex;flex-direction:column;gap:12px}
+.obox h2{font-family:var(--f-display);font-weight:500;font-size:22px;margin:0;flex:1}
+.arow{display:flex;align-items:center;gap:8px;padding:9px 10px;border:1px solid var(--line);border-radius:8px}.arow.cur{border-color:rgba(255,195,90,.6);background:rgba(40,30,12,.5)}
+.arow .an{flex:1;min-width:0}.arow .as{font-family:var(--f-mono);font-size:11px;color:var(--dim)}
+.arow input,.aform input{font:inherit;font-size:13px;padding:7px 9px;border-radius:7px;border:1px solid var(--line-strong);background:rgba(0,0,0,.35);color:var(--ink);min-width:0}
+.arow input{width:80px}.aform{display:flex;gap:6px;flex-wrap:wrap}.aform input{flex:1 1 120px}
+.endbox{border:1px solid rgba(255,107,90,.45);background:rgba(60,16,12,.35);border-radius:8px;padding:8px 10px;display:flex;flex-direction:column;gap:4px}.endbox .k{color:#ffb1a6}.endrow{display:flex;justify-content:space-between;font-size:12.5px;text-align:left;padding:2px 0}.endrow b{font-family:var(--f-mono);font-weight:500;color:#ffb1a6}.endrow.ext{opacity:.6;text-decoration:line-through}
+.endbadge{position:fixed;right:calc(var(--gutR) + 342px);top:calc(var(--top) + var(--hudH,64px) + 12px);z-index:4;padding:7px 12px;border-color:rgba(255,107,90,.55);color:#ffc0b6;font-family:var(--f-mono);font-size:12px}
+@media (max-width:760px){.endbadge{right:var(--gutR);top:auto;bottom:calc(var(--bot) + 230px)}}
+body.mHome .endbadge,body.mDemo .endbadge{display:none!important}
+.dna{width:100%;height:28px;display:block;border-radius:6px;background:rgba(0,0,0,.25)}.fam{display:flex;gap:6px;flex-wrap:wrap;align-items:center}.gsel,.coatsel{font:inherit;font-size:12px;background:rgba(0,0,0,.35);color:var(--ink);border:1px solid var(--line-strong);border-radius:6px;padding:4px 6px}
+.legend{position:fixed;left:calc(var(--gut) + 96px);top:calc(var(--top) + var(--hudH,64px) + 12px);z-index:4;padding:8px 12px;width:220px;display:flex;flex-direction:column;gap:5px}.legend .lbar{height:10px;border-radius:5px}.legend .lticks{display:flex;justify-content:space-between;font-family:var(--f-mono);font-size:10.5px;color:var(--dim)}
+body.mHome .legend,body.mDemo .legend{display:none!important}@media (max-width:760px){.legend{left:var(--gut);top:auto;bottom:calc(var(--bot) + 190px)}}
+.pbig{font-family:var(--f-display);font-size:54px;line-height:1;color:var(--flare)}
+
+@media (max-width:1600px){.right .stat{display:none}.find{width:170px}}
+@media (max-width:1300px){.brand .sub{display:none}.find{width:140px}.brand{padding:10px}}
+@media (max-width:760px){
+  .hud-top{flex-wrap:wrap}.brand{display:none}.time{flex:1 1 100%}.right{flex:1 1 100%;justify-content:space-between}.findwrap{flex:1 1 100%;order:-1}.find{width:100%;box-sizing:border-box}
+  .rail{top:auto;left:var(--gut);right:var(--gutR);bottom:var(--bot);width:auto;height:64px;flex-direction:row;overflow-x:auto;overflow-y:hidden}
+  .rail h3{display:none}.tool{min-width:58px}
+  .placeopts{left:var(--gut);bottom:calc(var(--bot) + 72px)}
+  .dock{top:auto;bottom:calc(var(--bot) + 120px);left:var(--gut);right:var(--gutR);width:auto;height:42vh}
+  body:not(.dockOpen) .dock{display:none}
+  .zoomb{right:var(--gutR);bottom:calc(var(--bot) + 120px)}
+  .home{background:rgba(var(--voidRGB),.74)}
+  .chhud{width:auto;min-width:0;left:var(--gut);right:var(--gutR);transform:none;bottom:calc(var(--bot) + 124px);max-height:36vh;overflow:auto}
+  .hint{display:none}
+}
+#dockBtn{display:none}@media (max-width:760px){#dockBtn{display:inline-block}}
+.sprow{text-align:left;width:100%}@media (max-width:760px){#dateSub{display:none}}
+.pop{display:flex;flex-direction:column;gap:2px}
+
+</style>
+</head>
+<body>
+<canvas id="world" aria-label="A slice through the ocean: drag to look around, scroll to zoom"></canvas>
+
+<header class="hud-top">
+  <div class="brand panel"><h1>Abys<b>sal</b></h1><span class="sub">A living ocean sandbox</span></div>
+  <div class="time panel">
+    <button id="pauseBtn" title="Pause or resume (Space)" aria-label="Pause">⏸</button>
+    <div class="tcol"><span class="k">Time rate</span><div class="spds" id="spds"></div><span class="v" id="rateTxt"></span></div>
+    <div class="tcol"><span class="k">Date</span><span class="v" id="dateTxt" style="white-space:nowrap"></span><span class="v" id="dateSub" style="font-size:11px;color:var(--dim)"></span></div>
+  </div>
+  <div class="right panel">
+    <div id="stats" style="display:contents"></div>
+    <div class="findwrap"><input id="find" class="find" placeholder="Find or release any sea creature…" aria-label="Find or release any sea creature…" autocomplete="off" spellcheck="false"><div id="findList" class="findlist panel" hidden></div></div>
+    <button id="homeBtn" class="btn" title="Back to the home page">⌂ Home</button>
+    <button id="acctBtn" class="btn" title="Account: save your progress on this device">👤</button>
+    <button id="scenBtn" class="btn">Oceans</button>
+    <button id="dockBtn" class="btn">Panel</button>
+  </div>
+</header>
+
+<nav class="rail panel" id="rail" aria-label="Tools"></nav>
+<div class="placeopts panel" id="placeopts" hidden>
+  <label>Brush <input type="range" id="brush" min="1" max="12" value="4"><span id="brushV" class="v">4</span></label>
+  <span id="toolNote" class="note"></span>
+</div>
+
+<aside class="dock panel" id="dock">
+  <div class="tabs" role="tablist"><button class="tab" role="tab" data-tab="world" aria-selected="true">Ocean</button><button class="tab" role="tab" data-tab="life" aria-selected="false">Life</button><button class="tab" role="tab" data-tab="insp" aria-selected="false">Inspect</button></div>
+  <div class="pane" id="pane-world">
+    <div class="sl"><div class="row"><span class="k">Water temperature</span><span id="tempV">+0 °C</span></div><input type="range" id="tempS" min="-6" max="8" step="0.25" value="0"></div>
+    <div class="sl"><div class="row"><span class="k">Carbon dioxide (acidity)</span><span id="co2V">420 ppm</span></div><input type="range" id="co2S" min="280" max="1200" step="10" value="420"></div>
+    <div class="sl"><div class="row"><span class="k">River nutrients</span><span id="nutV">100%</span></div><input type="range" id="nutS" min="0" max="500" step="10" value="100"></div>
+    <div class="sl"><div class="row"><span class="k">Fishing boats</span><span id="boatV">0</span></div><input type="range" id="boatS" min="0" max="8" step="1" value="0"></div>
+    <span class="k">Events · press again to stop</span>
+    <div class="evs">
+      <button class="btn" data-ev="heatwave">☀ Marine heatwave</button><button class="btn" data-ev="oil">🛢 Oil spill</button>
+      <button class="btn" data-ev="plastic">🧴 Plastic patch</button><button class="btn" data-ev="bloom">🟢 Algae bloom</button>
+      <button class="btn" data-ev="upwell">⬆ Upwelling</button><button class="btn" data-ev="migrate">🐋 Whale migration</button>
+      <button class="btn" data-ev="storm">🌊 Storm</button><button class="btn" data-ev="normal">↺ Stop all events</button>
+    </div>
+    <span class="k">Views</span>
+    <div class="views"><button class="btn" data-view="normal" aria-pressed="true">Natural</button><button class="btn" data-view="plankton" aria-pressed="false">Plankton</button><button class="btn" data-view="oxygen" aria-pressed="false">Oxygen</button><button class="btn" data-view="temp" aria-pressed="false">Temperature</button><button class="btn" data-view="nutrients" aria-pressed="false">Nutrients</button></div>
+    <div class="row"><span class="k">Labels</span><button class="btn" id="lblBtn" aria-pressed="true">On</button></div>
+    <p class="note">Sunlight only reaches the top 200 m. There, tiny plankton grow on nutrients and feed the whole ocean. Dead things sink as “marine snow” to feed the deep, and rot uses up oxygen: too many nutrients can make a dead zone.</p>
+  </div>
+  <div class="pane" id="pane-life" hidden>
+    <div id="endBox" class="endbox" hidden></div>
+    <div class="kv" id="lStats"></div>
+    <span class="k">Population over time</span>
+    <canvas id="graph"></canvas>
+    <div class="pop" id="plist"></div>
+    <p class="note">Click a species to find one.</p>
+  </div>
+  <div class="pane" id="pane-insp" hidden>
+    <div id="inspEmpty"><p class="note">Click a creature, a coral or the water to inspect it. Double-click a creature to follow it.</p></div>
+    <div id="inspBody" class="hview" hidden></div>
+  </div>
+
+</aside>
+<div class="zoomb panel"><button id="zIn" title="Zoom in">+</button><button id="zOut" title="Zoom out">−</button><button id="zFit" title="Show everything">⤢</button></div>
+<div id="legend" class="legend panel" hidden><span class="k"></span><div class="lbar"></div><div class="lticks"><span></span><span></span><span></span></div></div>
+<div class="hint" id="hint">Drag to look around · scroll to zoom · click a creature to inspect it</div>
+<div class="toasts" id="toasts" aria-live="polite"></div>
+
+<div class="scen panel" id="scen" hidden>
+  <div class="row"><span class="k">Choose a ocean</span><button class="btn ghost" id="scenClose">×</button></div>
+  <div class="scgrid" id="scgrid"></div>
+</div>
+
+<div id="home" class="home" role="dialog" aria-label="Home">
+  <div class="hcard">
+    <div class="hhead"><h1 class="htitle">Abys<b>sal</b></h1><p class="htag">Dive into a living ocean: reefs, kelp forests, whales and sharks, and the strange creatures of the deep</p>
+      <div class="hacct"><button class="chip" id="hAcctBtn">👤 <span id="hAcctName">Guest</span></button><button class="chip" id="hPlays" title="Total plays by everyone">▶ <b id="hPlaysN">0</b> <span id="hPlaysL">plays</span></button><button class="chip" id="hLb" title="Leaderboard">🏆 Leaderboard</button><style>.sims{position:relative;display:inline-block;z-index:70}.hhead{position:relative;z-index:20}.sims>summary{list-style:none;cursor:pointer}.sims>summary::-webkit-details-marker{display:none}
+.sims[open]>summary{background:rgba(255,255,255,.08)}.simsP{position:absolute;left:0;top:calc(100% + 6px);z-index:60;width:min(320px,86vw);padding:8px;border-radius:12px;background:#0c101c;border:1px solid rgba(255,255,255,.14);box-shadow:0 12px 40px rgba(0,0,0,.55);display:grid;gap:6px;text-align:left}
+.simsP a{display:grid;grid-template-columns:auto 1fr;gap:2px 10px;align-items:center;padding:9px 10px;border-radius:9px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.03);color:#e3e8f4;text-decoration:none;font:inherit}
+.simsP a:hover,.simsP a:focus-visible{background:rgba(255,255,255,.08);border-color:var(--sc,#7fe0a8)}.simsP .si{grid-row:span 2;font-size:24px}.simsP b{color:var(--sc,#fff);font-size:14px}.simsP small{color:#8b95ae;font-size:11.5px;line-height:1.3}.simsP .sn{color:#8b95ae;font-size:11px;padding:2px 4px}</style><details class="sims" id="hSims"><summary class="chip" title="Our other simulators">🧪 Try our other simulators ▾</summary><div class="simsP" id="hSimsP"></div></details><script>(()=>{const ME="abyssal",LIST=[{"id": "barycenter", "icon": "🪐", "name": "Barycenter", "tag": "Gravity, planets, stars and black holes", "url": "https://jacob711-oss.github.io/barycenter/", "color": "#e8b04a"}, {"id": "biosphere", "icon": "🌿", "name": "Biosphere", "tag": "A living world of animals, plants and people", "url": "https://jacob711-oss.github.io/barycenter/life/", "color": "#7fe0a8"}, {"id": "lithosphere", "icon": "🌋", "name": "Lithosphere", "tag": "Drift continents, raise mountains and set off volcanoes", "url": "https://jacob711-oss.github.io/barycenter/lithosphere/", "color": "#ff8a5c"}, {"id": "troposphere", "icon": "🌀", "name": "Troposphere", "tag": "Steer winds, brew hurricanes and change the climate", "url": "https://jacob711-oss.github.io/barycenter/troposphere/", "color": "#60d6e6"}, {"id": "catalyst", "icon": "⚛️", "name": "Catalyst", "tag": "Mix atoms, spark reactions and build molecules", "url": "https://jacob711-oss.github.io/barycenter/catalyst/", "color": "#c48bff"}, {"id": "abyssal", "icon": "🐋", "name": "Abyssal", "tag": "Dive into a living ocean, from coral reefs to the deep sea", "url": "https://jacob711-oss.github.io/barycenter/abyssal/", "color": "#4fa3ff"}],P=document.getElementById('hSimsP'),D=document.getElementById('hSims');
+const draw=l=>{P.textContent='';for(const s of l){if(s.id===ME||!s.url)continue;const a=document.createElement('a');a.href=s.url;a.target='_blank';a.rel='noopener';a.style.setProperty('--sc',s.color||'#7fe0a8');
+a.innerHTML='<span class="si"></span><b></b><small></small>';a.children[0].textContent=s.icon||'🧪';a.children[1].textContent=s.name;a.children[2].textContent=s.tag||'';P.appendChild(a)}
+const n=document.createElement('div');n.className='sn';n.textContent='More simulators coming soon.';P.appendChild(n)};draw(LIST);
+try{fetch('https://jacob711-oss.github.io/barycenter/sims.json',{cache:'no-cache'}).then(r=>r.ok?r.json():null).then(l=>{if(Array.isArray(l)&&l.length)draw(l.filter(s=>s&&typeof s.name==='string'&&/^https:\/\//.test(s.url||'')))}).catch(()=>{})}catch(e){}
+document.addEventListener('pointerdown',e=>{if(D.open&&!D.contains(e.target))D.open=false});document.addEventListener('keydown',e=>{if(e.key==='Escape')D.open=false})})()</script></div></div>
+    <div id="hMain" class="hview">
+      <button class="hb" id="hChal"><span class="ht">Challenges</span><span class="hd" id="hChalSub">Goals from easy to fiendish</span></button>
+      <button class="hb" id="hDemo"><span class="ht">Demo &amp; tutorial</span><span class="hd">Watch the highlights, or learn the controls step by step</span></button>
+      <button class="hb primary" id="hFree"><span class="ht">Free play</span><span class="hd">The full sandbox: release sea life, grow reefs, feed the plankton, fish, pollute and clean up</span></button>
+      <p class="hfoot">Simplified but real marine ecology: sunlight feeds plankton, plankton feeds everything else, and warming, acid, fishing and pollution ripple through the food web.</p>
+    </div>
+    <div id="hChalView" class="hview" hidden>
+      <div class="hbar"><button class="btn ghost hback">← Back</button><h2>Challenges</h2><span id="hStars" class="hstars"></span></div>
+      <p class="hfoot">Finish a challenge to unlock the next. Faster solutions earn more stars.</p>
+      <div id="hGrid" class="hgrid"></div>
+    </div>
+    <div id="hDemoView" class="hview" hidden>
+      <div class="hbar"><button class="btn ghost hback">← Back</button><h2>Demo &amp; tutorial</h2></div>
+      <button class="hb" id="hWatch"><span class="ht">Watch the demo</span><span class="hd">A tour of a coral reef, a kelp forest, the deep-sea vents, a whale feast and a dead zone</span></button>
+      <button class="hb primary" id="hTut"><span class="ht">Start the tutorial</span><span class="hd">Learn every control step by step; each step completes when you do it</span></button>
+    </div>
+  </div>
+</div>
+<div id="chHud" class="chhud panel" hidden aria-live="polite">
+  <div class="chtop"><span id="chNum" class="k"></span><span id="chTime" class="k"></span></div>
+  <div id="chTitle" class="chtitle"></div>
+  <div id="chGoal" class="chgoal"></div>
+  <div class="chbarw"><span id="chBar"></span></div>
+  <div class="chrow"><span id="chProg" class="chprog"></span><div class="chbtns"><button id="chHint" class="btn">Hint</button><button id="chRestart" class="btn">Restart</button><button id="chExit" class="btn ghost">Exit</button></div></div>
+</div>
+<div id="demoCap" class="democap panel" hidden><span class="k" id="demoStep"></span><h2 id="demoTitle"></h2><p id="demoText"></p><div class="actions"><button class="btn" id="demoNext">Next ›</button><button class="btn ghost" id="demoExit">Exit demo</button></div></div>
+<div id="acct" class="ovl" hidden role="dialog" aria-label="Accounts">
+  <div class="obox panel">
+    <div class="hbar"><h2>Accounts</h2><button class="btn" id="acctClose" aria-label="Close">×</button></div>
+    <p class="hfoot">Your stars, plays and time are saved in this browser on this device. Accounts are shared by all our simulators when they are opened from the same site.</p>
+    <div id="acctList" class="hview" style="gap:6px"></div>
+    <form id="acctForm" class="aform"><input id="acctNew" maxlength="20" placeholder="Your name" autocomplete="off"><input id="acctPin" maxlength="4" inputmode="numeric" placeholder="PIN (optional)" autocomplete="off"><button class="btn primary" type="submit">Create account</button></form>
+    <p class="hfoot" id="acctMsg" aria-live="polite"></p>
+    <button class="btn" id="acctLb" type="button">🏆 Leaderboard</button>
+  </div>
+</div>
+<div id="chDone" class="home donebg" hidden role="dialog" aria-label="Challenge result">
+  <div class="donecard panel">
+    <div id="dStars" class="dstars"></div><h2 id="dTitle"></h2><p id="dText" class="hfoot" style="font-size:13px"></p>
+    <div class="actions" style="justify-content:center"><button id="dNext" class="btn primary">Next challenge</button><button id="dRetry" class="btn">Try again</button><button id="dList" class="btn ghost">All challenges</button><button id="dLb" class="btn ghost">🏆 Leaderboard</button></div>
+  </div>
+</div>
+<style>.lbrow{display:grid;grid-template-columns:34px 1fr auto auto;gap:10px;align-items:center;padding:7px 10px;border:1px solid var(--line);border-radius:8px;font-size:13px}
+.lbrow .r{font-family:var(--f-mono);color:var(--dim)}.lbrow .nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.lbrow .st{color:var(--flare);font-family:var(--f-mono)}.lbrow .dn{font-family:var(--f-mono);font-size:11px;color:var(--dim)}
+.lbrow.me{border-color:rgba(255,180,84,.7);background:rgba(40,28,12,.55)}.lbrow.top1 .r{color:#ffd76a}.lbrow.top2 .r{color:#d8dee9}.lbrow.top3 .r{color:#e0a36a}
+.lbtabs{display:flex;gap:4px;flex-wrap:wrap}.lbtabs button{font-family:var(--f-mono);font-size:11.5px;padding:5px 10px;border-radius:99px;border:1px solid var(--line);color:var(--dim);background:none;cursor:pointer}.lbtabs button[aria-pressed="true"]{color:var(--ink);border-color:var(--flare);background:rgba(255,195,90,.12)}</style>
+<div id="lbBox" class="ovl" hidden role="dialog" aria-label="Leaderboard">
+  <div class="obox panel">
+    <div class="hbar"><h2>🏆 Leaderboard</h2><button class="btn" id="lbClose" aria-label="Close">×</button></div>
+    <div class="lbtabs" id="lbTabs"></div>
+    <p class="hfoot" id="lbMe"></p>
+    <div class="row" id="lbTogRow"><label class="hfoot" style="display:flex;gap:8px;align-items:center;margin:0"><input type="checkbox" id="lbWorld"> Show me on the world leaderboard</label><button class="btn" id="lbOut">↩ Sign out</button></div>
+    <div id="lbList" class="hview" style="gap:4px"></div>
+    <p class="hfoot" id="lbNote"></p>
+  </div>
+</div>
+
+
+<script>
+const SIMLIST=[{"id": "barycenter", "icon": "🪐", "name": "Barycenter", "tag": "Gravity, planets, stars and black holes", "url": "https://jacob711-oss.github.io/barycenter/", "color": "#e8b04a"}, {"id": "biosphere", "icon": "🌿", "name": "Biosphere", "tag": "A living world of animals, plants and people", "url": "https://jacob711-oss.github.io/barycenter/life/", "color": "#7fe0a8"}, {"id": "lithosphere", "icon": "🌋", "name": "Lithosphere", "tag": "Drift continents, raise mountains and set off volcanoes", "url": "https://jacob711-oss.github.io/barycenter/lithosphere/", "color": "#ff8a5c"}, {"id": "troposphere", "icon": "🌀", "name": "Troposphere", "tag": "Steer winds, brew hurricanes and change the climate", "url": "https://jacob711-oss.github.io/barycenter/troposphere/", "color": "#60d6e6"}, {"id": "catalyst", "icon": "⚛️", "name": "Catalyst", "tag": "Mix atoms, spark reactions and build molecules", "url": "https://jacob711-oss.github.io/barycenter/catalyst/", "color": "#c48bff"}, {"id": "abyssal", "icon": "🐋", "name": "Abyssal", "tag": "Dive into a living ocean, from coral reefs to the deep sea", "url": "https://jacob711-oss.github.io/barycenter/abyssal/", "color": "#4fa3ff"}],LB_GAME="abyssal";
+/* ===== simulator kit: core helpers shared by every simulator ===== */
+const $=id=>document.getElementById(id);
+const clamp=(v,a,b)=>v<a?a:v>b?b:v,lerp=(a,b,t)=>a+(b-a)*t,rr=(a,b)=>a+Math.random()*(b-a),ri=(a,b)=>Math.floor(rr(a,b+1)),pick=a=>a[Math.floor(Math.random()*a.length)];
+const mod=(a,n)=>((a%n)+n)%n;
+let W=innerWidth,H=innerHeight,DPR=Math.min(2,devicePixelRatio||1);
+const S={t:0,speed:1,speedI:0,paused:false,sel:null,view:'normal',tool:'select',brush:4,follow:false};
+const cam={x:0,y:0,z:4,ox:0};
+const CNT={moved:0,zoomed:0,scen:0,find:0,tool:0,view:0};const bump=k=>{CNT[k]=(CNT[k]||0)+1};
+function toast(msg,ms=3200){const el=document.createElement('div');el.className='toast panel';el.textContent=msg;const box=$('toasts');box.appendChild(el);while(box.children.length>4)box.firstChild.remove();setTimeout(()=>el.remove(),ms)}
+const fmtN=(v,d=0)=>Number(v).toLocaleString(undefined,{maximumFractionDigits:d,minimumFractionDigits:d});
+/* challenges */
+const CH={active:null,idx:-1,events:[],hold:{},t0:0,real0:0,done:false,failed:'',loading:false,ref:{}};
+function chEv(k,d){if(CH.active&&!CH.done&&!CH.loading)CH.events.push({k,...(d||{}),t:S.t})}
+const evN=k=>CH.events.filter(e=>e.k===k).length;
+const evHas=f=>CH.events.some(f);
+// hold a condition for an amount of simulated time (in the simulator's own time units)
+function hold(key,cond,dur){if(!cond){CH.hold[key]=null;return 0}if(CH.hold[key]==null)CH.hold[key]=S.t;return Math.min(1,(S.t-CH.hold[key])/dur)}
+const realSecs=()=>(performance.now()-CH.real0)/1000;
+const byTime=(t3,t2)=>()=>{const s=realSecs();return s<=t3?3:s<=t2?2:1};
+const CHALS=[];const CC=(diff,o)=>CHALS.push({diff,...o});
+const TSTEPS=[];const DEMO=[];
+const since=()=>S.t-CH.t0;
+
+/* ================= Abyssal: a living ocean ================= */
+// A side-on slice of ocean 360 units wide and 180 deep (1 unit of depth = 22 m, so the floor can be 4 km down).
+// Time is in days. Plankton, nutrients, oxygen and marine snow live on a coarse 4-unit grid; animals are individuals.
+const WW=360,WH=180,GS=4,GX=WW/GS,GY=WH/GS,NG=GX*GY,MPU=22,MAXAG=2600;
+const P=new Float32Array(NG),Z=new Float32Array(NG),NU=new Float32Array(NG),O2=new Float32Array(NG),DET=new Float32Array(NG),OIL=new Float32Array(NG),HT=new Float32Array(NG),tmpG=new Float32Array(NG);
+const FLOOR=new Float32Array(WW+1);let CORAL=[],KELP=[],VENTS=[],AG=[],PLAST=[],BOATS=[],PARTS=[],HIST=[],SNOW=[];
+const ENV={temp:0,co2:420,nut:1,boats:0,base:22,heat:false,bloom:false,storm:false,upwell:false};
+let LBL=true,STAT={coral:1,o2low:0,pop:{}},RELEASED={},CATCH=0,CLEANED=0,PLANTED=0,FED=0,FEDBY=0,EVN=0,EVSTOP=0,SLIDED=0,HEATED=0,BORN=0,EATEN=0;
+const gi=(x,y)=>clamp(Math.floor(y/GS),0,GY-1)*GX+clamp(Math.floor(x/GS),0,GX-1);
+const floorAt=x=>FLOOR[clamp(Math.round(x),0,WW)];
+const depthM=y=>Math.round(y*MPU);
+const lightAt=(y)=>Math.exp(-y/9)*dayLight();
+const dayLight=()=>S.speed<=0.26?clamp(0.15+0.85*Math.max(0,Math.sin((mod(S.t,1)-0.25)*Math.PI*2))*1.2,0.15,1):0.75;
+const tempAt=y=>{const ts=ENV.base+ENV.temp+(ENV.heat?4:0);return 2+(ts-2)*Math.exp(-y/28)};
+const pH=()=>8.2-0.33*Math.log2(ENV.co2/280);
+/* ---------- the underwater city ---------- */
+const BT={dome:{n:'Habitat dome',ic:'🫧',house:60,pw:-2,food:0,w:7,h:5},tower:{n:'Glass tower',ic:'🏙️',house:160,pw:-5,food:0,w:4,h:16},farm:{n:'Kelp and fish farm',ic:'🌾',house:0,pw:-1,food:120,w:9,h:3},
+  power:{n:'Power plant',ic:'⚡',house:0,pw:12,food:0,w:5,h:6},lab:{n:'Research lab',ic:'🔬',house:20,pw:-3,food:0,w:6,h:5},port:{n:'Submarine port',ic:'🚢',house:10,pw:-2,food:0,w:8,h:4}};
+let CITY={b:[],subs:[],pop:0,built:0};
+function cityStats(){let house=0,pw=0,food=0;for(const b of CITY.b){const t=BT[b.t];house+=t.house;food+=t.food;pw+=t.pw+(b.t==='power'&&VENTS.some(v=>Math.abs(v.x-b.x)<14)?18:0)}return{house,pw,food,cap:Math.max(0,Math.min(house,food+40,pw>=0?house:house*Math.max(0,1+pw/20)))}}
+function cityStep(dt){if(!CITY.b.length){CITY.pop=0;return}const st=cityStats();CITY.pop+=(st.cap-CITY.pop)*Math.min(1,dt*0.2);
+  for(const b of CITY.b){if(BT[b.t].house){const g=gi(b.x,b.y-3);NU[g]+=CITY.pop/Math.max(1,st.house)*BT[b.t].house*0.00004*dt*ENV.nut}}
+  const ports=CITY.b.filter(b=>b.t==='port').length;while(CITY.subs.length<ports*2&&CITY.b.length>1)CITY.subs.push({x:CITY.b[0].x,y:CITY.b[0].y-6,ti:1,ph:Math.random()});while(CITY.subs.length>ports*2)CITY.subs.pop();
+  for(const s0 of CITY.subs){const t=CITY.b[s0.ti%CITY.b.length];const tx=t.x,ty=t.y-BT[t.t].h-3,dx=tx-s0.x,dy=ty-s0.y,d=Math.hypot(dx,dy);if(d<2)s0.ti=Math.floor(Math.random()*CITY.b.length);else{s0.x+=dx/d*dt*60;s0.y+=dy/d*dt*60;s0.dir=dx>0?1:-1}}}
+function build(t,x){const fy=floorAt(x),bt=BT[t];for(const b of CITY.b)if(Math.abs(b.x-x)<(BT[b.t].w+bt.w)/2){toast('Too close to another building');return false}CITY.b.push({t,x,y:fy,born:S.t});CITY.built++;chEv('build',{t});if(CITY.b.length===1)toast('🏙️ The first building of your underwater city!');return true}
+const SP={
+ sardine:{n:'Sardine',pl:'Sardines',ic:'🐟',len:1.5,col:'#c8d6e4',sp:70,d:[2,55],z:1,school:1,life:4,mat:0.6,lit:5,max:900,met:0.5,T:[1,30]},
+ lantern:{n:'Lanternfish',pl:'Lanternfish',ic:'✨',len:1.2,col:'#7fa8d8',sp:55,d:[45,130],z:1,school:1,life:3,mat:0.5,lit:4,max:600,met:0.4,T:[2,26],glow:'#8fe8ff',migrate:1},
+ jelly:{n:'Jellyfish',pl:'Jellyfish',ic:'🪼',len:1.6,col:'#e8a8ff',sp:12,d:[2,80],z:1,life:1,mat:0.2,lit:4,max:380,met:0.25,T:[6,32],drift:1,glow:'#ffb8ff'},
+ squid:{n:'Squid',pl:'Squid',ic:'🦑',len:2.4,col:'#ff8a7a',sp:90,d:[20,130],eat:['sardine','lantern'],life:2,mat:0.5,lit:4,max:200,met:0.6,T:[-1,28]},
+ tuna:{n:'Tuna',pl:'Tuna',ic:'🐟',len:3.6,col:'#6a88b8',sp:110,d:[2,70],eat:['sardine','squid','lantern'],school:1,life:12,mat:2,lit:3,max:140,met:0.9,T:[12,30]},
+ dolphin:{n:'Dolphin',pl:'Dolphins',ic:'🐬',len:4,col:'#9aaab8',sp:120,d:[0,50],eat:['sardine','squid'],school:1,life:30,mat:5,lit:1,max:60,met:0.6,T:[8,30],air:1},
+ seal:{n:'Seal',pl:'Seals',ic:'🦭',len:3.2,col:'#8a7a6a',sp:90,d:[0,45],eat:['sardine','tuna','squid'],life:25,mat:4,lit:1,max:50,met:0.55,T:[-2,16],air:1},
+ turtle:{n:'Sea turtle',pl:'Sea turtles',ic:'🐢',len:2.8,col:'#7a9a5a',sp:35,d:[0,40],eat:['jelly'],life:60,mat:8,lit:4,max:50,met:0.3,T:[16,32],air:1},
+ shark:{n:'Shark',pl:'Sharks',ic:'🦈',len:7,col:'#7a8a9a',sp:100,d:[2,120],eat:['tuna','seal','turtle','squid','dolphin','sardine'],life:40,mat:8,lit:2,max:24,met:0.7,T:[4,30]},
+ whale:{n:'Blue whale',pl:'Blue whales',ic:'🐋',len:16,col:'#5a7aa0',sp:45,d:[0,90],z:1,big:1,life:80,mat:10,lit:1,max:12,met:0.4,T:[-2,28],air:1},
+ angler:{n:'Anglerfish',pl:'Anglerfish',ic:'🎣',len:2,col:'#4a3a3a',sp:20,d:[110,180],eat:['lantern','squid','sardine'],life:10,mat:2,lit:6,max:60,met:0.15,T:[0,12],glow:'#9fffe0',lure:1},
+ crab:{n:'Crab',pl:'Crabs',ic:'🦀',len:1.4,col:'#e06a3a',sp:15,floor:1,det:1,life:6,mat:1,lit:5,max:220,met:0.3,T:[0,34]},
+};
+const SPK=Object.keys(SP);
+const RANGE=k=>{const s=SP[k];return s.d||[0,WH]};
+
+/* ---------- world ---------- */
+function setFloor(f){for(let x=0;x<=WW;x++)FLOOR[x]=clamp(f(x),8,WH-2)}
+function clearOcean(){CITY={b:[],subs:[],pop:0,built:0};AG=[];CORAL=[];KELP=[];VENTS=[];PLAST=[];BOATS=[];PARTS=[];HIST=[];SNOW=[];RELEASED={};Object.assign(ENV,{temp:0,co2:420,nut:1,boats:0,base:22,heat:false,bloom:false,storm:false,upwell:false});OIL.fill(0);HT.fill(0)}
+function initFields(){for(let j=0;j<GY;j++)for(let i=0;i<GX;i++){const g=j*GX+i,y=(j+.5)*GS;P[g]=y<40?0.35*Math.exp(-y/25):0.01;Z[g]=y<80?0.3*Math.exp(-y/40):0.04;NU[g]=0.2+0.6*(1-Math.exp(-y/40));O2[g]=1-0.35*Math.exp(-(((y-90)/35)**2));DET[g]=0.02}}
+function spawnN(k,n,x0,x1){const [d0,d1]=RANGE(k);for(let q=0;q<n;q++){const x=rr(x0??4,x1??WW-4);const fy=floorAt(x);const y=SP[k].floor?fy-0.8:clamp(rr(d0,d1),1,fy-2);addAg(k,x,y,{age:rr(0,SP[k].life*0.6)*365})}}
+function addAg(k,x,y,o){if(AG.length>=MAXAG)return null;const s=SP[k];const a={sp:k,x,y,vx:rr(-1,1)*s.sp*0.3,vy:rr(-1,1)*s.sp*0.1,e:0.7,age:0,air:1,kids:0,kills:0,id:Math.random(),dir:1,...(o||{})};AG.push(a);return a}
+function reef(x0,x1){for(let x=x0;x<=x1;x+=1.6){const y=floorAt(x);if(y<60)CORAL.push({x:x+rr(-.5,.5),y:y-rr(0,1.5),h:rr(0.7,1),kind:pick(['brain','branch','fan','table']),col:pick(['#ff7a8a','#ffb05a','#c88aff','#5ae0c0','#ffd45a','#ff9adf']),r:rr(1,2.3)})}}
+function kelpAt(x0,x1,n){for(let q=0;q<n;q++){const x=rr(x0,x1),y=floorAt(x);if(y<70)KELP.push({x,y,len:rr(10,Math.min(40,y-2)),ph:Math.random()*6})}}
+const SCENS={
+  reef:()=>{ENV.base=28;setFloor(x=>{const c=Math.abs(x-180)/180;return 18+Math.pow(c,1.6)*150+Math.sin(x/11)*2});reef(110,250);kelpAt(60,100,6);spawnN('sardine',260);spawnN('jelly',50);spawnN('turtle',10,100,260);spawnN('shark',5);spawnN('tuna',30);spawnN('squid',30);spawnN('crab',40,100,260);spawnN('dolphin',8);spawnN('lantern',120)},
+  open:()=>{ENV.base=21;setFloor(x=>165+Math.sin(x/30)*6);spawnN('sardine',320);spawnN('tuna',50);spawnN('shark',8);spawnN('dolphin',14);spawnN('whale',4);spawnN('squid',50);spawnN('lantern',220);spawnN('jelly',60);spawnN('angler',20);spawnN('crab',30)},
+  kelp:()=>{ENV.base=14;setFloor(x=>x<220?30+x*0.05+Math.sin(x/9)*3:30+(x-220)*1+Math.sin(x/9)*3);kelpAt(10,210,70);spawnN('sardine',220,0,250);spawnN('seal',14);spawnN('shark',5);spawnN('crab',60,0,220);spawnN('squid',30);spawnN('jelly',30)},
+  vents:()=>{ENV.base=18;setFloor(x=>150+Math.sin(x/14)*10+(Math.abs(x-180)<30?-12+Math.abs(x-180)*0.4:0));for(const vx of [150,180,212])VENTS.push({x:vx,y:floorAt(vx)-1});spawnN('angler',30);spawnN('lantern',260);spawnN('squid',50);spawnN('crab',90,130,240);spawnN('sardine',120);spawnN('shark',4)},
+  polar:()=>{ENV.base=1;setFloor(x=>120+Math.sin(x/25)*15);spawnN('whale',7);spawnN('seal',22);spawnN('lantern',150);spawnN('squid',40);spawnN('sardine',150);spawnN('crab',40);spawnN('shark',3);for(let g=0;g<NG;g++)Z[g]*=1.8},
+  deadzone:()=>{ENV.base=24;ENV.nut=4;setFloor(x=>12+x*0.4);reef(20,90);spawnN('sardine',250,0,250);spawnN('tuna',25);spawnN('crab',50,0,200);spawnN('jelly',60);spawnN('shark',3)},
+  empty:()=>{ENV.base=20;setFloor(x=>140+Math.sin(x/20)*8)},
+};
+const SCENLIST=[{id:'reef',name:'Coral reef',desc:'Warm, clear, shallow water full of colourful coral, turtles and fish.'},{id:'open',name:'Open ocean',desc:'Deep blue water with tuna, sharks, dolphins and whales, and the dark deep below.'},
+  {id:'kelp',name:'Kelp forest',desc:'Cold coastal water with towering kelp, seals and crabs.'},{id:'vents',name:'Deep-sea vents',desc:'Two kilometres down: hot springs, anglerfish and glowing lanternfish.'},
+  {id:'polar',name:'Polar sea',desc:'Icy water rich in krill, feeding whales and seals.'},{id:'deadzone',name:'River mouth',desc:'Farm runoff pours nutrients into the sea. Watch for a dead zone.'},{id:'empty',name:'Empty ocean',desc:'Lifeless water. Build your own ecosystem.'}];
+
+/* ---------- fields ---------- */
+function fieldStep(dt){const T0=ENV.base+ENV.temp+(ENV.heat?4:0);
+  for(let j=0;j<GY;j++){const y=(j+.5)*GS,L=lightAt(y),Tf=clamp(1-Math.abs(tempAt(y)-15)/40,0.5,1);for(let i=0;i<GX;i++){const g=j*GX+i;if(y>floorAt((i+.5)*GS)){P[g]=Z[g]=0;continue}
+    const gr=1.6*L*NU[g]/(NU[g]+0.15)*Tf*(1-P[g])*(ENV.bloom?2.5:1)*(1-OIL[g]);const dp=gr*P[g]*dt;P[g]+=dp+0.0004*dt*L;NU[g]=Math.max(0,NU[g]-dp*0.8);O2[g]=Math.min(1.2,O2[g]+dp*0.6);
+    const graze=0.9*P[g]*Z[g]*dt;P[g]-=graze;Z[g]+=graze*0.8-0.04*Z[g]*dt+0.0006*dt;P[g]-=P[g]*0.04*dt;DET[g]+=graze*0.3+P[g]*0.04*dt+0.05*Z[g]*dt;
+    const rot=DET[g]*0.08*dt*(O2[g]>0.05?1:0.2);DET[g]-=rot;NU[g]+=rot*0.9;O2[g]-=rot*1.6+0.003*dt*(y<150?1:0.3);
+    if(j===0){O2[g]+=(1-O2[g])*Math.min(1,dt*(ENV.storm?3:0.8))}if(O2[g]<0)O2[g]=0;OIL[g]*=Math.exp(-dt*0.01);P[g]=clamp(P[g],0,1);Z[g]=clamp(Z[g],0,1.2)}}
+  // marine snow sinks, water mixes, rivers add nutrients near the left shore, upwelling brings deep nutrients up at the right
+  for(let j=GY-1;j>0;j--)for(let i=0;i<GX;i++){const g=j*GX+i,u=g-GX,m=DET[u]*Math.min(1,dt*0.6);if((j+.5)*GS<floorAt((i+.5)*GS)){DET[u]-=m;DET[g]+=m}}
+  const mix=Math.min(0.2,dt*(ENV.storm?2:0.3));tmpG.set(NU);for(let j=0;j<GY;j++)for(let i=0;i<GX;i++){const g=j*GX+i;let s=0,n=0;for(const k of [g-1,g+1,g-GX,g+GX])if(k>=0&&k<NG&&Math.abs((k%GX)-i)<=1){s+=tmpG[k];n++}NU[g]+=(s/n-NU[g])*mix}
+  for(let j=0;j<4;j++)for(let i=0;i<5;i++)NU[j*GX+i]+=0.05*ENV.nut*dt;
+  if(ENV.upwell)for(let j=0;j<GY;j++){const i=GX-6;const g=j*GX+i;const dg=Math.min(NG-1,(j+8)*GX+i);NU[g]=Math.max(NU[g],NU[dg]*0.9)}
+  for(const v of VENTS){const g=gi(v.x,v.y-1);NU[g]+=0.3*dt;DET[g]+=0.05*dt;HT[g]=8}
+  if(ENV.storm&&Math.random()<dt*2)for(let g=0;g<GX*3;g++){NU[g]+=0.02}}
+
+/* ---------- animals ---------- */
+const GC=8,HX=Math.ceil(WW/GC)+1,HY=Math.ceil(WH/GC)+1;let HB=[];
+function bucket(){HB=Array.from({length:HX*HY},()=>[]);for(const a of AG)HB[clamp((a.y/GC)|0,0,HY-1)*HX+clamp((a.x/GC)|0,0,HX-1)].push(a)}
+function near(x,y,r,f){const x0=Math.max(0,((x-r)/GC)|0),x1=Math.min(HX-1,((x+r)/GC)|0),y0=Math.max(0,((y-r)/GC)|0),y1=Math.min(HY-1,((y+r)/GC)|0);for(let j=y0;j<=y1;j++)for(let i=x0;i<=x1;i++)for(const b of HB[j*HX+i])f(b)}
+const PREDS={};for(const k of SPK)for(const p of (SP[k].eat||[]))(PREDS[p]=PREDS[p]||[]).push(k);
+function die(a,cause){if(a.dead)return;a.dead=true;a.cause=cause;DET[gi(a.x,a.y)]+=0.02*SP[a.sp].len;chEv('death',{sp:a.sp,cause});if(S.sel&&S.sel.a===a)toast(`${SP[a.sp].n} died: ${cause}`)}
+function animals(dt){bucket();const born=[];const cnt={};for(const a of AG)cnt[a.sp]=(cnt[a.sp]||0)+1;
+  for(const a of AG){if(a.dead)continue;const s=SP[a.sp];a.age+=dt;const fy=floorAt(a.x);let ax=0,ay=0;
+    // depth preference (lanternfish rise at night)
+    let [d0,d1]=RANGE(a.sp);if(s.migrate&&dayLight()<0.4){d0=5;d1=60}const tgtY=s.floor?fy-0.8:null;
+    if(tgtY!=null){ay+=(tgtY-a.y)*4}else{if(a.y<d0)ay+=(d0-a.y)*2;if(a.y>d1)ay-=(a.y-d1)*2}
+    if(s.air){a.air-=dt*(s.big?0.35:1.2);if(a.y<2)a.air=Math.min(1,a.air+dt*20);if(a.air<-0.3){die(a,'drowned');continue}}
+    if(a.y>fy-1.5)ay-=(a.y-(fy-1.5))*8;if(a.y<0.5)ay+=4;
+    // food
+    let target=null,flee=null,td=1e9;const sense=s.len*4+10;
+    const gasp=s.air&&a.air<0.3;if(s.eat&&a.e<(a.sp==='squid'?0.7:0.5)&&!gasp){near(a.x,a.y,sense,b=>{if(b.dead||b===a||!s.eat.includes(b.sp))return;const d=(b.x-a.x)**2+(b.y-a.y)**2;if(d<td){td=d;target=b}})}
+    const pr=PREDS[a.sp];if(pr){let fd=1e9;near(a.x,a.y,s.len*3+8,b=>{if(b.dead||!pr.includes(b.sp)||b.e>0.5)return;const d=(b.x-a.x)**2+(b.y-a.y)**2;if(d<fd){fd=d;flee=b}})}
+    if(gasp){}else if(flee){const d=Math.sqrt((flee.x-a.x)**2+(flee.y-a.y)**2)||1;ax-=(flee.x-a.x)/d*s.sp*2;ay-=(flee.y-a.y)/d*s.sp*2}
+    else if(target){const d=Math.sqrt(td)||1;ax+=(target.x-a.x)/d*s.sp*2;ay+=(target.y-a.y)/d*s.sp*2;if(d<(s.len+SP[target.sp].len)*0.6&&Math.random()<0.25){die(target,'eaten by a '+s.n.toLowerCase());a.e=Math.min(1,a.e+0.35+SP[target.sp].len/s.len*0.6);a.kills++;EATEN++;chEv('eat',{pred:a.sp,prey:target.sp})}}
+    else if(s.z){const g=gi(a.x,a.y);const want=Math.min(Z[g],dt*0.5*(s.big?6:1)*s.len*0.3);Z[g]-=want;a.e=Math.min(1,a.e+want*(s.big?1.2:4));if(Z[g]<0.08){const gr=gi(a.x+6,a.y),gl=gi(a.x-6,a.y);ax+=(Z[gr]-Z[gl])*s.sp*6}}
+    else if(s.det){const g=gi(a.x,fy-2);const want=Math.min(DET[g],dt*0.3);DET[g]-=want;a.e=Math.min(1,a.e+want*5)}
+    // schooling
+    if(s.school){let cx=0,cy=0,vx=0,vy=0,n=0,sx2=0,sy2=0;near(a.x,a.y,6,b=>{if(b===a||b.sp!==a.sp||b.dead)return;const dx=b.x-a.x,dy=b.y-a.y,d2=dx*dx+dy*dy;if(d2>36)return;cx+=b.x;cy+=b.y;vx+=b.vx;vy+=b.vy;n++;if(d2<s.len*s.len*1.4){sx2-=dx;sy2-=dy}});
+      if(n){ax+=(cx/n-a.x)*1.5+(vx/n-a.vx)*0.8+sx2*8;ay+=(cy/n-a.y)*1.5+(vy/n-a.vy)*0.8+sy2*8}}
+    // wander
+    a.wt=(a.wt||0)-dt;if(a.wt<=0){a.wt=rr(0.02,0.08);a.wx=rr(-1,1)*s.sp;a.wy=rr(-.4,.4)*s.sp}ax+=a.wx*(s.drift?0.3:1);ay+=a.wy*(s.drift?0.3:1);
+    if(s.drift)ay+=Math.sin(S.t*40+a.id*9)*s.sp*0.6;
+    // low oxygen: flee upward, suffocate
+    const o=O2[gi(a.x,a.y)];if(o<0.25&&!s.air){ay-=s.sp*1.5;a.e-=dt*(0.25-o)*6;if(a.e<0){die(a,'no oxygen');continue}}
+    if(OIL[gi(a.x,a.y)]>0.3){a.e-=dt*OIL[gi(a.x,a.y)]*2}
+    const T=tempAt(a.y);if(T<s.T[0]||T>s.T[1])a.e-=dt*0.6;
+    if(gasp){ax*=0.1;ay=-s.sp*6}
+    a.vx+=ax*dt*6;a.vy+=ay*dt*6;const sp=Math.hypot(a.vx,a.vy),mx=s.sp*(flee||target||gasp?1.4:0.8);if(sp>mx){a.vx*=mx/sp;a.vy*=mx/sp}
+    a.x+=a.vx*dt;a.y+=a.vy*dt;if(a.x<1){a.x=1;a.vx=Math.abs(a.vx)}if(a.x>WW-1){a.x=WW-1;a.vx=-Math.abs(a.vx)}a.y=clamp(a.y,0.3,floorAt(a.x)-0.5);if(Math.abs(a.vx)>0.5)a.dir=a.vx>0?1:-1;
+    a.e-=dt*s.met*0.08*(1+(ENV.heat?0.3:0));
+    if(a.e<=0){die(a,'starved');continue}if(a.age>s.life*365*rr(0.85,1.15)){die(a,'old age');continue}
+    // babies
+    if(a.age>s.mat*365&&a.e>0.75&&(cnt[a.sp]||0)<s.max&&Math.random()<dt*(s.big?0.002:0.08)/Math.max(1,s.mat)){a.e-=0.35;const n=Math.max(1,Math.round(s.lit*rr(0.5,1.2)));for(let q=0;q<n;q++)born.push([a.sp,a.x+rr(-1,1),a.y+rr(-1,1)]);a.kids+=n;cnt[a.sp]=(cnt[a.sp]||0)+n;BORN+=n;chEv('birth',{sp:a.sp,n})}}
+  AG=AG.filter(a=>!a.dead);for(const [k,x,y] of born)addAg(k,x,y,{e:0.6});
+  // small fish swim in from the wider ocean if they get very rare (only species that have lived here)
+  for(const k of ['sardine','lantern'])if((cnt[k]||0)<12&&(S.seen||{})[k]&&Math.random()<dt*0.5)spawnN(k,4)}
+function coralStep(dt){const T=tempAt(20),ph=pH();let tot=0;for(const c of CORAL){const T2=tempAt(c.y);const stress=Math.max(0,T2-30.5)*0.5+Math.max(0,7.95-ph)*6+OIL[gi(c.x,c.y)]*2+(O2[gi(c.x,c.y)]<0.2?1:0);
+  if(stress>0)c.h-=dt*stress*0.03;else c.h=Math.min(1,c.h+dt*0.004*(1+P[gi(c.x,c.y)]));c.h=clamp(c.h,0,1);tot+=c.h}STAT.coral=CORAL.length?tot/CORAL.length:0;
+  for(const k of KELP){const T2=tempAt(k.y-k.len/2);if(T2>22)k.len=Math.max(2,k.len-dt*0.3);else k.len=Math.min(Math.min(45,k.y-1),k.len+dt*0.15*NU[gi(k.x,k.y-k.len)]*3)}}
+function boatsStep(dt){while(BOATS.length<ENV.boats)BOATS.push({x:rr(10,WW-10),d:Math.random()<.5?1:-1,net:0});while(BOATS.length>ENV.boats)BOATS.pop();
+  for(const b of BOATS){b.x+=b.d*dt*60;if(b.x<5||b.x>WW-5)b.d*=-1;b.net=Math.min(35,b.net+dt*40);near(b.x-b.d*4,b.net,7,a=>{if(a.dead||a.sp==='crab'||a.sp==='angler')return;if(Math.abs(a.x-(b.x-b.d*4))<5&&a.y<b.net+2&&a.y>2&&Math.random()<dt*30){die(a,'caught in a net');CATCH++;chEv('catch',{sp:a.sp})}})}}
+
+/* ---------- player actions ---------- */
+function doEvent(ev){EVN++;chEv('event',{ev});const tog=['heat','bloom','storm','upwell'];const key={heatwave:'heat',bloom:'bloom',storm:'storm',upwell:'upwell'}[ev];
+  if(ev==='normal'){if(ENV.heat||ENV.bloom||ENV.storm||ENV.upwell)EVSTOP++;for(const k of tog)ENV[k]=false;toast('All events stopped');syncUI();return}
+  if(key){if(ENV[key]){ENV[key]=false;EVSTOP++;chEv('stop',{ev});toast('Stopped')}else{ENV[key]=true;toast({heat:'☀ A marine heatwave warms the surface by 4 °C',bloom:'🟢 An algae bloom spreads across the surface',storm:'🌊 A storm churns the sea and stirs it up',upwell:'⬆ Cold, rich deep water wells up along the coast'}[key])}syncUI();return}
+  if(ev==='oil'){const x=rr(60,WW-60);for(let i=-8;i<=8;i++)for(let j=0;j<2;j++){const g=j*GX+clamp(Math.floor(x/GS)+i,0,GX-1);OIL[g]=Math.min(1,OIL[g]+0.9*(1-Math.abs(i)/9))}toast('🛢 A tanker spills oil on the surface');flyToW(x,10,4)}
+  if(ev==='plastic'){const x=rr(40,WW-40);for(let k=0;k<120;k++)PLAST.push({x:x+rr(-30,30),y:rr(0.5,30),vy:rr(-.2,.4),ph:Math.random()*6,c:pick(['#f0f0f0','#4aa8ff','#ff5a5a','#ffd45a','#5ae08a'])});toast('🧴 A patch of plastic drifts in')}
+  if(ev==='migrate'){spawnN('whale',4);toast('🐋 A pod of blue whales arrives')}syncUI()}
+function syncUI(){$('tempS').value=ENV.temp;$('tempV').textContent=(ENV.temp>=0?'+':'')+ENV.temp+' °C';$('co2S').value=ENV.co2;$('co2V').textContent=ENV.co2+' ppm';$('nutS').value=Math.round(ENV.nut*100);$('nutV').textContent=Math.round(ENV.nut*100)+'%';$('boatS').value=ENV.boats;$('boatV').textContent=ENV.boats;
+  const lab={heatwave:['heat','☀ Marine heatwave'],bloom:['bloom','🟢 Algae bloom'],storm:['storm','🌊 Storm'],upwell:['upwell','⬆ Upwelling']};document.querySelectorAll('[data-ev]').forEach(b=>{const L=lab[b.dataset.ev];if(!L)return;b.setAttribute('aria-pressed',ENV[L[0]]);b.textContent=ENV[L[0]]?'■ Stop '+L[1].slice(2).toLowerCase():L[1]})}
+for(const [id,k,f,t] of [['tempS','temp',v=>v,v=>(v>=0?'+':'')+v+' °C'],['co2S','co2',v=>v,v=>v+' ppm'],['nutS','nut',v=>v/100,v=>v+'%'],['boatS','boats',v=>v,v=>v]])$(id).addEventListener('input',e=>{const v=+e.target.value;ENV[k]=f(v);$(id.replace('S','V')).textContent=t(v);SLIDED++;chEv('slider',{k})});
+document.querySelectorAll('[data-ev]').forEach(b=>b.onclick=()=>doEvent(b.dataset.ev));
+$('lblBtn').onclick=()=>{LBL=!LBL;$('lblBtn').setAttribute('aria-pressed',LBL);$('lblBtn').textContent=LBL?'On':'Off'};
+function release(k,x,y,n){let c=0;for(let q=0;q<n;q++){const s=SP[k],fy=floorAt(x);const yy=s.floor?fy-0.8:clamp(y+rr(-2,2),0.5,fy-1);if(addAg(k,clamp(x+rr(-2,2),1,WW-1),yy,{age:s.mat*365*rr(1,1.4),e:0.8}))c++}RELEASED[k]=(RELEASED[k]||0)+c;chEv('release',{sp:k,n:c});return c}
+
+/* ---------- rendering ---------- */
+const fimg=document.createElement('canvas');fimg.width=GX;fimg.height=GY;const fg=fimg.getContext('2d'),FID=fg.createImageData(GX,GY);
+function fieldImage(){const v=S.view,d=FID.data;for(let g=0;g<NG;g++){const o=g*4;let r=0,gg=0,b=0,a=0;const y=((g/GX|0)+.5)*GS;
+  if(v==='normal'){a=clamp(P[g]*0.9,0,0.55)*255;r=60;gg=200;b=90;if(OIL[g]>0.05){r=20;gg=16;b=10;a=Math.min(230,OIL[g]*260)}}
+  else if(v==='plankton'){const t=clamp(P[g]*1.5,0,1),z=clamp(Z[g],0,1);r=40+z*200;gg=60+t*190;b=80;a=200}
+  else if(v==='oxygen'){const t=clamp(O2[g],0,1);r=255*(1-t);gg=80+120*t;b=255*t;a=200}
+  else if(v==='temp'){const t=clamp((tempAt(y)+HT[g]*0.2-2)/30,0,1);r=255*t;gg=90+60*(1-Math.abs(t-0.5)*2);b=255*(1-t);a=200}
+  else if(v==='nutrients'){const t=clamp(NU[g],0,1);r=200*t;gg=150*t;b=60;a=200}
+  d[o]=r;d[o+1]=gg;d[o+2]=b;d[o+3]=a}fg.putImageData(FID,0,0)}
+function legendFor(v){const L={plankton:['Plankton','linear-gradient(90deg,#283c50,#3cb450,#e8c850)',['none','plant plankton','+ animal plankton']],oxygen:['Oxygen','linear-gradient(90deg,#ff5000,#c8a080,#0078ff)',['dead zone','','plenty']],temp:['Water temperature','linear-gradient(90deg,#0050ff,#a080a0,#ff3c00)',['2 °C','17 °C','32 °C']],nutrients:['Nutrients','linear-gradient(90deg,#000020,#c89640)',['poor','','rich']]}[v];if(L)setLegend(...L);else setLegend(null)}
+function drawFish(c,a,X,Y,z){const s=SP[a.sp],L=Math.max(3,s.len*z),d=a.dir;c.save();c.translate(X,Y);c.scale(d,1);const ang=clamp(Math.atan2(a.vy,Math.abs(a.vx)+1e-3),-0.6,0.6);c.rotate(ang);
+  c.fillStyle=s.col;
+  if(a.sp==='jelly'){c.scale(d,1);c.rotate(-ang);const p=Math.sin(S.t*60+a.id*20)*0.15;c.fillStyle='rgba(232,168,255,.75)';c.beginPath();c.ellipse(0,0,L*0.5,L*(0.38+p),0,Math.PI,0);c.fill();c.strokeStyle='rgba(232,168,255,.5)';c.lineWidth=1;for(let k=-2;k<=2;k++){c.beginPath();c.moveTo(k*L*0.15,0);c.quadraticCurveTo(k*L*0.2+Math.sin(S.t*50+k)*2,L*0.5,k*L*0.12,L*0.9);c.stroke()}c.restore();return}
+  if(a.sp==='crab'){c.scale(d,1);c.rotate(-ang);c.beginPath();c.ellipse(0,0,L*0.55,L*0.35,0,0,7);c.fill();c.strokeStyle=s.col;c.lineWidth=Math.max(1,L*0.12);for(const k of [-1,1]){c.beginPath();c.moveTo(k*L*0.4,0);c.lineTo(k*L*0.8,L*0.3);c.stroke();c.beginPath();c.arc(k*L*0.7,-L*0.35,L*0.18,0,7);c.fill()}c.restore();return}
+  if(a.sp==='turtle'){c.fillStyle='#5a7a3a';c.beginPath();c.ellipse(0,0,L*0.5,L*0.32,0,0,7);c.fill();c.fillStyle='#9aba7a';c.beginPath();c.arc(L*0.55,0,L*0.15,0,7);c.fill();c.beginPath();c.ellipse(L*0.2,L*0.32,L*0.25,L*0.08,0.6,0,7);c.ellipse(-L*0.25,L*0.3,L*0.18,L*0.07,-0.6,0,7);c.fill();c.restore();return}
+  if(a.sp==='squid'){c.beginPath();c.moveTo(L*0.6,0);c.lineTo(-L*0.1,-L*0.18);c.lineTo(-L*0.1,L*0.18);c.closePath();c.fill();c.strokeStyle=s.col;c.lineWidth=Math.max(1,L*0.06);for(let k=-2;k<=2;k++){c.beginPath();c.moveTo(-L*0.1,k*L*0.05);c.quadraticCurveTo(-L*0.4,k*L*0.12+Math.sin(S.t*80+k)*L*0.05,-L*0.65,k*L*0.1);c.stroke()}c.restore();return}
+  // fish-shaped body
+  const hgt=s.big?0.18:a.sp==='shark'?0.17:a.sp==='dolphin'||a.sp==='seal'?0.2:0.26;c.beginPath();c.ellipse(0,0,L*0.5,L*hgt,0,0,7);c.fill();
+  c.beginPath();c.moveTo(-L*0.42,0);c.lineTo(-L*0.7,-L*hgt*1.4);c.lineTo(-L*0.62,0);c.lineTo(-L*0.7,L*hgt*1.4);c.closePath();c.fill();
+  if(a.sp==='shark'||a.sp==='dolphin'){c.beginPath();c.moveTo(0,-L*hgt*0.8);c.lineTo(-L*0.12,-L*hgt*2.2);c.lineTo(-L*0.2,-L*hgt*0.8);c.fill()}
+  if(s.big||a.sp==='shark'||a.sp==='tuna'||a.sp==='dolphin'){c.fillStyle='rgba(255,255,255,.18)';c.beginPath();c.ellipse(L*0.05,L*hgt*0.45,L*0.38,L*hgt*0.45,0,0,7);c.fill()}
+  if(L>6){c.fillStyle='#111';c.beginPath();c.arc(L*0.33,-L*hgt*0.25,Math.max(0.8,L*0.03),0,7);c.fill()}
+  if(s.lure){c.strokeStyle='rgba(160,255,220,.6)';c.lineWidth=1;c.beginPath();c.moveTo(L*0.3,-L*hgt);c.quadraticCurveTo(L*0.6,-L*0.6,L*0.75,-L*0.3);c.stroke();c.fillStyle='#bfffe8';c.shadowColor='#9fffe0';c.shadowBlur=10;c.beginPath();c.arc(L*0.75,-L*0.3,Math.max(1.5,L*0.07),0,7);c.fill();c.shadowBlur=0}
+  c.restore()}
+function render(c,now){c.fillStyle='rgb(3,8,18)';c.fillRect(0,0,W,H);const z=cam.z,X0=sx(0),Y0=sy(0),X1=sx(WW),Y1=sy(WH);
+  // sky and water
+  const sky=c.createLinearGradient(0,sy(-20),0,Y0);const dl=dayLight();sky.addColorStop(0,`rgba(${40*dl},${70*dl},${120*dl},1)`);sky.addColorStop(1,`rgba(${120*dl+20},${170*dl+20},${220*dl+30},1)`);c.fillStyle=sky;c.fillRect(X0,sy(-30),X1-X0,Y0-sy(-30));
+  const wg=c.createLinearGradient(0,Y0,0,Y1);const T0=ENV.base+ENV.temp;const warm=clamp((T0-10)/20,0,1);wg.addColorStop(0,`rgb(${30+warm*20},${130+warm*40},${190+warm*20})`);wg.addColorStop(0.08,`rgb(14,${70+warm*20},140)`);wg.addColorStop(0.3,'rgb(6,28,70)');wg.addColorStop(0.7,'rgb(2,8,24)');wg.addColorStop(1,'rgb(1,3,10)');c.fillStyle=wg;c.fillRect(X0,Y0,X1-X0,Y1-Y0);
+  // sun rays
+  c.save();c.globalAlpha=0.07*dl;c.fillStyle='#fff';for(let k=0;k<9;k++){const x=((k*47+now*0.003)%WW);c.beginPath();c.moveTo(sx(x),Y0);c.lineTo(sx(x+6),Y0);c.lineTo(sx(x-14),sy(45));c.lineTo(sx(x-22),sy(45));c.fill()}c.restore();
+  // fields
+  if(this.fT===undefined||now-this.fT>200){fieldImage();this.fT=now}c.imageSmoothingEnabled=true;c.drawImage(fimg,X0,Y0,X1-X0,Y1-Y0);
+  // marine snow
+  c.fillStyle='rgba(220,230,240,.35)';for(const p of SNOW){const X=sx(p.x),Y=sy(p.y);if(X<0||X>W||Y<0||Y>H)continue;c.fillRect(X,Y,1.3,1.3)}
+  // kelp
+  for(const k of KELP){const X=sx(k.x),Yb=sy(k.y),n=8;c.strokeStyle='rgba(120,150,40,.9)';c.lineWidth=Math.max(1.5,z*0.5);c.beginPath();c.moveTo(X,Yb);let px=X,py=Yb;for(let s=1;s<=n;s++){const yy=k.y-k.len*s/n,xx=k.x+Math.sin(now*0.0015+k.ph+s*0.6)*s*0.35;px=sx(xx);py=sy(yy);c.lineTo(px,py)}c.stroke();
+    c.fillStyle='rgba(140,170,50,.75)';for(let s=2;s<=n;s+=1){const yy=k.y-k.len*s/n,xx=k.x+Math.sin(now*0.0015+k.ph+s*0.6)*s*0.35;c.beginPath();c.ellipse(sx(xx)+z*0.6,sy(yy),z*0.9,z*0.3,0.5,0,7);c.fill()}}
+  // floor
+  c.fillStyle='#2a2418';c.beginPath();c.moveTo(X0,Y1+50);for(let x=0;x<=WW;x+=2)c.lineTo(sx(x),sy(FLOOR[x]));c.lineTo(X1,Y1+50);c.closePath();c.fill();
+  c.strokeStyle='rgba(200,180,130,.45)';c.lineWidth=2;c.beginPath();for(let x=0;x<=WW;x+=2){const X=sx(x),Y=sy(FLOOR[x]);x?c.lineTo(X,Y):c.moveTo(X,Y)}c.stroke();
+  // vents
+  for(const v of VENTS){const X=sx(v.x),Y=sy(v.y);c.fillStyle='#1a1410';c.beginPath();c.moveTo(X-z*2,Y+z);c.lineTo(X-z*0.6,Y-z*4);c.lineTo(X+z*0.6,Y-z*4);c.lineTo(X+z*2,Y+z);c.fill();for(let k=0;k<6;k++){const t=(now*0.001+k/6)%1;c.fillStyle=`rgba(60,50,45,${0.6*(1-t)})`;c.beginPath();c.arc(X+Math.sin(k+now*0.002)*z*t*2,Y-z*4-t*z*14,z*(0.8+t*2.5),0,7);c.fill()}}
+  // coral
+  for(const cr of CORAL){const X=sx(cr.x),Y=sy(cr.y),R0=cr.r*z;const h=cr.h,col=h>0.35?cr.col:'#f4f0ea';c.globalAlpha=0.55+0.45*Math.max(h,0.4);c.fillStyle=col;
+    if(cr.kind==='branch'){c.strokeStyle=col;c.lineWidth=Math.max(1.5,R0*0.3);for(let k=-1;k<=1;k++){c.beginPath();c.moveTo(X,Y);c.lineTo(X+k*R0*0.7,Y-R0*1.4);c.stroke()}}else if(cr.kind==='fan'){c.beginPath();c.arc(X,Y,R0*1.2,Math.PI,0);c.fill()}else if(cr.kind==='table'){c.fillRect(X-R0,Y-R0*1.2,R0*2,R0*0.4);c.fillRect(X-R0*0.15,Y-R0,R0*0.3,R0)}else{c.beginPath();c.arc(X,Y-R0*0.3,R0*0.8,0,7);c.fill()}c.globalAlpha=1}
+  // city
+  const night=dayLight()<0.45;for(const b of CITY.b){const t=BT[b.t],X=sx(b.x),Y=sy(b.y),w=t.w*z,hh=t.h*z,lit=CITY.pop>0;
+    if(b.t==='dome'||b.t==='lab'){c.fillStyle='rgba(150,220,255,.18)';c.strokeStyle='rgba(190,235,255,.85)';c.lineWidth=Math.max(1.2,z*0.15);c.beginPath();c.ellipse(X,Y,w/2,hh,0,Math.PI,0);c.fill();c.stroke();
+      c.fillStyle=lit?(night?'#ffe08a':'rgba(255,230,160,.7)'):'#556';for(let k=0;k<5;k++){c.fillRect(X-w*0.35+k*w*0.16,Y-hh*0.35,Math.max(1.5,z*0.35),Math.max(1.5,z*0.35))}if(b.t==='lab'){c.fillStyle='#ff6a6a';c.beginPath();c.arc(X,Y-hh,Math.max(2,z*0.3),0,7);c.fill()}}
+    else if(b.t==='tower'){c.fillStyle='rgba(120,170,210,.35)';c.strokeStyle='rgba(190,230,255,.9)';c.lineWidth=Math.max(1,z*0.12);c.fillRect(X-w/2,Y-hh,w,hh);c.strokeRect(X-w/2,Y-hh,w,hh);c.fillStyle=lit?(night?'#ffe08a':'rgba(255,240,190,.6)'):'#445';for(let j=1;j<t.h;j+=1.6)for(let i=-1;i<=1;i+=2)c.fillRect(X+i*w*0.22-z*0.2,Y-j*z,Math.max(1.2,z*0.4),Math.max(1.2,z*0.5))}
+    else if(b.t==='farm'){c.strokeStyle='rgba(200,220,200,.6)';c.lineWidth=1;c.strokeRect(X-w/2,Y-hh,w,hh);for(let k=0;k<6;k++){c.strokeStyle='rgba(110,170,60,.9)';c.beginPath();c.moveTo(X-w/2+k*w/5,Y);c.lineTo(X-w/2+k*w/5+Math.sin(now*0.002+k)*z*0.4,Y-hh*0.9);c.stroke()}}
+    else if(b.t==='power'){c.fillStyle='#3a4a5a';c.fillRect(X-z*0.4,Y-hh,z*0.8,hh);c.save();c.translate(X,Y-hh);c.rotate(now*0.004);c.fillStyle='#d8e0e8';for(let k=0;k<3;k++){c.rotate(2.094);c.fillRect(-z*0.25,0,z*0.5,hh*0.5)}c.restore()}
+    else if(b.t==='port'){c.fillStyle='#4a5a6a';c.fillRect(X-w/2,Y-hh,w,hh);c.fillStyle='#ffd45a';c.fillRect(X-w/2,Y-hh,w,z*0.4)}
+    if(night&&lit){c.fillStyle='rgba(255,220,140,.08)';c.beginPath();c.arc(X,Y-hh/2,w*1.1,0,7);c.fill()}}
+  for(const s0 of CITY.subs){const X=sx(s0.x),Y=sy(s0.y),L=Math.max(5,z*3);c.save();c.translate(X,Y);c.scale(s0.dir||1,1);c.fillStyle='#ffd23a';c.beginPath();c.ellipse(0,0,L,L*0.38,0,0,7);c.fill();c.fillRect(-L*0.2,-L*0.6,L*0.4,L*0.3);c.fillStyle='#7fd8ff';c.beginPath();c.arc(L*0.5,0,L*0.15,0,7);c.fill();if(night){c.fillStyle='rgba(255,250,200,.25)';c.beginPath();c.moveTo(L,0);c.lineTo(L*4,-L);c.lineTo(L*4,L);c.fill()}c.restore()}
+  if(LBL&&CITY.b.length&&z>=2.5){const xs=CITY.b.map(b=>b.x),cx=(Math.min(...xs)+Math.max(...xs))/2,cy=Math.min(...CITY.b.map(b=>b.y-BT[b.t].h))-4;c.font='600 12px "IBM Plex Mono",monospace';c.textAlign='center';c.fillStyle='rgba(255,230,170,.9)';c.fillText(`🏙️ ${Math.round(CITY.pop)} people`,sx(cx),sy(cy))}
+  // creatures
+  for(const a of AG){const X=sx(a.x),Y=sy(a.y),s=SP[a.sp];if(X<-200||X>W+200||Y<-50||Y>H+50)continue;drawFish(c,a,X,Y,z);
+    if(s.glow&&a.y>40){c.fillStyle=s.glow;c.globalAlpha=0.8;c.beginPath();c.arc(X,Y,Math.max(1.2,z*0.25),0,7);c.fill();c.globalAlpha=1}}
+  // plastic
+  for(const p of PLAST){const X=sx(p.x),Y=sy(p.y);c.fillStyle=p.c;c.save();c.translate(X,Y);c.rotate(p.ph);c.fillRect(-z*0.4,-z*0.15,z*0.8,z*0.3);c.restore()}
+  // surface waves and boats
+  c.strokeStyle='rgba(220,240,255,.55)';c.lineWidth=2;c.beginPath();for(let x=0;x<=WW;x+=2){const Y=sy(Math.sin(x*0.3+now*0.002)*(ENV.storm?1.2:0.25));x?c.lineTo(sx(x),Y):c.moveTo(sx(x),Y)}c.stroke();
+  for(const b of BOATS){const X=sx(b.x),Y=sy(0);c.fillStyle='#d8d0c0';c.beginPath();c.moveTo(X-z*5,Y-z*1.2);c.lineTo(X+z*5,Y-z*1.2);c.lineTo(X+z*3.5,Y+z*0.6);c.lineTo(X-z*3.5,Y+z*0.6);c.fill();c.fillStyle='#a03a2a';c.fillRect(X-z,Y-z*3.2,z*2.2,z*2);
+    const nx=sx(b.x-b.d*4);c.strokeStyle='rgba(230,230,220,.5)';c.lineWidth=1;c.beginPath();c.moveTo(X,Y);c.lineTo(nx-z*4,sy(b.net));c.lineTo(nx+z*4,sy(b.net));c.closePath();c.stroke()}
+  // depth ruler
+  c.font='600 10px "IBM Plex Mono",monospace';c.textAlign='left';c.fillStyle='rgba(200,220,240,.6)';for(const [m,lab] of [[200,'200 m · twilight zone'],[1000,'1,000 m · midnight zone'],[3000,'3,000 m · the abyss']]){const Y=sy(m/MPU);if(Y>sy(0)&&Y<H){c.fillRect(X0,Y,6,1);c.fillText(lab,Math.max(X0+8,100),Y-3)}}
+  // labels and selection
+  if(false){}
+  if(LBL&&z>=5){c.font='600 10px "IBM Plex Mono",monospace';c.textAlign='center';for(const a of AG){if(!SP[a.sp].big&&a.sp!=='shark'&&a.sp!=='turtle'&&a.sp!=='seal'&&a.sp!=='dolphin')continue;c.fillStyle='rgba(255,255,255,.7)';c.fillText(SP[a.sp].n,sx(a.x),sy(a.y)-SP[a.sp].len*z*0.4-6)}}
+  if(S.sel&&S.sel.a){const a=S.sel.a;c.strokeStyle='#ffc35a';c.lineWidth=2;c.beginPath();c.arc(sx(a.x),sy(a.y),Math.max(10,SP[a.sp].len*z*0.6),0,7);c.stroke()}
+  if(S.sel&&S.sel.c){const cr=S.sel.c;c.strokeStyle='#ffc35a';c.lineWidth=2;c.beginPath();c.arc(sx(cr.x),sy(cr.y),cr.r*z+6,0,7);c.stroke()}
+  for(const p of PARTS){c.globalAlpha=Math.min(1,p.life*2);c.fillStyle=p.c;c.beginPath();c.arc(sx(p.x),sy(p.y),2,0,7);c.fill()}c.globalAlpha=1;
+  if(HOVER&&TB[S.tool]){c.strokeStyle='rgba(255,255,255,.6)';c.lineWidth=1;c.beginPath();c.arc(sx(HOVER[0]),sy(HOVER[1]),(S.brush*1.5+2)*z,0,7);c.stroke()}}
+
+/* ---------- tools ---------- */
+const TB={feed:1,nutr:1,heat:1,cool:1,clean:1,remove:1};let HOVER=null,lastT=0;
+const toolsList=[['',[['select','👆','Inspect']]],['Life',SPK.map(k=>['r_'+k,SP[k].ic,SP[k].n])],['Grow',[['coral','🪸','Coral','Click on a shallow sea floor to plant coral.'],['kelp','🌿','Kelp','Click on a shallow sea floor to plant kelp.'],['vent','♨️','Vent','Click on the sea floor to open a hot vent.'],['feed','🟢','Plankton','Paint a plankton bloom: food for small fish, jellyfish and whales.',1],['nutr','🧪','Nutrients','Paint nutrients that make plankton grow.',1]]],
+  ['City',[['b_dome','🫧','Dome','Click on the sea floor to build a habitat dome (homes for 60 people).'],['b_tower','🏙️','Tower','A tall glass tower: homes for 160 people, but it needs lots of power.'],['b_farm','🌾','Farm','A kelp and fish farm: feeds 120 people.'],['b_power','⚡','Power','A power plant. Build it next to a hot vent for much more power.'],['b_lab','🔬','Lab','A research lab.'],['b_port','🚢','Sub port','A submarine port: subs travel between your buildings.']]],
+  ['Change',[['heat','🔥','Heat','Paint to warm the water.',1],['cool','🧊','Cool','Paint to cool the water.',1],['clean','🧽','Clean up','Paint to remove plastic and oil.',1],['remove','✖️','Remove','Paint to remove creatures.',1]]]];
+const SIM={id:'abyssal',name:'Abyssal',world:{w:WW,h:WH,wrapX:false,maxZ:40,followZ:9},home:'reef',freeScen:'reef',tutScen:'reef',defSpeed:1,homeSpeed:0,inspectTab:'insp',canFollow:true,
+  speeds:[['1 hr',1/24],['6 hr',0.25],['1 day',1],['1 wk',7],['1 mo',30]],
+  fmtRate:v=>v<1?`${Math.round(v*24)} hour${v*24>1.5?'s':''} / s`:v<7?'1 day / s':v<30?'1 week / s':'1 month / s',
+  dateTxt:()=>{const y=Math.floor(S.t/365)+1,d=Math.floor(mod(S.t,365))+1,hr=Math.floor(mod(S.t,1)*24);return`Year ${y}, day ${d}${S.speed<=1?` · ${String(hr).padStart(2,'0')}:00`:''}`},
+  dateSub:()=>`${(ENV.base+ENV.temp+(ENV.heat?4:0)).toFixed(1)} °C surface · pH ${pH().toFixed(2)}`,
+  stepSize:sp=>clamp(sp/80,0.002,0.08),
+  tools:toolsList,scens:SCENLIST,
+  load(id){clearOcean();initFields();(SCENS[id]||SCENS.reef)();for(let k=0;k<30;k++)fieldStep(0.5);S.status={};S.seen={};S.statusReady=false;computeStats();HIST=[];sampleHist(true);syncUI();legendFor(S.view)},
+  step(dt){fieldStep(dt);animals(dt);coralStep(dt);boatsStep(dt);cityStep(dt);
+    for(const p of PLAST){p.y=clamp(p.y+p.vy*dt*2,0.3,floorAt(p.x)-0.5);p.x+=Math.sin(S.t*3+p.ph)*dt*3;p.ph+=dt;near(p.x,p.y,2,a=>{if(!a.dead&&(a.sp==='turtle'||a.sp==='whale'||a.sp==='seal')&&Math.random()<dt*2)a.e-=0.05})}},
+  frame(dt){if(SNOW.length<260)SNOW.push({x:Math.random()*WW,y:Math.random()*WH});for(const p of SNOW){p.y+=dt*1.2;if(p.y>floorAt(p.x)){p.y=0;p.x=Math.random()*WW}}for(const p of PARTS){p.x+=p.vx*dt;p.y+=p.vy*dt;p.life-=dt}PARTS=PARTS.filter(p=>p.life>0)},
+  render,
+  stats:()=>[...(CITY.b.length?[['City',Math.round(CITY.pop)+' people']]:[]),['Creatures',AG.length],['Species',Object.keys(STAT.pop).filter(k=>STAT.pop[k]).length],['Coral health',CORAL.length?Math.round(STAT.coral*100)+'%':'—'],['Caught',CATCH]],
+  hud(){computeStats();sampleHist();renderLife();renderInspect()},
+  pick(wx,wy){for(const b of CITY.b){const t=BT[b.t];if(Math.abs(wx-b.x)<t.w/2&&wy<=b.y+0.5&&wy>=b.y-t.h-1)return{b}}let best=null,bd=1e9;for(const a of AG){const d=(a.x-wx)**2+(a.y-wy)**2-SP[a.sp].len*SP[a.sp].len*0.3;if(d<bd){bd=d;best=a}}if(best&&bd<9)return{a:best};let bc=null,bcd=1e9;for(const c of CORAL){const d=(c.x-wx)**2+(c.y-wy)**2;if(d<bcd){bcd=d;bc=c}}if(bc&&bcd<6)return{c:bc};if(wy<0||wy>floorAt(wx))return null;return{w:[wx,wy]}},
+  selPos:s=>s.a?(AG.includes(s.a)?[s.a.x,s.a.y]:null):null,
+  pointer(type,wx,wy){const t=S.tool;HOVER=[wx,wy];if(type==='up')return;const now=performance.now();if(type==='drag'&&now-lastT<60)return;lastT=now;const fy=floorAt(wx);
+    if(t.startsWith('b_')){if(type!=='down')return;if(wy<floorAt(wx)-30&&floorAt(wx)-wy>30){}build(t.slice(2),wx);return}
+    if(t.startsWith('r_')){const k=t.slice(2);if(wy>fy){toast('That is under the sea floor');return}const n=release(k,wx,wy,SP[k].big||k==='shark'?1:k==='sardine'||k==='lantern'?8:3);if(!n)toast('The ocean is full');return}
+    if(type!=='down'&&!TB[t])return;
+    if(t==='coral'){if(fy>70){toast('Coral needs sunlight: plant it on shallow sea floor');return}for(let k=0;k<4;k++){const x=wx+rr(-2,2);CORAL.push({x,y:floorAt(x)-rr(0,1),h:0.6,kind:pick(['brain','branch','fan','table']),col:pick(['#ff7a8a','#ffb05a','#c88aff','#5ae0c0','#ffd45a']),r:rr(1,2)})}PLANTED++;chEv('coral',{});return}
+    if(t==='kelp'){if(fy>70){toast('Kelp needs sunlight: plant it on shallow sea floor');return}KELP.push({x:wx,y:fy,len:3,ph:Math.random()*6});PLANTED++;chEv('kelp',{});return}
+    if(t==='vent'){VENTS.push({x:wx,y:fy-1});chEv('vent',{});toast('♨️ A hydrothermal vent opens');return}
+    const r=S.brush*1.5+2;const cells=[];for(let j=0;j<GY;j++)for(let i=0;i<GX;i++){const x=(i+.5)*GS,y=(j+.5)*GS;if((x-wx)**2+(y-wy)**2<r*r)cells.push(j*GX+i)}
+    if(t==='feed'){for(const g of cells){P[g]=Math.min(1,P[g]+0.3);Z[g]=Math.min(1.2,Z[g]+0.25)}FED++;chEv('feed',{})}
+    else if(t==='nutr'){for(const g of cells)NU[g]=Math.min(2,NU[g]+0.4);FED++;chEv('nutr',{})}
+    else if(t==='heat'||t==='cool'){const d=t==='heat'?1:-1;for(const g of cells)HT[g]+=d;ENV.temp=clamp(ENV.temp+d*0.25,-6,8);HEATED++;syncUI()}
+    else if(t==='clean'){const n0=PLAST.length;PLAST=PLAST.filter(p=>(p.x-wx)**2+(p.y-wy)**2>r*r);CLEANED+=n0-PLAST.length;for(const g of cells){if(OIL[g]>0.01)CLEANED+=OIL[g]*10;OIL[g]=0}chEv('clean',{})}
+    else if(t==='remove'){for(const a of AG)if((a.x-wx)**2+(a.y-wy)**2<r*r)a.dead=true;AG=AG.filter(a=>!a.dead)}},
+  hover(wx,wy){HOVER=[wx,wy]},
+  viewChanged:v=>legendFor(v),
+  find(q){const out=[],add=(label,sub,go)=>out.push({label,sub,go});
+    for(const k of SPK){const s=SP[k];if(s.n.toLowerCase().includes(q)||s.pl.toLowerCase().includes(q)||k.includes(q)){const n=STAT.pop[k]||0;if(n)add(`${s.ic} Find a ${s.n.toLowerCase()}`,`${n} in the ocean`,()=>{const a=AG.find(x=>x.sp===k);if(a){S.sel={a};S.follow=true;flyToW(a.x,a.y,10);S.follow=true;showTab('insp')}});
+      add(`${s.ic} Release ${s.pl.toLowerCase()} here`,'adds some in the middle of the view',()=>{const x=clamp(cam.x,4,WW-4),y=clamp(cam.y,2,floorAt(cam.x)-2);release(k,x,y,s.big||k==='shark'?2:6);toast(`Released ${s.pl.toLowerCase()}`)})}}
+    for(const [,items] of SIM.tools)for(const [id,ico,name] of items)if(!id.startsWith('r_')&&id!=='select'&&name.toLowerCase().includes(q))add(`${ico} Use the ${name} tool`,'tool',()=>setTool(id));
+    for(const [ev,lab] of [['heatwave','☀ Marine heatwave'],['oil','🛢 Oil spill'],['plastic','🧴 Plastic patch'],['bloom','🟢 Algae bloom'],['upwell','⬆ Upwelling'],['migrate','🐋 Whale migration'],['storm','🌊 Storm']])if(lab.toLowerCase().includes(q)||ev.includes(q))add(lab,'event',()=>doEvent(ev));
+    for(const s of SCENLIST)if(s.name.toLowerCase().includes(q))add('Ocean: '+s.name,s.desc,()=>{loadScen(s.id);toast(s.name)});return out},
+  tabShown(id){if(id==='life')renderLife(true)},
+  selChanged(){renderInspect()},
+};
+/* ---------- stats and panels ---------- */
+function computeStats(){const pop={};for(const k of SPK)pop[k]=0;for(const a of AG)pop[a.sp]++;STAT.pop=pop;let low=0,n=0;for(let g=0;g<NG;g++){const i=g%GX,j=(g/GX)|0;if((j+.5)*GS<floorAt((i+.5)*GS)){n++;if(O2[g]<0.2)low++}}STAT.o2low=n?low/n:0;
+  let pp=0;for(let g=0;g<GX*10;g++)pp+=P[g];STAT.plank=pp/(GX*10);
+  const st=S.status||(S.status={});S.seen=S.seen||{};const msgs=[];for(const k of SPK){const c=pop[k];if(c>0)S.seen[k]=1;if(!S.seen[k])continue;const now=c===0?'extinct':c<15&&SP[k].max>30?'endangered':'ok',was=st[k];
+    if(S.statusReady&&was&&was!==now){if(now==='extinct'){msgs.push(`✖ ${SP[k].pl} are gone from this ocean`);chEv('extinct',{sp:k})}else if(now==='endangered'&&was==='ok'){msgs.push(`⚠ ${SP[k].pl} are endangered: only ${c} left`);chEv('endangered',{sp:k})}}st[k]=now}S.statusReady=true;for(const m of msgs.slice(0,2))toast(m)}
+function sampleHist(force){const last=HIST[HIST.length-1];if(!force&&last&&S.t-last.t<Math.max(0.1,S.speed*0.6))return;HIST.push({t:S.t,pop:{...STAT.pop}});if(HIST.length>240)HIST.shift()}
+function kv(rows){return rows.map(([k,v])=>`<div><span class="k">${k}</span><span class="v">${v}</span></div>`).join('')}
+function renderLife(force){if($('pane-life').hidden&&!force)return;
+  const cs=cityStats();$('lStats').innerHTML=kv([...(CITY.b.length?[['City population',Math.round(CITY.pop)+' / '+cs.house],['City power',(cs.pw>=0?'+':'')+cs.pw],['City food',cs.food+40+' people']]:[]),['Creatures',AG.length],['Coral health',CORAL.length?Math.round(STAT.coral*100)+'%':'no coral'],['Low-oxygen water',Math.round(STAT.o2low*100)+'%'],['Surface plankton',Math.round(STAT.plank*100)+'%'],['Water acidity',`pH ${pH().toFixed(2)}`],['Fish caught',CATCH],['Plastic pieces',PLAST.length],['Babies born',fmtN(BORN)]]);
+  const g=$('graph'),gc=g.getContext('2d'),w=g.width=g.clientWidth*DPR,hh=g.height=g.clientHeight*DPR;gc.clearRect(0,0,w,hh);
+  if(HIST.length>1){const t0=HIST[0].t,t1=HIST[HIST.length-1].t,X=t=>8+(w-16)*(t-t0)/Math.max(1e-6,t1-t0);for(const k of SPK){const mx=Math.max(1,...HIST.map(p=>p.pop[k]||0));if(mx<2)continue;gc.strokeStyle=SP[k].col;gc.lineWidth=1.6*DPR;gc.beginPath();HIST.forEach((p,i)=>{const y=hh-6-(hh-12)*(p.pop[k]||0)/mx;i?gc.lineTo(X(p.t),y):gc.moveTo(X(p.t),y)});gc.stroke()}}
+  const L=$('plist');L.textContent='';for(const k of SPK){const n=STAT.pop[k]||0;if(!n&&!(S.seen||{})[k])continue;const r=document.createElement('button');r.className='sprow'+(n?'':' zero');r.innerHTML='<i></i><span></span><b></b>';r.children[0].style.background=SP[k].col;r.children[1].textContent=`${SP[k].ic} ${SP[k].pl}${S.status&&S.status[k]==='endangered'?' · endangered':''}`;r.children[2].textContent=n;r.onclick=()=>{const a=AG.find(x=>x.sp===k);if(a){S.sel={a};flyToW(a.x,a.y,10);showTab('insp')}};L.appendChild(r)}
+  const st=S.status||{},bad=SPK.filter(k=>st[k]==='endangered'||st[k]==='extinct'),box=$('endBox');box.hidden=!bad.length;if(bad.length)box.innerHTML='<span class="k">Endangered or gone</span>'+bad.map(k=>`<div class="endrow${st[k]==='extinct'?' ext':''}"><span>${SP[k].ic} ${SP[k].pl}</span><b>${st[k]==='extinct'?'gone':STAT.pop[k]}</b></div>`).join('')}
+let INSPK='';
+function renderInspect(){const b=S.sel;$('inspEmpty').hidden=!!b;$('inspBody').hidden=!b;if(!b)return;const body=$('inspBody');
+  if(b.a){const a=b.a;if(!AG.includes(a)){body.innerHTML=`<h2 class="ititle">${SP[a.sp].n}</h2><p class="note">It died: ${a.cause||'gone'}.</p>`;return}const s=SP[a.sp];
+    if(INSPK!==a.id){INSPK=a.id;body.innerHTML=`<h2 class="ititle"></h2><div class="isub"></div><div class="kv" id="iK"></div><div class="actions"><button class="btn" id="aFeed">Feed</button><button class="btn" id="aClone">Clone</button><button class="btn" id="aFol">Follow</button></div><p class="note" id="iN"></p>`;
+      $('aFeed').onclick=()=>{a.e=1;FEDBY++;chEv('feedone',{});toast('Fed')};$('aClone').onclick=()=>{release(a.sp,a.x,a.y,1);toast('Cloned')};$('aFol').onclick=()=>{S.follow=true;cam.z=Math.max(cam.z,9)}}
+    body.children[0].textContent=`${s.ic} ${s.n}`;body.children[1].textContent=`${depthM(a.y)} m deep · ${(a.age/365).toFixed(1)} years old`;
+    $('iK').innerHTML=kv([['Energy',Math.round(a.e*100)+'%'],['Eats',s.eat?s.eat.map(k=>SP[k].pl.toLowerCase()).join(', '):s.z?'plankton':'marine snow'],['Children',a.kids],['Kills',a.kills],['Water',tempAt(a.y).toFixed(1)+' °C'],s.air?['Air',Math.round(clamp(a.air,0,1)*100)+'%']:['Oxygen',Math.round(O2[gi(a.x,a.y)]*100)+'%']]);
+    $('iN').textContent=s.air?'Air-breathing: it must swim up to the surface to breathe.':s.glow?'Glows in the dark (bioluminescence) to find mates and lure prey.':s.school?'Swims in a school: safety in numbers.':''}
+  else if(b.b){const B=b.b,t=BT[B.t],cs=cityStats();INSPK='';body.innerHTML=`<h2 class="ititle">${t.ic} ${t.n}</h2><div class="isub">${depthM(B.y)} m deep · built on day ${Math.floor(B.born)+1}</div><div class="kv">${kv([['Homes',t.house],['Food',t.food?'feeds '+t.food:'—'],['Power',t.pw>0?'+'+(t.pw+(VENTS.some(v=>Math.abs(v.x-B.x)<14)?18:0)):t.pw],['City population',Math.round(CITY.pop)],['City power',(cs.pw>=0?'+':'')+cs.pw],['City food',cs.food+40]])}</div><div class="actions"><button class="btn danger" id="bDel">Demolish</button></div><p class="note">The city grows when it has homes, food and enough power. Its sewage adds nutrients to the water nearby.</p>`;$('bDel').onclick=()=>{CITY.b.splice(CITY.b.indexOf(B),1);S.sel=null;toast('Demolished')}}
+  else if(b.c){const c=b.c;INSPK='';body.innerHTML=`<h2 class="ititle">🪸 Coral</h2><div class="isub">${depthM(c.y)} m deep</div><div class="kv">${kv([['Health',Math.round(c.h*100)+'%'],['State',c.h>0.35?'healthy':c.h>0?'bleached':'dead'],['Water',tempAt(c.y).toFixed(1)+' °C'],['Acidity','pH '+pH().toFixed(2)]])}</div><p class="note">Coral bleaches when the water gets too warm (above about 30.5 °C) or too acidic. It can recover if conditions improve in time.</p>`}
+  else if(b.w){const [x,y]=b.w,g=gi(x,y);INSPK='';body.innerHTML=`<h2 class="ititle">Sea water</h2><div class="isub">${depthM(y)} m deep</div><div class="kv">${kv([['Temperature',tempAt(y).toFixed(1)+' °C'],['Light',Math.round(lightAt(y)*100)+'%'],['Plankton',Math.round(P[g]*100)+'%'],['Animal plankton',Math.round(Z[g]*100)+'%'],['Nutrients',Math.round(NU[g]*100)+'%'],['Oxygen',Math.round(O2[g]*100)+'%']])}</div>`}}
+
+/* ================= Abyssal: challenges, tutorial, demo ================= */
+const pop=k=>STAT.pop[k]||0;
+const relN=k=>CH.events.filter(e=>e.k==='release'&&(!k||e.sp===k)).reduce((s,e)=>s+e.n,0);
+CC(1,{t:'Find a shark',g:'Find a shark and follow it.',hint:'Type shark in the search bar and pick “Find a shark”.',scen:'reef',check:()=>{const ok=S.sel&&S.sel.a&&S.sel.a.sp==='shark'&&S.follow;return[ok,S.sel&&S.sel.a&&S.sel.a.sp==='shark'?0.5:0,ok?'Following a shark':'']},stars:byTime(20,45)});
+CC(1.05,{t:'Top of the board',g:'Open the leaderboard and look at the All simulators rankings.',hint:'Press 🏆 Leaderboard on the home page or in the 👤 account box, then the All simulators tab.',scen:'reef',setup:()=>{CH.ref.n=LBOPEN},check:()=>{const ok=LBOPEN>CH.ref.n&&LBTAB==='all'&&!$('lbBox').hidden;return[ok,LBOPEN>CH.ref.n?0.5:0,ok?'':'Open the leaderboard']},stars:byTime(20,45)});
+CC(1.1,{t:'Into the deep',g:'Find an anglerfish, 2,500 m down in the dark.',hint:'Type angler in the search bar.',scen:'vents',check:()=>{const ok=S.sel&&S.sel.a&&S.sel.a.sp==='angler';return[ok,ok?1:0,'']},stars:byTime(20,45)});
+CC(1.2,{t:'School’s in',g:'Release 40 sardines and watch them school.',hint:'Pick 🐟 Sardine in the toolbar and click in the sunlit water.',scen:'empty',check:()=>{const n=relN('sardine');return[n>=40,n/40,`${Math.min(n,40)} of 40 released`]},stars:byTime(20,50)});
+CC(1.3,{t:'Plant a reef',g:'Plant 30 corals.',hint:'Pick 🪸 Coral and click on shallow sea floor (in the sunlight).',scen:'kelp',setup:()=>{CH.ref.c=CORAL.length},check:()=>{const n=CORAL.length-CH.ref.c;return[n>=30,n/30,`${n} of 30 corals`]},stars:byTime(25,60)});
+CC(1.4,{t:'Bloom',g:'Turn 40% of the sunlit water green with plankton.',hint:'Paint 🟢 Plankton or 🧪 Nutrients near the surface, or press 🟢 Algae bloom.',scen:'open',check:()=>{const p=STAT.plank;return[p>=.4,p/.4,`${Math.round(p*100)}% plankton at the surface`]},stars:byTime(25,60)});
+CC(1.5,{t:'Clean the sea',g:'Clean up 100 pieces of plastic.',hint:'Press 🧴 Plastic patch if there is none, then paint with 🧽 Clean up.',scen:'reef',setup:()=>{doEvent('plastic');CH.ref.c=CLEANED},check:()=>{const n=Math.floor(CLEANED-CH.ref.c);return[n>=100,n/100,`${Math.min(n,100)} of 100 cleaned`]},stars:byTime(30,70)});
+CC(1.6,{t:'Turtle rescue',g:'Have 15 sea turtles on the reef.',hint:'Release turtles (🐢) and make sure there are jellyfish to eat.',scen:'reef',check:()=>{const n=pop('turtle');return[n>=15,n/15,`${n} of 15 turtles`]},stars:byTime(30,70)});
+// ecology
+CC(2.4,{t:'Whale feast',g:'Grow the whales to 8 in the polar sea.',hint:'Whales eat krill (animal plankton). Paint plankton and nutrients, and keep the water cold.',scen:'polar',check:()=>{const n=pop('whale');return[n>=8,n/8,`${n} of 8 whales`]},stars:byTime(60,150)});
+CC(2.2,{t:'Predators and prey',g:'Keep sharks and tuna alive together for 1 year.',hint:'If the sharks eat all the tuna, they starve. Keep plenty of sardines for the tuna.',scen:'open',check:()=>{const p=hold('h',pop('shark')>0&&pop('tuna')>0,365);return[p>=1,p,`${pop('shark')} sharks · ${pop('tuna')} tuna · ${Math.round(p*365)} of 365 days`]},fail:()=>!pop('shark')?'The sharks died out':!pop('tuna')?'The tuna died out':'',stars:byTime(60,150)});
+CC(2.6,{t:'Life at the vents',g:'Have 120 crabs living on the deep sea floor.',hint:'Crabs eat marine snow. More life up above means more food falling down. Open more vents too.',scen:'vents',check:()=>{const n=pop('crab');return[n>=120,n/120,`${n} of 120 crabs`]},stars:byTime(60,150)});
+CC(2.3,{t:'Kelp forest',g:'Grow 60 kelp plants in the cold coastal water.',hint:'Pick 🌿 Kelp and plant on shallow floor. Kelp shrinks in warm water.',scen:'kelp',check:()=>{const n=KELP.filter(k=>k.len>8).length;return[n>=60,n/60,`${n} of 60 tall kelp`]},stars:byTime(45,110)});
+CC(3.0,{t:'Jellyfish takeover',g:'Let the jellyfish grow to 350.',hint:'Jellyfish thrive when their predators (turtles) and competitors (small fish) vanish, and plankton is plentiful.',scen:'reef',check:()=>{const n=pop('jelly');return[n>=350,n/350,`${n} of 350 jellyfish`]},stars:byTime(60,150)});
+CC(2.8,{t:'Night shift',g:'Watch lanternfish rise toward the surface at night: get 60 of them above 600 m.',hint:'Slow time to 1 hour per second. At night the lanternfish swim up to feed.',scen:'open',check:()=>{const n=AG.filter(a=>a.sp==='lantern'&&a.y<600/MPU).length;return[n>=60,n/60,`${n} of 60 lanternfish shallower than 600 m`]},stars:byTime(45,110)});
+// people and the ocean
+CC(2.5,{t:'Save the reef',g:'A marine heatwave is bleaching the coral. Keep average coral health above 50% for 120 days.',hint:'Cool the water with 🧊 Cool, lower the temperature or carbon dioxide, and stop the heatwave.',scen:'reef',setup:()=>{doEvent('heatwave');ENV.temp=2;syncUI()},check:()=>{const p=hold('r',STAT.coral>0.5,120);return[p>=1,p,`Coral health ${Math.round(STAT.coral*100)}% · ${Math.round(p*120)} of 120 days`]},fail:()=>STAT.coral<0.2?'The reef bleached and died':'',stars:byTime(45,110)});
+CC(3.2,{t:'Fix the dead zone',g:'Farm runoff has choked the river mouth. Get low-oxygen water below 5%.',hint:'Turn down River nutrients, and let storms or time mix oxygen back in.',scen:'deadzone',setup:()=>{for(let k=0;k<60;k++)fieldStep(0.5)},check:()=>{const f=STAT.o2low;return[since()>5&&f<.05,clamp((0.3-f)/0.25,0,1),`${Math.round(f*100)}% of the water low in oxygen`]},stars:byTime(60,150)});
+CC(3.4,{t:'Sustainable fishing',g:'Catch 150 fish with boats while keeping at least 150 sardines alive.',hint:'Use the Fishing boats slider. Too many boats and the sardines collapse.',scen:'open',setup:()=>{CH.ref.c=CATCH},check:()=>{const c=CATCH-CH.ref.c,s=pop('sardine');return[c>=150&&s>=150,Math.min(1,c/150)*(s>=150?1:0.5),`${c} of 150 caught · ${s} sardines`]},fail:()=>pop('sardine')<40?'The sardines were overfished':'',stars:byTime(60,150)});
+CC(2.9,{t:'Oil spill',g:'Clean up an oil spill before it kills more than 20 animals.',hint:'Paint the black slick with 🧽 Clean up.',scen:'reef',setup:()=>{doEvent('oil');CH.ref.d=0},check:()=>{let oil=0;for(let g=0;g<NG;g++)oil+=OIL[g];return[oil<0.5,clamp(1-oil/12,0,1),`Oil left: ${oil.toFixed(1)}`]},fail:()=>CH.events.filter(e=>e.k==='death'&&e.cause!=='old age'&&e.cause.indexOf('eaten')<0).length>20?'Too many animals died':'',stars:byTime(40,100)});
+CC(3.6,{t:'Acid ocean',g:'Raise carbon dioxide until the coral starts dissolving: average coral health below 30%.',hint:'Drag the Carbon dioxide slider up. More CO₂ makes the sea more acidic.',scen:'reef',check:()=>{const h=STAT.coral;return[h<0.3,clamp((1-h)/0.7,0,1),`Coral health ${Math.round(h*100)}% · pH ${pH().toFixed(2)}`]},stars:byTime(45,110)});
+CC(4.0,{t:'Rewild the ocean',g:'In the empty ocean, have 8 species alive at once for 60 days.',hint:'Start the food web from the bottom: plankton, then small fish, then hunters.',scen:'empty',check:()=>{const n=SPK.filter(k=>pop(k)>0).length,p=hold('w',n>=8,60);return[p>=1,p*0.8+Math.min(0.2,n/40),`${n} species · ${Math.round(p*60)} of 60 days`]},stars:byTime(90,240)});
+CC(1.7,{t:'First foundations',g:'Build an underwater city with 3 domes and a farm.',hint:'Pick 🫧 Dome and 🌾 Farm in the City section of the toolbar and click on the sea floor.',scen:'reef',check:()=>{const d=CITY.b.filter(b=>b.t==='dome').length,f=CITY.b.filter(b=>b.t==='farm').length;return[d>=3&&f>=1,Math.min(d,3)/4+Math.min(f,1)/4,`${d} of 3 domes · ${f} of 1 farm`]},stars:byTime(30,70)});
+CC(2.7,{t:'Atlantis',g:'Grow your underwater city to 500 people.',hint:'People need homes (domes, towers), food (farms) and power (power plants: put them next to hot vents for extra power).',scen:'vents',check:()=>{const n=Math.round(CITY.pop);return[n>=500,n/500,`${n} of 500 people`]},stars:byTime(60,150)});
+CC(3.3,{t:'Eco city',g:'Have a city of 300 people while the reef stays above 60% health for 60 days.',hint:'Farms and powered homes grow the city; too many people pollute the water. Balance it.',scen:'reef',check:()=>{const p=hold('e',CITY.pop>=300&&STAT.coral>0.6,60);return[p>=1,p*0.7+Math.min(0.3,CITY.pop/1000),`${Math.round(CITY.pop)} people · coral ${Math.round(STAT.coral*100)}% · ${Math.round(p*60)} of 60 days`]},stars:byTime(90,200)});
+CC(2.0,{t:'Make it yours',g:'Create an account (👤 at the top), then release a whale.',hint:'Click 👤, type a name and press Create account. Then pick 🐋 Blue whale and click.',scen:'open',setup:()=>{CH.ref.a=ACCN},check:()=>{const a=ACCN>CH.ref.a,w=relN('whale')>0;return[a&&w,(a?.5:0)+(w?.5:0),a?(w?'':'Now release a whale'):'Create or sign in to an account first']},stars:byTime(60,150)});
+
+TSTEPS.push(
+ ['Look around','Drag to move around the ocean. W, A, S and D work too.',r=>CNT.moved>r.m+150,r=>{r.m=CNT.moved}],
+ ['Zoom','Scroll (or pinch) to zoom in on the creatures.',r=>CNT.zoomed>r.z+2,r=>{r.z=CNT.zoomed}],
+ ['Pause time','Press Space or the ⏸ button to pause.',()=>S.paused],
+ ['Speed up','Resume, then press “1 day”.',()=>!S.paused&&S.speed>=1],
+ ['Find a creature','Type turtle in the search bar and pick “Find a sea turtle”.',()=>S.sel&&S.sel.a],
+ ['Inspect','The Inspect tab shows its energy, age and what it eats. Press Feed.',r=>FEDBY>r.n,r=>{r.n=FEDBY}],
+ ['Release sea life','Pick 🐟 Sardine in the toolbar and click in the water.',r=>Object.values(RELEASED).reduce((x,y)=>x+y,0)>r.n,r=>{r.n=Object.values(RELEASED).reduce((x,y)=>x+y,0)}],
+ ['Build a city','Pick 🫧 Dome in the City section of the toolbar and click on the sea floor. Add a 🌾 Farm and a ⚡ Power plant so people move in.',r=>CITY.built>r.n,r=>{r.n=CITY.built}],
+ ['Plant coral','Pick 🪸 Coral and click on shallow sea floor.',r=>PLANTED>r.n,r=>{r.n=PLANTED}],
+ ['Feed the plankton','Pick 🟢 Plankton and paint near the surface.',r=>FED>r.n,r=>{r.n=FED}],
+ ['Change the water','Pick 🔥 Heat or 🧊 Cool and paint in the water.',r=>HEATED>r.n,r=>{r.n=HEATED}],
+ ['Clean up','Press 🧴 Plastic patch in the Ocean tab, then pick 🧽 Clean up and paint over it.',r=>CLEANED>r.n,r=>{r.n=CLEANED}],
+ ['Fishing boats','In the Ocean tab, drag the Fishing boats slider.',r=>SLIDED>r.n,r=>{r.n=SLIDED}],
+ ['Cause an event','Press one of the events, such as ☀ Marine heatwave.',r=>EVN>r.n,r=>{r.n=EVN}],
+ ['Stop the event','Press the same button again (it now says ■ Stop) or ↺ Stop all events.',r=>EVSTOP>r.n,r=>{r.n=EVSTOP}],
+ ['Views','Switch to the Oxygen or Plankton view.',()=>S.view==='oxygen'||S.view==='plankton'],
+ ['The Life tab','Open the Life tab to see every species and the endangered list.',r=>(CNT.tab_life||0)>r.n,r=>{r.n=CNT.tab_life||0}],
+ ['Other oceans','Press Oceans in the top bar and pick another one.',r=>CNT.scen>r.n,r=>{r.n=CNT.scen}],
+ ['Leaderboard','Click 👤 in the top bar, then 🏆 Leaderboard, to see who has the most stars here and across all our simulators.',r=>LBOPEN>r.n,r=>{r.n=LBOPEN}],
+ ['Save your progress','Click 👤 in the top bar and create an account (a PIN is optional). Your stars save on this device.',r=>ACCN>r.n,r=>{r.n=ACCN}],
+);
+DEMO.push(
+ ['reef','Coral reef','Warm, clear, shallow water: corals, turtles, schools of fish and the sharks that hunt them.',()=>{setSpeed(0);flyToW(180,20,6)}],
+ ['kelp','Kelp forest','Giant kelp towers up from the cold sea floor, sheltering fish, crabs and hunting seals.',()=>{setSpeed(0);flyToW(110,25,5)}],
+ ['open','The open ocean','Tuna and dolphins chase sardines near the surface; far below, lanternfish glow in the dark.',()=>{setSpeed(1)}],
+ ['vents','Deep-sea vents','No sunlight reaches 3 km down. Hot vents feed a strange world of crabs and anglerfish.',()=>{setSpeed(0);flyToW(180,140,5)}],
+ ['polar','Whale feast','In icy water, krill swarm in the plankton, and the biggest animals on Earth come to eat.',()=>{setSpeed(1);setView('plankton')}],
+ ['deadzone','Dead zone','Fertiliser from farms feeds a huge bloom. When it dies and rots, it uses up the oxygen.',()=>{setSpeed(3);setView('oxygen')}],
+);
+
+/* ===== simulator kit: UI, home, accounts, challenges, tutorial, demo, main loop ===== */
+const cv=$('world'),ctx=cv.getContext('2d');
+function resize(){W=innerWidth;H=innerHeight;DPR=Math.min(2,devicePixelRatio||1);cv.width=Math.round(W*DPR);cv.height=Math.round(H*DPR);measureHud();if(SIM.resize)SIM.resize()}
+function measureHud(){const h=document.querySelector('.hud-top');if(h)document.documentElement.style.setProperty('--hudH',Math.round(h.getBoundingClientRect().height)+'px')}
+const sx=wx=>(wx-cam.x)*cam.z+W/2+cam.ox,sy=wy=>(wy-cam.y)*cam.z+H/2;
+const wxOf=px=>(px-W/2-cam.ox)/cam.z+cam.x,wyOf=py=>(py-H/2)/cam.z+cam.y;
+function fitWorld(){const w=SIM.world.w,h=SIM.world.h,m=innerWidth<760?1:0.82;cam.z=SIM.world.wrapX?Math.max(W/w,H/h):Math.min(W/w,(H-90)/h)*m;cam.x=w/2;cam.y=h/2;clampCam()}
+function minZoom(){const w=SIM.world.w,h=SIM.world.h;return SIM.world.wrapX?H/h:Math.min(W/w,H/h)*0.5}
+function clampCam(){const h=SIM.world.h,w=SIM.world.w;cam.z=clamp(cam.z,minZoom(),SIM.world.maxZ||40);if(SIM.world.wrapX){const hy=H/2/cam.z;cam.y=clamp(cam.y,Math.min(h/2,hy),Math.max(h/2,h-hy))}else cam.y=clamp(cam.y,0,h);if(SIM.world.wrapX)cam.x=mod(cam.x,w);else cam.x=clamp(cam.x,0,w)}
+function zoomAt(f,px,py){const wx=wxOf(px),wy=wyOf(py);cam.z*=f;clampCam();cam.x+=wx-wxOf(px);cam.y+=wy-wyOf(py);clampCam();bump('zoomed')}
+function flyToW(x,y,z){S.follow=false;cam.x=x;cam.y=y;if(z)cam.z=Math.max(cam.z,z);clampCam()}
+
+/* speeds */
+function buildSpeeds(){const b=$('spds');b.textContent='';SIM.speeds.forEach(([l,v],i)=>{const e=document.createElement('button');e.className='spd';e.textContent=l;e.onclick=()=>{setSpeed(i);setPaused(false)};b.appendChild(e)})}
+function setSpeed(i){i=clamp(i,0,SIM.speeds.length-1);S.speedI=i;S.speed=SIM.speeds[i][1];[...$('spds').children].forEach((e,k)=>e.setAttribute('aria-pressed',k===i));updateRate()}
+function setPaused(p){S.paused=p;$('pauseBtn').textContent=p?'▶':'⏸';$('pauseBtn').setAttribute('aria-label',p?'Resume':'Pause');updateRate()}
+function updateRate(){$('rateTxt').textContent=S.paused?'Paused':SIM.fmtRate(S.speed)+(S.achieved<S.speed*0.8&&!S.paused?` (running ${SIM.fmtRate(Math.max(S.achieved,S.speed*0.01))})`:'')}
+$('pauseBtn').onclick=()=>setPaused(!S.paused);
+
+/* tools */
+function buildRail(){const r=$('rail');r.textContent='';for(const [g,items] of SIM.tools){if(g){const h=document.createElement('h3');h.textContent=g;r.appendChild(h)}
+  for(const [id,ico,name] of items){const b=document.createElement('button');b.className='tool';b.dataset.tool=id;b.innerHTML='<span class="ico"></span><span></span>';b.children[0].textContent=ico;b.children[1].textContent=name;b.onclick=()=>setTool(id);r.appendChild(b)}}}
+function toolInfo(id){for(const [,items] of SIM.tools)for(const t of items)if(t[0]===id)return t;return null}
+function setTool(id){S.tool=id;document.querySelectorAll('.tool').forEach(b=>b.setAttribute('aria-pressed',b.dataset.tool===id));const t=toolInfo(id);
+  $('placeopts').hidden=id==='select'||!t;$('toolNote').textContent=t&&t[3]||'';$('brush').parentElement.hidden=!(t&&t[4]);cv.classList.toggle('place',id!=='select');if(id!=='select')bump('tool');if(SIM.toolChanged)SIM.toolChanged(id)}
+$('brush').oninput=e=>{S.brush=+e.target.value;$('brushV').textContent=S.brush};
+
+/* dock tabs */
+function showTab(id){document.querySelectorAll('.tab').forEach(t=>t.setAttribute('aria-selected',t.dataset.tab===id));document.querySelectorAll('#dock .pane').forEach(p=>p.hidden=p.id!=='pane-'+id);bump('tab_'+id);if(SIM.tabShown)SIM.tabShown(id)}
+document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>showTab(t.dataset.tab));
+$('dockBtn').onclick=()=>document.body.classList.toggle('dockOpen');
+function setView(v){S.view=v;document.querySelectorAll('[data-view]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.view===v));bump('view');if(SIM.viewChanged)SIM.viewChanged(v)}
+document.querySelectorAll('[data-view]').forEach(b=>b.onclick=()=>setView(b.dataset.view));
+function setLegend(title,grad,ticks){const L=$('legend');if(!title){L.hidden=true;return}L.hidden=false;L.children[0].textContent=title;L.children[1].style.background=grad;[...L.children[2].children].forEach((s,i)=>s.textContent=ticks[i]||'')}
+
+/* scenarios */
+function buildScen(){const g=$('scgrid');g.textContent='';for(const s of SIM.scens){const b=document.createElement('button');b.className='scb';b.innerHTML='<b></b><span></span>';b.children[0].textContent=s.name;b.children[1].textContent=s.desc;b.onclick=()=>{$('scen').hidden=true;loadScen(s.id);bump('scen');toast(s.name)};g.appendChild(b)}}
+function loadScen(id){S.t=0;S.sel=null;S.follow=false;SIM.load(id);S.scen=id;fitWorld();if(SIM.after)SIM.after()}
+$('scenBtn').onclick=()=>$('scen').hidden=!$('scen').hidden;$('scenClose').onclick=()=>$('scen').hidden=true;
+
+/* find */
+let findItems=[],findI=0;
+function renderFind(){const L=$('findList'),q=$('find').value.trim();findItems=q?SIM.find(q.toLowerCase()).slice(0,10):[];findI=0;L.hidden=!findItems.length;L.textContent='';
+  findItems.forEach((it,i)=>{const b=document.createElement('button');b.className=i===findI?'on':'';b.innerHTML='<span></span><small></small>';b.children[0].textContent=it.label;b.children[1].textContent=it.sub||'';b.onmousedown=e=>{e.preventDefault();doFind(i)};L.appendChild(b)})}
+function doFind(i){const it=findItems[i];if(!it)return;$('find').value='';$('findList').hidden=true;$('find').blur();it.go();bump('find')}
+$('find').oninput=renderFind;$('find').onblur=()=>setTimeout(()=>$('findList').hidden=true,120);
+$('find').onkeydown=e=>{if(e.key==='Enter'){doFind(findI)}else if(e.key==='ArrowDown'||e.key==='ArrowUp'){findI=clamp(findI+(e.key==='ArrowDown'?1:-1),0,findItems.length-1);[...$('findList').children].forEach((b,k)=>b.className=k===findI?'on':'');e.preventDefault()}else if(e.key==='Escape'){$('find').blur()}};
+
+/* pointer input */
+const ptrs=new Map();let drag=null,pinch=null;
+cv.addEventListener('contextmenu',e=>e.preventDefault());
+cv.addEventListener('pointerdown',e=>{cv.setPointerCapture(e.pointerId);ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY});
+  if(ptrs.size===2){const [a,b]=[...ptrs.values()];pinch={d:Math.hypot(a.x-b.x,a.y-b.y),z:cam.z};if(drag&&drag.tool)SIM.pointer('up',wxOf(e.clientX),wyOf(e.clientY),e);drag=null;return}
+  const pan=S.tool==='select'||e.button===1||e.button===2;
+  drag={x0:e.clientX,y0:e.clientY,lx:e.clientX,ly:e.clientY,moved:0,pan,tool:!pan};
+  if(!pan)SIM.pointer('down',wxOf(e.clientX),wyOf(e.clientY),e)});
+cv.addEventListener('pointermove',e=>{const p=ptrs.get(e.pointerId);if(p){p.x=e.clientX;p.y=e.clientY}
+  if(pinch&&ptrs.size===2){const [a,b]=[...ptrs.values()];const d=Math.hypot(a.x-b.x,a.y-b.y);const f=pinch.z*d/pinch.d/cam.z;zoomAt(f,(a.x+b.x)/2,(a.y+b.y)/2);return}
+  if(!drag){if(SIM.hover)SIM.hover(wxOf(e.clientX),wyOf(e.clientY));return}
+  const dx=e.clientX-drag.lx,dy=e.clientY-drag.ly;drag.lx=e.clientX;drag.ly=e.clientY;drag.moved+=Math.abs(dx)+Math.abs(dy);
+  if(drag.pan){S.follow=false;cam.x-=dx/cam.z;cam.y-=dy/cam.z;clampCam();CNT.moved+=Math.abs(dx)+Math.abs(dy)}else SIM.pointer('drag',wxOf(e.clientX),wyOf(e.clientY),e)});
+function endPtr(e){ptrs.delete(e.pointerId);if(ptrs.size<2)pinch=null;if(!drag)return;const d=drag;drag=null;
+  if(d.tool)SIM.pointer('up',wxOf(e.clientX),wyOf(e.clientY),e);else if(d.moved<6&&e.button!==2){S.follow=false;S.sel=SIM.pick(wxOf(e.clientX),wyOf(e.clientY))||null;if(S.sel&&SIM.inspectTab){showTab(SIM.inspectTab);document.body.classList.add('dockOpen')}if(SIM.selChanged)SIM.selChanged();deselBtn()}}
+cv.addEventListener('pointerup',endPtr);cv.addEventListener('pointercancel',endPtr);
+cv.addEventListener('dblclick',e=>{if(S.sel&&S.tool==='select'&&SIM.canFollow){S.follow=true;cam.z=Math.max(cam.z,SIM.world.followZ||cam.z)}});
+cv.addEventListener('wheel',e=>{e.preventDefault();zoomAt(Math.exp(-e.deltaY*0.0015),e.clientX,e.clientY)},{passive:false});
+$('zIn').onclick=()=>zoomAt(1.4,W/2+cam.ox,H/2);$('zOut').onclick=()=>zoomAt(1/1.4,W/2+cam.ox,H/2);$('zFit').onclick=()=>{fitWorld();bump('zoomed')};
+const keys=new Set();
+addEventListener('keydown',e=>{if(e.target.tagName==='INPUT'||e.target.tagName==='SELECT'||e.target.tagName==='TEXTAREA')return;const k=e.key.toLowerCase();
+  if(k===' '){e.preventDefault();setPaused(!S.paused)}else if(k==='escape'){if(S.tool!=='select')setTool('select');else{S.sel=null;S.follow=false;if(SIM.selChanged)SIM.selChanged()}}
+  else if(k==='+'||k==='=')zoomAt(1.25,W/2+cam.ox,H/2);else if(k==='-')zoomAt(0.8,W/2+cam.ox,H/2);else keys.add(k)});
+addEventListener('keyup',e=>keys.delete(e.key.toLowerCase()));
+function camKeys(dt){let dx=0,dy=0;if(keys.has('a')||keys.has('arrowleft'))dx--;if(keys.has('d')||keys.has('arrowright'))dx++;if(keys.has('w')||keys.has('arrowup'))dy--;if(keys.has('s')||keys.has('arrowdown'))dy++;
+  if(dx||dy){S.follow=false;const sp=600*dt/cam.z;cam.x+=dx*sp;cam.y+=dy*sp;clampCam();CNT.moved+=600*dt}}
+
+/* accounts (shared by every simulator on the site) */
+const lsGet=k=>{try{return JSON.parse(localStorage.getItem(k)||'null')}catch(e){return null}};
+const lsSet=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}};
+const ACC_KEY='barycenter.accounts',PROG_KEY=SIM.id+'.progress';
+let ACC=lsGet(ACC_KEY);if(!ACC||!Array.isArray(ACC.list))ACC={list:[],cur:'guest',devicePlays:0};if(ACC.cur!=='guest'&&!ACC.list.some(a=>a.id===ACC.cur))ACC.cur='guest';
+let ACCN=0;
+const progKey=id=>id==='guest'?PROG_KEY:PROG_KEY+'.'+id;
+const blankProg=()=>({stars:{},plays:0,secs:0});
+let PROG=blankProg();
+function loadProg(){const v=lsGet(progKey(ACC.cur));PROG=Object.assign(blankProg(),v&&typeof v.stars==='object'?v:{})}
+function saveProg(){lsSet(progKey(ACC.cur),PROG)}
+function saveAcc(){const cur=lsGet(ACC_KEY);if(cur&&Array.isArray(cur.list)){for(const a of ACC.list){const o=cur.list.find(x=>x.id===a.id);if(o)Object.keys(o).forEach(k=>{if(!(k in a))a[k]=o[k]})}for(const o of cur.list)if(!ACC.list.some(a=>a.id===o.id))ACC.list.push(o);if(cur.devicePlays>ACC.devicePlays)ACC.devicePlays=cur.devicePlays}lsSet(ACC_KEY,ACC)}
+const curAcc=()=>ACC.list.find(a=>a.id===ACC.cur);
+const accName=()=>(curAcc()||{name:'Guest'}).name;
+const pinHash=p=>{let h=5381;for(const c of 'bary:'+p)h=((h*33)^c.charCodeAt(0))>>>0;return h.toString(36)};
+const GCOUNT='https://abacus.jasoncameron.dev',GPATH='barycenter-sandbox/'+SIM.id+'-plays';let GLOBAL=null;
+function gCount(op){try{const ctl=new AbortController();setTimeout(()=>ctl.abort(),6000);fetch(`${GCOUNT}/${op}/${GPATH}`,{signal:ctl.signal,cache:'no-store'}).then(r=>r.ok?r.json():null).then(j=>{if(j&&Number.isFinite(+j.value)){GLOBAL=Math.max(GLOBAL||0,+j.value);updateAcctUI()}}).catch(()=>{})}catch(e){}}
+function countPlay(){PROG.plays++;ACC.devicePlays=(ACC.devicePlays||0)+1;saveProg();saveAcc();if(GLOBAL!=null)GLOBAL++;updateAcctUI();gCount('hit')}
+function updateAcctUI(){$('hAcctName').textContent=curAcc()?accName():'Guest · make an account';$('hPlaysN').textContent=(GLOBAL!=null?GLOBAL:PROG.plays).toLocaleString();$('hPlaysL').textContent=GLOBAL!=null?'plays by everyone':'plays';$('acctBtn').title=`Account: ${accName()} (saved on this device)`}
+function switchAcc(id,quiet){if(id===ACC.cur)return;saveProg();ACC.cur=id;saveAcc();loadProg();ACCN++;updateAcctUI();if(!$('home').hidden)homeView($('hChalView').hidden?'hMain':'hChalView');if(!quiet)toast(`Signed in as ${accName()}`);renderAcct()}
+let acctPend=null;
+function renderAcct(msg){const L=$('acctList');L.textContent='';$('acctMsg').textContent=msg||'';
+  for(const a of [{id:'guest',name:'Guest',guest:1},...ACC.list]){const pr=a.id===ACC.cur?PROG:(lsGet(progKey(a.id))||{stars:{},plays:0}),cur=a.id===ACC.cur,r=document.createElement('div');r.className='arow'+(cur?' cur':'');
+    const nm=document.createElement('div');nm.className='an';nm.innerHTML='<div></div><div class="as"></div>';nm.children[0].textContent=(a.pin?'🔒 ':'')+a.name+(cur?' (signed in)':'');nm.children[1].textContent=`★ ${Object.values(pr.stars||{}).reduce((x,y)=>x+y,0)} in ${SIM.name} · ${pr.plays||0} plays`;r.appendChild(nm);
+    if(!cur){if(acctPend===a.id){const inp=document.createElement('input');inp.placeholder='PIN';inp.maxLength=4;const go=document.createElement('button');go.className='btn primary';go.textContent='OK';const t=()=>{if(pinHash(inp.value)===a.pin){acctPend=null;switchAcc(a.id)}else renderAcct('Wrong PIN')};go.onclick=t;inp.onkeydown=e=>{if(e.key==='Enter')t()};r.append(inp,go);setTimeout(()=>inp.focus(),0)}
+      else{const b=document.createElement('button');b.className='btn';b.textContent=a.guest?'Use guest':'Sign in';b.onclick=()=>{if(a.pin){acctPend=a.id;renderAcct()}else switchAcc(a.id)};r.appendChild(b)}}
+    else if(!a.guest){const so=document.createElement('button');so.className='btn';so.textContent='Sign out';so.onclick=()=>switchAcc('guest');r.appendChild(so)}
+    L.appendChild(r)}}
+function openAcct(){acctPend=null;$('acct').hidden=false;renderAcct()}
+$('acctForm').addEventListener('submit',e=>{e.preventDefault();const name=$('acctNew').value.trim().replace(/\s+/g,' ').slice(0,20),pin=$('acctPin').value.trim();
+  if(!name)return renderAcct('Type a name first');if(/^guest$/i.test(name)||ACC.list.some(a=>a.name.toLowerCase()===name.toLowerCase()))return renderAcct('That name is taken on this device');if(pin&&!/^\d{4}$/.test(pin))return renderAcct('A PIN is 4 digits (or leave it empty)');
+  const fromGuest=ACC.cur==='guest'&&(PROG.plays||Object.keys(PROG.stars).length);const a={id:'a'+Date.now().toString(36)+Math.floor(Math.random()*1e4).toString(36),name,created:Date.now()};if(pin)a.pin=pinHash(pin);
+  if(fromGuest){lsSet(progKey(a.id),PROG);lsSet(PROG_KEY,blankProg())}ACC.list.push(a);saveAcc();$('acctNew').value='';$('acctPin').value='';switchAcc(a.id,true);toast(`Account ${name} created`);renderAcct(fromGuest?'Your guest progress moved into this account.':'')});
+$('hAcctBtn').onclick=openAcct;$('acctBtn').onclick=openAcct;$('acctClose').onclick=()=>$('acct').hidden=true;$('acct').addEventListener('click',e=>{if(e.target.id==='acct')$('acct').hidden=true});
+$('hPlays').onclick=()=>{gCount('get');toast(GLOBAL!=null?`${GLOBAL.toLocaleString()} plays by everyone · ${PROG.plays} by you`:`${PROG.plays} plays by you on this device`)};
+
+/* challenges */
+CHALS.sort((a,b)=>a.diff-b.diff);loadProg();
+const NCH=CHALS.length;
+const starsOf=i=>(CHALS[i]&&PROG.stars[CHALS[i].t])||0;
+const unlocked=i=>{if(i===0||starsOf(i-1)||starsOf(i))return true;for(let j=i+1;j<NCH;j++)if(starsOf(j))return true;return false};
+function totalStars(){let n=0;for(let i=0;i<NCH;i++)n+=starsOf(i);return n}
+const doneCount=()=>CHALS.filter((c,i)=>starsOf(i)>0).length;
+function setMode(m){document.body.classList.toggle('mHome',m==='home');document.body.classList.toggle('mDemo',m==='demo')}
+function homeView(v){for(const id of ['hMain','hChalView','hDemoView'])$(id).hidden=id!==v;if(v==='hChalView')renderGrid();const d=doneCount();$('hChalSub').textContent=d?`${d} of ${NCH} complete · ${totalStars()} of ${NCH*3} stars`:`${NCH} goals, from easy to fiendish`;updateAcctUI()}
+function showHome(){stopDemo(true);if(CH.active)endChallenge();if(TUT.on)endTutorial();$('chDone').hidden=true;$('scen').hidden=true;
+  CH.loading=true;loadScen(SIM.home);CH.loading=false;setSpeed(SIM.homeSpeed??SIM.defSpeed);setPaused(false);setTool('select');setView('normal');
+  cam.ox=innerWidth>900?innerWidth*0.2:0;setMode('home');$('home').hidden=false;homeView('hMain')}
+function leaveHome(){cam.ox=0;$('home').hidden=true;setMode('');fitWorld()}
+$('homeBtn').onclick=showHome;document.querySelectorAll('.hback').forEach(b=>b.onclick=()=>homeView('hMain'));
+$('hChal').onclick=()=>homeView('hChalView');$('hDemo').onclick=()=>homeView('hDemoView');
+function startFree(){leaveHome();loadScen(SIM.freeScen||SIM.home);setSpeed(SIM.defSpeed);countPlay()}
+$('hFree').onclick=startFree;
+function renderGrid(){const g=$('hGrid');g.textContent='';let next=-1;
+  CHALS.forEach((c,i)=>{const st=starsOf(i),un=unlocked(i);if(un&&!st&&next<0)next=i;const b=document.createElement('button');b.className='ct'+(i===next?' next':'');b.disabled=!un;b.title=un?`${c.t}: ${c.g}`:'Finish the previous challenge to unlock';
+    b.innerHTML='<span class="cn"></span><span class="ctt"></span><span class="cs"></span>';b.children[0].textContent=`#${i+1}`;b.children[1].textContent=un?c.t:'Locked';b.children[2].textContent=un?(st?'★'.repeat(st)+'☆'.repeat(3-st):'☆☆☆'):'🔒';b.onclick=()=>startChallenge(i);g.appendChild(b)});
+  $('hStars').textContent=`★ ${totalStars()} / ${NCH*3}`;if(next>=0)setTimeout(()=>{const el=g.children[next];if(el)el.scrollIntoView({block:'nearest'})},30)}
+function startChallenge(i){const c=CHALS[i];if(!c||!unlocked(i))return;leaveHome();countPlay();$('chDone').hidden=true;
+  CH.active=c;CH.idx=i;CH.events=[];CH.hold={};CH.ref={};CH.done=false;CH.failed='';CH.loading=true;try{loadScen(c.scen||SIM.home);setSpeed(c.speed??SIM.defSpeed);if(c.setup)c.setup()}finally{CH.loading=false}
+  CH.t0=S.t;CH.real0=performance.now();setPaused(false);setTool('select');
+  $('chHud').hidden=false;$('chNum').textContent=`Challenge ${i+1} of ${NCH}`;$('chTitle').textContent=c.t;$('chGoal').textContent=c.g;$('chProg').textContent='';$('chBar').style.width='0%';$('chHint').hidden=!c.hint;$('chRestart').textContent='Restart'}
+function endChallenge(){CH.active=null;$('chHud').hidden=true}
+function chTick(){if(TUT.on)tutTick();if(!CH.active||CH.done)return;const c=CH.active;let r;try{r=c.check()}catch(e){console.warn(e);r=[false,0,'']}
+  const [done,p,txt]=r;$('chProg').textContent=txt||'';$('chBar').style.width=Math.round(clamp(p||0,0,1)*100)+'%';const t=realSecs();$('chTime').textContent=`${Math.floor(t/60)}:${String(Math.floor(t%60)).padStart(2,'0')}`;
+  if(done){CH.done=true;const st=clamp((c.stars||byTime(60,150))(),1,3),prev=starsOf(CH.idx);if(st>prev)PROG.stars[c.t]=st;saveProg();
+    $('dStars').innerHTML='★'.repeat(st)+'<span class="off">'+'★'.repeat(3-st)+'</span>';$('dTitle').textContent=`Challenge ${CH.idx+1} complete!`;$('dText').textContent=`${c.t} · ${Math.floor(t/60)}:${String(Math.floor(t%60)).padStart(2,'0')}${st<3?' · Faster solutions earn more stars.':' · Perfect!'}${prev>st?` Your best is still ${prev} ★.`:''}`;
+    $('dNext').hidden=CH.idx>=NCH-1;$('dNext').textContent='Next challenge';$('dRetry').hidden=false;$('dList').textContent='All challenges';$('chDone').hidden=false;$('chHud').hidden=true;return}
+  const f=c.fail&&c.fail();if(f){CH.done=true;$('dStars').innerHTML='<span class="off">★★★</span>';$('dTitle').textContent='Not this time';$('dText').textContent=f+'. Try again?';$('dNext').hidden=true;$('dRetry').hidden=false;$('dList').textContent='All challenges';$('chDone').hidden=false;$('chHud').hidden=true}}
+$('chRestart').addEventListener('click',()=>{if(TUT.on){TUT.i++;tutStep();return}startChallenge(CH.idx)});
+$('chExit').addEventListener('click',()=>{if(TUT.on){endTutorial();showHome();homeView('hDemoView');return}endChallenge();showHome();homeView('hChalView')});
+$('chHint').onclick=()=>{if(CH.active)toast('Hint: '+CH.active.hint,6000)};
+$('dNext').onclick=()=>{if(TUT.finished){TUT.finished=false;showHome();homeView('hChalView');return}startChallenge(CH.idx+1)};
+$('dRetry').onclick=()=>{if(TUT.finished){TUT.finished=false;startTutorial();return}startChallenge(CH.idx)};
+$('dList').onclick=()=>{if(TUT.finished){TUT.finished=false;$('chDone').hidden=true;startFree();return}endChallenge();showHome();homeView('hChalView')};
+
+/* tutorial */
+const TUT={on:false,i:0,ref:{},finished:false};
+function startTutorial(){leaveHome();countPlay();$('chDone').hidden=true;CH.loading=true;loadScen(SIM.tutScen||SIM.home);CH.loading=false;setSpeed(SIM.defSpeed);setPaused(false);TUT.on=true;TUT.i=0;TUT.finished=false;tutStep()}
+function tutStep(){const st=TSTEPS[TUT.i];if(!st){TUT.on=false;TUT.finished=true;$('chHud').hidden=true;$('dStars').innerHTML='★★★';$('dTitle').textContent='Tutorial complete!';$('dText').textContent='You know all the controls. Try the challenges, or build anything in free play.';$('dNext').hidden=false;$('dNext').textContent='Challenges';$('dRetry').hidden=false;$('dList').textContent='Free play';$('chDone').hidden=false;$('chRestart').textContent='Restart';return}
+  TUT.ref={};if(st[3])st[3](TUT.ref);$('chHud').hidden=false;$('chNum').textContent=`Tutorial · step ${TUT.i+1} of ${TSTEPS.length}`;$('chTitle').textContent=st[0];$('chGoal').textContent=st[1];$('chProg').textContent='';$('chTime').textContent='';$('chBar').style.width=Math.round(TUT.i/TSTEPS.length*100)+'%';$('chHint').hidden=true;$('chRestart').textContent='Skip step'}
+function tutTick(){const st=TSTEPS[TUT.i];let ok=false;try{ok=st&&st[2](TUT.ref)}catch(e){}if(ok){TUT.i++;toast('✓ '+st[0]);tutStep()}}
+function endTutorial(){TUT.on=false;$('chHud').hidden=true;$('chRestart').textContent='Restart'}
+$('hTut').onclick=startTutorial;
+
+/* demo */
+let demoI=-1,demoTimer=0;
+function startDemo(){leaveHome();countPlay();setMode('demo');$('demoCap').hidden=false;demoI=-1;nextDemo()}
+function nextDemo(){clearTimeout(demoTimer);demoI=(demoI+1)%DEMO.length;const [id,t,x,f]=DEMO[demoI];CH.loading=true;loadScen(id);CH.loading=false;setView('normal');setPaused(false);if(f)f();
+  $('demoStep').textContent=`Demo · ${demoI+1} of ${DEMO.length}`;$('demoTitle').textContent=t;$('demoText').textContent=x;demoTimer=setTimeout(nextDemo,12000)}
+function stopDemo(quiet){clearTimeout(demoTimer);if(demoI<0&&quiet)return;demoI=-1;$('demoCap').hidden=true;setMode('');if(!quiet)showHome()}
+$('hWatch').onclick=startDemo;$('demoExit').onclick=()=>stopDemo();$('demoNext').onclick=nextDemo;
+
+/* main loop */
+let last=performance.now(),uiT=0,achAcc=0,achT=0,renderMs=4,stepMs=1;S.achieved=1;
+function frame(now){const dtR=Math.min(0.1,(now-last)/1000);last=now;camKeys(dtR);
+  try{
+    if(!S.paused){const want=S.speed*dtR,step=SIM.stepSize(S.speed),t0=performance.now(),budget=clamp((SIM.budget||12.5)-renderMs,2,9);let done=0;
+      while(done<want-1e-12){const el=performance.now()-t0;if(el+stepMs*0.9>budget&&done>0)break;const s0=performance.now(),d=Math.min(step,want-done);SIM.step(d);S.t+=d;done+=d;stepMs=stepMs*0.8+(performance.now()-s0)*0.2}
+      achAcc+=done}
+    achT+=dtR;if(achT>=0.5){S.achieved=achAcc/achT;achAcc=0;achT=0}
+    if(SIM.frame)SIM.frame(dtR);
+    if(S.follow&&S.sel&&SIM.selPos){const p=SIM.selPos(S.sel);if(p){cam.x=lerp(cam.x,p[0],Math.min(1,dtR*6));cam.y=lerp(cam.y,p[1],Math.min(1,dtR*6));clampCam()}}
+    const r0=performance.now();ctx.setTransform(DPR,0,0,DPR,0,0);SIM.render(ctx,now);renderMs=renderMs*0.85+(performance.now()-r0)*0.15;
+    uiT+=dtR;if(uiT>0.25){uiT=0;updateHud()}
+  }catch(err){console.error('['+SIM.name+']',err)}
+  requestAnimationFrame(frame)}
+function deselect(){S.sel=null;S.follow=false;if(SIM.selChanged)SIM.selChanged()}
+function deselBtn(){const p=$('pane-insp');if(!p)return;let b=$('kitDesel');if(!b){b=document.createElement('button');b.id='kitDesel';b.className='btn';b.textContent='✕ Stop inspecting';b.onclick=deselect;p.insertBefore(b,p.firstChild)}b.hidden=!S.sel}
+function updateHud(){deselBtn();measureHud();const st=SIM.stats(),box=$('stats');if(box.children.length!==st.length){box.textContent='';for(const [k] of st){const d=document.createElement('div');d.className='stat';d.innerHTML='<span class="k"></span><span class="v"></span>';d.children[0].textContent=k;box.appendChild(d)}}
+  st.forEach(([k,v],i)=>{box.children[i].children[1].textContent=v});$('dateTxt').textContent=SIM.dateTxt();$('dateSub').textContent=SIM.dateSub?SIM.dateSub():'';updateRate();SIM.hud();chTick();
+  if(document.visibilityState==='visible'&&$('home').hidden)PROG.secs=(PROG.secs||0)+0.25}
+addEventListener('resize',resize);addEventListener('pagehide',saveProg);
+resize();buildRail();buildSpeeds();buildScen();if(SIM.init)SIM.init();setSpeed(SIM.defSpeed);setTool('select');updateAcctUI();gCount('get');showHome();requestAnimationFrame(frame);
+
+/* ===== leaderboard: every account's stars, in this simulator and across all of them (shared by every simulator) ===== */
+// needs: LB_GAME (this game's id), SIMLIST (all games), ACC, lsGet, curAcc, toast
+let LBOPEN=0,LBTAB=LB_GAME;
+// world leaderboard: an online table shared by every game (see supabase-setup.sql). Empty until the database is connected.
+const LB_URL='',LB_KEY='';const lbWorldOn=()=>!!(LB_URL&&LB_KEY);let lbWorldCache={};
+function lbFetch(path,body){const h={apikey:LB_KEY,'content-type':'application/json'};if(/^eyJ/.test(LB_KEY))h.authorization='Bearer '+LB_KEY;const ctl=new AbortController();setTimeout(()=>ctl.abort(),8000);
+  return fetch(LB_URL.replace(/\/$/,'')+path,{method:body?'POST':'GET',headers:h,body:body?JSON.stringify(body):undefined,signal:ctl.signal,cache:'no-store'}).then(r=>{if(!r.ok)throw new Error('HTTP '+r.status);return r.status===204?null:r.json()})}
+function lbIds(a){if(!a.uid){a.uid=(crypto.randomUUID?crypto.randomUUID():'xxxxxxxx-xxxx-4xxx-8xxx-xxxxxxxxxxxx'.replace(/x/g,()=>(Math.random()*16|0).toString(16)));a.sec=Math.random().toString(36).slice(2)+Math.random().toString(36).slice(2);if(typeof saveAcc==='function')saveAcc()}}
+function lbPost(){const a=curAcc();if(!a||!lbWorldOn())return;lbIds(a);const r=lbStars(LB_GAME,a.id);
+  if(a.lb)lbFetch('/rest/v1/rpc/submit_game_score',{p_id:a.uid,p_secret:a.sec,p_game:LB_GAME,p_name:a.name,p_stars:r.stars,p_done:r.done}).then(()=>{lbWorldCache={}}).catch(()=>{});
+  else lbFetch('/rest/v1/rpc/remove_game_score',{p_id:a.uid,p_secret:a.sec,p_game:LB_GAME}).catch(()=>{})}
+const lbStars=(game,accId)=>{const k=game+'.progress'+(accId==='guest'?'':'.'+accId);let v=null;try{v=JSON.parse(localStorage.getItem(k)||'null')}catch(e){}const st=(v&&v.stars)||{};return{stars:Object.values(st).reduce((a,b)=>a+(+b||0),0),done:Object.values(st).filter(x=>x>0).length}};
+function lbRow(i,name,stars,sub,me){const r=document.createElement('div');r.className='lbrow'+(me?' me':'')+(i<3&&stars>0?' top'+(i+1):'');
+  r.innerHTML='<span class="r"></span><span class="nm"></span><span class="st"></span><span class="dn"></span>';r.children[0].textContent=i<3&&stars>0?['🥇','🥈','🥉'][i]:'#'+(i+1);r.children[1].textContent=name+(me?' (you)':'');r.children[2].textContent='★ '+stars;r.children[3].textContent=sub;return r}
+function renderLb(){if(typeof saveProg==='function')saveProg();const T=$('lbTabs');T.textContent='';
+  for(const [id,lab] of [['world','🌍 World'],[LB_GAME,(SIMLIST.find(s=>s.id===LB_GAME)||{name:'This game'}).name],['all','All simulators'],...SIMLIST.filter(s=>s.id!==LB_GAME).map(s=>[s.id,s.name])]){const b=document.createElement('button');b.textContent=lab;b.setAttribute('aria-pressed',LBTAB===id);b.onclick=()=>{LBTAB=id;renderLb()};T.appendChild(b)}
+  const a0=curAcc();$('lbTogRow').hidden=!a0;if(a0)$('lbWorld').checked=!!a0.lb;
+  if(LBTAB==='world'){const L=$('lbList');L.textContent='';const msg=t=>{const e=document.createElement('p');e.className='hfoot';e.textContent=t;L.appendChild(e)};
+    $('lbMe').textContent=a0?`You: ${a0.name}${a0.lb?' · on the world board':' · tick the box below to join the world board'}`:'Sign in (👤) to join the world leaderboard.';
+    if(!lbWorldOn()){msg('The worldwide leaderboard is switched off until its online database is connected. Your choice to appear on it is saved, and your stars will be posted as soon as it is switched on.');$('lbNote').textContent='';return}
+    const show=list=>{L.textContent='';if(!list.length)msg('Nobody yet: finish a challenge to be first!');list.forEach((x,i)=>L.appendChild(lbRow(i,x.name,x.stars,x.done+' done',a0&&x.id===a0.uid)))};
+    if(lbWorldCache[LB_GAME])show(lbWorldCache[LB_GAME]);else msg('Loading…');
+    lbFetch(`/rest/v1/game_scores_top?select=id,name,stars,done&game=eq.${LB_GAME}&order=stars.desc,updated_at.asc&limit=50`).then(l=>{lbWorldCache[LB_GAME]=l||[];if(LBTAB==='world'&&!$('lbBox').hidden)show(lbWorldCache[LB_GAME])}).catch(()=>{if(!lbWorldCache[LB_GAME]){L.textContent='';msg('Could not reach the world leaderboard. Check your internet connection.')}});
+    $('lbNote').textContent='Top players worldwide in this simulator.';return}
+  const games=LBTAB==='all'?SIMLIST.map(s=>s.id):[LBTAB],L=$('lbList');L.textContent='';
+  const rows=ACC.list.map(a=>{let st=0,dn=0,gp=0;for(const g of games){const r=lbStars(g,a.id);st+=r.stars;dn+=r.done;if(r.stars)gp++}return{name:a.name,stars:st,sub:LBTAB==='all'?`${gp} game${gp===1?'':'s'}`:`${dn} done`,me:a.id===ACC.cur}}).sort((x,y)=>y.stars-x.stars||x.name.localeCompare(y.name));
+  rows.forEach((x,i)=>L.appendChild(lbRow(i,x.name,x.stars,x.sub,x.me)));
+  if(!rows.length){const e=document.createElement('p');e.className='hfoot';e.textContent='No accounts yet. Make one with 👤 to get on the board.';L.appendChild(e)}
+  const a=curAcc(),me=a?rows.find(r=>r.me):null;$('lbMe').textContent=a?`You: ${a.name} · ★ ${me?me.stars:0}${me&&rows.length>1?` · rank ${rows.indexOf(me)+1} of ${rows.length}`:''}`:'You are playing as a guest. Make an account (👤) to join the leaderboard.';
+  $('lbNote').textContent='Rankings include every account on this device. Stars from all our simulators add up in “All simulators”.'}
+function openLb(){LBOPEN++;if($('acct'))$('acct').hidden=true;$('lbBox').hidden=false;renderLb();if(typeof chEv==='function')chEv('leaderboard',{})}
+$('lbClose').onclick=()=>$('lbBox').hidden=true;$('lbBox').addEventListener('click',e=>{if(e.target.id==='lbBox')$('lbBox').hidden=true});
+for(const id of ['hLb','acctLb','dLb'])if($(id))$(id).addEventListener('click',openLb);
+$('lbWorld').addEventListener('change',()=>{const a=curAcc();if(!a)return;a.lb=$('lbWorld').checked;if(typeof saveAcc==='function')saveAcc();lbPost();toast(a.lb?'🌍 You are on the world leaderboard':'Hidden from the world leaderboard');renderLb()});
+$('lbOut').onclick=()=>{switchAcc('guest');renderLb()};
+// a sign-out button on the home page while signed in
+{const h=$('hAcctBtn');if(h&&!$('hOut')){const b=document.createElement('button');b.className='chip';b.id='hOut';b.textContent='↩ Sign out';b.title='Sign out (back to guest)';b.onclick=()=>switchAcc('guest');h.after(b)}
+  setInterval(()=>{const b=$('hOut');if(b)b.hidden=!curAcc()},500)}
+setInterval(lbPost,60000);setTimeout(lbPost,3000);
+
+</script>
+</body>
+</html>

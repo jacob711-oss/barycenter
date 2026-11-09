@@ -38,5 +38,13 @@
   "tag": "Mix atoms, spark reactions and build molecules",
   "url": "https://jacob711-oss.github.io/barycenter/catalyst/",
   "color": "#c48bff"
+ },
+ {
+  "id": "abyssal",
+  "icon": "🐋",
+  "name": "Abyssal",
+  "tag": "Dive into a living ocean, from coral reefs to the deep sea",
+  "url": "https://jacob711-oss.github.io/barycenter/abyssal/",
+  "color": "#4fa3ff"
  }
 ]
