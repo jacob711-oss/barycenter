@@ -14,5 +14,13 @@
   "tag": "A living world of animals, plants and people",
   "url": "https://jacob711-oss.github.io/barycenter/life/",
   "color": "#7fe0a8"
+ },
+ {
+  "id": "tectonic",
+  "icon": "🌋",
+  "name": "Tectonic",
+  "tag": "Drift continents, raise mountains and set off volcanoes",
+  "url": "https://jacob711-oss.github.io/barycenter/tectonic/",
+  "color": "#ff8a5c"
  }
 ]
