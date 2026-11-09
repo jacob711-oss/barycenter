@@ -46,5 +46,13 @@
   "tag": "Dive into a living ocean, from coral reefs to the deep sea",
   "url": "https://jacob711-oss.github.io/barycenter/abyssal/",
   "color": "#4fa3ff"
+ },
+ {
+  "id": "metropolis",
+  "icon": "🏙️",
+  "name": "Metropolis",
+  "tag": "Build a city from scratch: roads, pipes, power, homes and public transport",
+  "url": "https://jacob711-oss.github.io/barycenter/metropolis/",
+  "color": "#ffb454"
  }
 ]

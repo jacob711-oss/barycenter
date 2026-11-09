@@ -172,6 +172,7 @@ body.mHome .legend,body.mDemo .legend{display:none!important}@media (max-width:7
 }
 #dockBtn{display:none}@media (max-width:760px){#dockBtn{display:inline-block}}
 .sprow{text-align:left;width:100%}@media (max-width:760px){#dateSub{display:none}}
+#hAcctBtn,#acctBtn,#hOut,#acct{display:none!important}
 .slist{display:flex;flex-direction:column;gap:3px}
 .cat{font-family:var(--f-mono);font-size:11px;padding:1px 6px;border-radius:5px;border:1px solid var(--line-strong)}
 
@@ -253,10 +254,10 @@ body.mHome .legend,body.mDemo .legend{display:none!important}@media (max-width:7
 <div id="home" class="home" role="dialog" aria-label="Home">
   <div class="hcard">
     <div class="hhead"><h1 class="htitle">Tropo<b>sphere</b></h1><p class="htag">Steer the winds, brew hurricanes and tornadoes, and change the climate of a whole planet</p>
-      <div class="hacct"><button class="chip" id="hAcctBtn">👤 <span id="hAcctName">Guest</span></button><button class="chip" id="hPlays" title="Total plays by everyone">▶ <b id="hPlaysN">0</b> <span id="hPlaysL">plays</span></button><button class="chip" id="hLb" title="Leaderboard">🏆 Leaderboard</button><style>.sims{position:relative;display:inline-block;z-index:70}.hhead{position:relative;z-index:20}.sims>summary{list-style:none;cursor:pointer}.sims>summary::-webkit-details-marker{display:none}
+      <div class="hacct"><button class="chip" id="hAcctBtn">👤 <span id="hAcctName">Guest</span></button><button class="chip" id="hPlays" title="Total plays by everyone">▶ <b id="hPlaysN">0</b> <span id="hPlaysL">plays</span></button><style>.sims{position:relative;display:inline-block;z-index:70}.hhead{position:relative;z-index:20}.sims>summary{list-style:none;cursor:pointer}.sims>summary::-webkit-details-marker{display:none}
 .sims[open]>summary{background:rgba(255,255,255,.08)}.simsP{position:absolute;left:0;top:calc(100% + 6px);z-index:60;width:min(320px,86vw);padding:8px;border-radius:12px;background:#0c101c;border:1px solid rgba(255,255,255,.14);box-shadow:0 12px 40px rgba(0,0,0,.55);display:grid;gap:6px;text-align:left}
 .simsP a{display:grid;grid-template-columns:auto 1fr;gap:2px 10px;align-items:center;padding:9px 10px;border-radius:9px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.03);color:#e3e8f4;text-decoration:none;font:inherit}
-.simsP a:hover,.simsP a:focus-visible{background:rgba(255,255,255,.08);border-color:var(--sc,#7fe0a8)}.simsP .si{grid-row:span 2;font-size:24px}.simsP b{color:var(--sc,#fff);font-size:14px}.simsP small{color:#8b95ae;font-size:11.5px;line-height:1.3}.simsP .sn{color:#8b95ae;font-size:11px;padding:2px 4px}</style><details class="sims" id="hSims"><summary class="chip" title="Our other simulators">🧪 Try our other simulators ▾</summary><div class="simsP" id="hSimsP"></div></details><script>(()=>{const ME="troposphere",LIST=[{"id": "barycenter", "icon": "🪐", "name": "Barycenter", "tag": "Gravity, planets, stars and black holes", "url": "https://jacob711-oss.github.io/barycenter/", "color": "#e8b04a"}, {"id": "biosphere", "icon": "🌿", "name": "Biosphere", "tag": "A living world of animals, plants and people", "url": "https://jacob711-oss.github.io/barycenter/life/", "color": "#7fe0a8"}, {"id": "lithosphere", "icon": "🌋", "name": "Lithosphere", "tag": "Drift continents, raise mountains and set off volcanoes", "url": "https://jacob711-oss.github.io/barycenter/lithosphere/", "color": "#ff8a5c"}, {"id": "troposphere", "icon": "🌀", "name": "Troposphere", "tag": "Steer winds, brew hurricanes and change the climate", "url": "https://jacob711-oss.github.io/barycenter/troposphere/", "color": "#60d6e6"}, {"id": "catalyst", "icon": "⚛️", "name": "Catalyst", "tag": "Mix atoms, spark reactions and build molecules", "url": "https://jacob711-oss.github.io/barycenter/catalyst/", "color": "#c48bff"}, {"id": "abyssal", "icon": "🐋", "name": "Abyssal", "tag": "Dive into a living ocean, from coral reefs to the deep sea", "url": "https://jacob711-oss.github.io/barycenter/abyssal/", "color": "#4fa3ff"}],P=document.getElementById('hSimsP'),D=document.getElementById('hSims');
+.simsP a:hover,.simsP a:focus-visible{background:rgba(255,255,255,.08);border-color:var(--sc,#7fe0a8)}.simsP .si{grid-row:span 2;font-size:24px}.simsP b{color:var(--sc,#fff);font-size:14px}.simsP small{color:#8b95ae;font-size:11.5px;line-height:1.3}.simsP .sn{color:#8b95ae;font-size:11px;padding:2px 4px}</style><details class="sims" id="hSims"><summary class="chip" title="Our other simulators">🧪 Try our other simulators ▾</summary><div class="simsP" id="hSimsP"></div></details><script>(()=>{const ME="troposphere",LIST=[{"id": "barycenter", "icon": "🪐", "name": "Barycenter", "tag": "Gravity, planets, stars and black holes", "url": "https://jacob711-oss.github.io/barycenter/", "color": "#e8b04a"}, {"id": "biosphere", "icon": "🌿", "name": "Biosphere", "tag": "A living world of animals, plants and people", "url": "https://jacob711-oss.github.io/barycenter/life/", "color": "#7fe0a8"}, {"id": "lithosphere", "icon": "🌋", "name": "Lithosphere", "tag": "Drift continents, raise mountains and set off volcanoes", "url": "https://jacob711-oss.github.io/barycenter/lithosphere/", "color": "#ff8a5c"}, {"id": "troposphere", "icon": "🌀", "name": "Troposphere", "tag": "Steer winds, brew hurricanes and change the climate", "url": "https://jacob711-oss.github.io/barycenter/troposphere/", "color": "#60d6e6"}, {"id": "catalyst", "icon": "⚛️", "name": "Catalyst", "tag": "Mix atoms, spark reactions and build molecules", "url": "https://jacob711-oss.github.io/barycenter/catalyst/", "color": "#c48bff"}, {"id": "abyssal", "icon": "🐋", "name": "Abyssal", "tag": "Dive into a living ocean, from coral reefs to the deep sea", "url": "https://jacob711-oss.github.io/barycenter/abyssal/", "color": "#4fa3ff"}, {"id": "metropolis", "icon": "🏙️", "name": "Metropolis", "tag": "Build a city from scratch: roads, pipes, power, homes and public transport", "url": "https://jacob711-oss.github.io/barycenter/metropolis/", "color": "#ffb454"}],P=document.getElementById('hSimsP'),D=document.getElementById('hSims');
 const draw=l=>{P.textContent='';for(const s of l){if(s.id===ME||!s.url)continue;const a=document.createElement('a');a.href=s.url;a.target='_blank';a.rel='noopener';a.style.setProperty('--sc',s.color||'#7fe0a8');
 a.innerHTML='<span class="si"></span><b></b><small></small>';a.children[0].textContent=s.icon||'🧪';a.children[1].textContent=s.name;a.children[2].textContent=s.tag||'';P.appendChild(a)}
 const n=document.createElement('div');n.className='sn';n.textContent='More simulators coming soon.';P.appendChild(n)};draw(LIST);
@@ -295,33 +296,17 @@ document.addEventListener('pointerdown',e=>{if(D.open&&!D.contains(e.target))D.o
     <div id="acctList" class="hview" style="gap:6px"></div>
     <form id="acctForm" class="aform"><input id="acctNew" maxlength="20" placeholder="Your name" autocomplete="off"><input id="acctPin" maxlength="4" inputmode="numeric" placeholder="PIN (optional)" autocomplete="off"><button class="btn primary" type="submit">Create account</button></form>
     <p class="hfoot" id="acctMsg" aria-live="polite"></p>
-    <button class="btn" id="acctLb" type="button">🏆 Leaderboard</button>
   </div>
 </div>
 <div id="chDone" class="home donebg" hidden role="dialog" aria-label="Challenge result">
   <div class="donecard panel">
     <div id="dStars" class="dstars"></div><h2 id="dTitle"></h2><p id="dText" class="hfoot" style="font-size:13px"></p>
-    <div class="actions" style="justify-content:center"><button id="dNext" class="btn primary">Next challenge</button><button id="dRetry" class="btn">Try again</button><button id="dList" class="btn ghost">All challenges</button><button id="dLb" class="btn ghost">🏆 Leaderboard</button></div>
+    <div class="actions" style="justify-content:center"><button id="dNext" class="btn primary">Next challenge</button><button id="dRetry" class="btn">Try again</button><button id="dList" class="btn ghost">All challenges</button></div>
   </div>
 </div>
-<style>.lbrow{display:grid;grid-template-columns:34px 1fr auto auto;gap:10px;align-items:center;padding:7px 10px;border:1px solid var(--line);border-radius:8px;font-size:13px}
-.lbrow .r{font-family:var(--f-mono);color:var(--dim)}.lbrow .nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.lbrow .st{color:var(--flare);font-family:var(--f-mono)}.lbrow .dn{font-family:var(--f-mono);font-size:11px;color:var(--dim)}
-.lbrow.me{border-color:rgba(255,180,84,.7);background:rgba(40,28,12,.55)}.lbrow.top1 .r{color:#ffd76a}.lbrow.top2 .r{color:#d8dee9}.lbrow.top3 .r{color:#e0a36a}
-.lbtabs{display:flex;gap:4px;flex-wrap:wrap}.lbtabs button{font-family:var(--f-mono);font-size:11.5px;padding:5px 10px;border-radius:99px;border:1px solid var(--line);color:var(--dim);background:none;cursor:pointer}.lbtabs button[aria-pressed="true"]{color:var(--ink);border-color:var(--flare);background:rgba(255,195,90,.12)}</style>
-<div id="lbBox" class="ovl" hidden role="dialog" aria-label="Leaderboard">
-  <div class="obox panel">
-    <div class="hbar"><h2>🏆 Leaderboard</h2><button class="btn" id="lbClose" aria-label="Close">×</button></div>
-    <div class="lbtabs" id="lbTabs"></div>
-    <p class="hfoot" id="lbMe"></p>
-    <div class="row" id="lbTogRow"><label class="hfoot" style="display:flex;gap:8px;align-items:center;margin:0"><input type="checkbox" id="lbWorld"> Show me on the world leaderboard</label><button class="btn" id="lbOut">↩ Sign out</button></div>
-    <div id="lbList" class="hview" style="gap:4px"></div>
-    <p class="hfoot" id="lbNote"></p>
-  </div>
-</div>
-
 
 <script>
-const SIMLIST=[{"id": "barycenter", "icon": "🪐", "name": "Barycenter", "tag": "Gravity, planets, stars and black holes", "url": "https://jacob711-oss.github.io/barycenter/", "color": "#e8b04a"}, {"id": "biosphere", "icon": "🌿", "name": "Biosphere", "tag": "A living world of animals, plants and people", "url": "https://jacob711-oss.github.io/barycenter/life/", "color": "#7fe0a8"}, {"id": "lithosphere", "icon": "🌋", "name": "Lithosphere", "tag": "Drift continents, raise mountains and set off volcanoes", "url": "https://jacob711-oss.github.io/barycenter/lithosphere/", "color": "#ff8a5c"}, {"id": "troposphere", "icon": "🌀", "name": "Troposphere", "tag": "Steer winds, brew hurricanes and change the climate", "url": "https://jacob711-oss.github.io/barycenter/troposphere/", "color": "#60d6e6"}, {"id": "catalyst", "icon": "⚛️", "name": "Catalyst", "tag": "Mix atoms, spark reactions and build molecules", "url": "https://jacob711-oss.github.io/barycenter/catalyst/", "color": "#c48bff"}, {"id": "abyssal", "icon": "🐋", "name": "Abyssal", "tag": "Dive into a living ocean, from coral reefs to the deep sea", "url": "https://jacob711-oss.github.io/barycenter/abyssal/", "color": "#4fa3ff"}],LB_GAME="troposphere";
+const SIMLIST=[{"id": "barycenter", "icon": "🪐", "name": "Barycenter", "tag": "Gravity, planets, stars and black holes", "url": "https://jacob711-oss.github.io/barycenter/", "color": "#e8b04a"}, {"id": "biosphere", "icon": "🌿", "name": "Biosphere", "tag": "A living world of animals, plants and people", "url": "https://jacob711-oss.github.io/barycenter/life/", "color": "#7fe0a8"}, {"id": "lithosphere", "icon": "🌋", "name": "Lithosphere", "tag": "Drift continents, raise mountains and set off volcanoes", "url": "https://jacob711-oss.github.io/barycenter/lithosphere/", "color": "#ff8a5c"}, {"id": "troposphere", "icon": "🌀", "name": "Troposphere", "tag": "Steer winds, brew hurricanes and change the climate", "url": "https://jacob711-oss.github.io/barycenter/troposphere/", "color": "#60d6e6"}, {"id": "catalyst", "icon": "⚛️", "name": "Catalyst", "tag": "Mix atoms, spark reactions and build molecules", "url": "https://jacob711-oss.github.io/barycenter/catalyst/", "color": "#c48bff"}, {"id": "abyssal", "icon": "🐋", "name": "Abyssal", "tag": "Dive into a living ocean, from coral reefs to the deep sea", "url": "https://jacob711-oss.github.io/barycenter/abyssal/", "color": "#4fa3ff"}, {"id": "metropolis", "icon": "🏙️", "name": "Metropolis", "tag": "Build a city from scratch: roads, pipes, power, homes and public transport", "url": "https://jacob711-oss.github.io/barycenter/metropolis/", "color": "#ffb454"}],LB_GAME="troposphere";
 /* ===== simulator kit: core helpers shared by every simulator ===== */
 const $=id=>document.getElementById(id);
 const clamp=(v,a,b)=>v<a?a:v>b?b:v,lerp=(a,b,t)=>a+(b-a)*t,rr=(a,b)=>a+Math.random()*(b-a),ri=(a,b)=>Math.floor(rr(a,b+1)),pick=a=>a[Math.floor(Math.random()*a.length)];
@@ -725,8 +710,6 @@ CC(3.5,{t:'Steady climate',g:'Carbon dioxide is rising by itself. Keep the avera
 CC(3.1,{t:'Monsoon',g:'Bring heavy rain to 20% of the giant continent at once.',hint:'Monsoon rains come when the land heats up in summer and pulls in wet ocean air. Let summer arrive, or Heat the land.',scen:'monsoon',check:()=>{let n=0,t=0;for(let i=0;i<N;i++){const x=cxOf(i),y=cyOf(i);if(isOcean(i)||Math.abs(wdx(x-140))>55||y<22||y>56)continue;t++;if(rn[i]>0.8)n++}const f=t?n/t:0;return[f>=.2,f/.2,`${Math.round(f*100)}% of the continent in heavy rain`]},stars:byTime(45,110)});
 CC(3.8,{t:'Rain shadow',g:'Raise a mountain over 3,000 m and make it rain on its slopes.',hint:'Pick Mountain and paint a ridge near a coast where the wind blows in from the sea. Rising air drops its rain.',scen:'earth',check:()=>{const n=landCellsWhere(i=>elev[i]>3000&&rn[i]>0.6&&RAISEDM>0);return[n>=3,n/3,`${n} of 3 rainy mountain squares`]},stars:byTime(45,110)});
 CC(4.0,{t:'Warm the dark side',g:'On the planet with no night, raise the average temperature of the dark side above −15 °C.',hint:'More carbon dioxide traps heat; a faster spin and warm oceans carry heat around the planet.',scen:'locked',check:()=>{let s=0,n=0;for(let i=0;i<N;i++){const lo=lonOf(cxOf(i));if(Math.abs(lo)>100){s+=T[i];n++}}const m=s/n;return[m>-15,clamp((m+45)/30,0,1),`Dark side: ${m.toFixed(1)} °C`]},stars:byTime(45,120)});
-CC(1.05,{t:'Top of the board',g:'Open the leaderboard and look at the All simulators rankings.',hint:'Press 🏆 Leaderboard on the home page or in the 👤 account box, then the All simulators tab.',setup:()=>{CH.ref.n=LBOPEN},check:()=>{const ok=LBOPEN>CH.ref.n&&LBTAB==='all'&&!$('lbBox').hidden;return[ok,LBOPEN>CH.ref.n?0.5:0,ok?'':'Open the leaderboard']},stars:byTime(20,45)});
-CC(2.0,{t:'Make it yours',g:'Create an account (👤 at the top), then strike lightning.',hint:'Click 👤, type a name and press Create account. Then pick Lightning and click.',scen:'earth',setup:()=>{CH.ref.a=ACCN},check:()=>{const a=ACCN>CH.ref.a,l=CH.events.some(e=>e.k==='lightning'&&e.user);return[a&&l,(a?.5:0)+(l?.5:0),a?(l?'':'Now strike lightning'):'Create or sign in to an account first']},stars:byTime(60,150)});
 
 /* tutorial */
 TSTEPS.push(
@@ -752,8 +735,6 @@ TSTEPS.push(
  ['Stop the event','Press the same button again (it now says ■ Stop) or ↺ Stop all events.',r=>EVSTOP>r.n,r=>{r.n=EVSTOP}],
  ['The Climate tab','Open the Climate tab to see the average temperature, ice, storms and records.',r=>(CNT.tab_climate||0)>r.n,r=>{r.n=CNT.tab_climate||0}],
  ['Other worlds','Press Worlds in the top bar and pick a different planet.',r=>CNT.scen>r.n,r=>{r.n=CNT.scen}],
- ['Leaderboard','Click 👤 in the top bar, then 🏆 Leaderboard, to see who has the most stars here and across all our simulators.',r=>LBOPEN>r.n,r=>{r.n=LBOPEN}],
- ['Save your progress','Click 👤 in the top bar and create an account (a PIN is optional). Your stars save on this device.',r=>ACCN>r.n,r=>{r.n=ACCN}],
 );
 
 /* demo */
@@ -956,45 +937,9 @@ function updateHud(){deselBtn();measureHud();const st=SIM.stats(),box=$('stats')
 addEventListener('resize',resize);addEventListener('pagehide',saveProg);
 resize();buildRail();buildSpeeds();buildScen();if(SIM.init)SIM.init();setSpeed(SIM.defSpeed);setTool('select');updateAcctUI();gCount('get');showHome();requestAnimationFrame(frame);
 
-/* ===== leaderboard: every account's stars, in this simulator and across all of them (shared by every simulator) ===== */
-// needs: LB_GAME (this game's id), SIMLIST (all games), ACC, lsGet, curAcc, toast
-let LBOPEN=0,LBTAB=LB_GAME;
-// world leaderboard: an online table shared by every game (see supabase-setup.sql). Empty until the database is connected.
-const LB_URL='',LB_KEY='';const lbWorldOn=()=>!!(LB_URL&&LB_KEY);let lbWorldCache={};
-function lbFetch(path,body){const h={apikey:LB_KEY,'content-type':'application/json'};if(/^eyJ/.test(LB_KEY))h.authorization='Bearer '+LB_KEY;const ctl=new AbortController();setTimeout(()=>ctl.abort(),8000);
-  return fetch(LB_URL.replace(/\/$/,'')+path,{method:body?'POST':'GET',headers:h,body:body?JSON.stringify(body):undefined,signal:ctl.signal,cache:'no-store'}).then(r=>{if(!r.ok)throw new Error('HTTP '+r.status);return r.status===204?null:r.json()})}
-function lbIds(a){if(!a.uid){a.uid=(crypto.randomUUID?crypto.randomUUID():'xxxxxxxx-xxxx-4xxx-8xxx-xxxxxxxxxxxx'.replace(/x/g,()=>(Math.random()*16|0).toString(16)));a.sec=Math.random().toString(36).slice(2)+Math.random().toString(36).slice(2);if(typeof saveAcc==='function')saveAcc()}}
-function lbPost(){const a=curAcc();if(!a||!lbWorldOn())return;lbIds(a);const r=lbStars(LB_GAME,a.id);
-  if(a.lb)lbFetch('/rest/v1/rpc/submit_game_score',{p_id:a.uid,p_secret:a.sec,p_game:LB_GAME,p_name:a.name,p_stars:r.stars,p_done:r.done}).then(()=>{lbWorldCache={}}).catch(()=>{});
-  else lbFetch('/rest/v1/rpc/remove_game_score',{p_id:a.uid,p_secret:a.sec,p_game:LB_GAME}).catch(()=>{})}
-const lbStars=(game,accId)=>{const k=game+'.progress'+(accId==='guest'?'':'.'+accId);let v=null;try{v=JSON.parse(localStorage.getItem(k)||'null')}catch(e){}const st=(v&&v.stars)||{};return{stars:Object.values(st).reduce((a,b)=>a+(+b||0),0),done:Object.values(st).filter(x=>x>0).length}};
-function lbRow(i,name,stars,sub,me){const r=document.createElement('div');r.className='lbrow'+(me?' me':'')+(i<3&&stars>0?' top'+(i+1):'');
-  r.innerHTML='<span class="r"></span><span class="nm"></span><span class="st"></span><span class="dn"></span>';r.children[0].textContent=i<3&&stars>0?['🥇','🥈','🥉'][i]:'#'+(i+1);r.children[1].textContent=name+(me?' (you)':'');r.children[2].textContent='★ '+stars;r.children[3].textContent=sub;return r}
-function renderLb(){if(typeof saveProg==='function')saveProg();const T=$('lbTabs');T.textContent='';
-  for(const [id,lab] of [['world','🌍 World'],[LB_GAME,(SIMLIST.find(s=>s.id===LB_GAME)||{name:'This game'}).name],['all','All simulators'],...SIMLIST.filter(s=>s.id!==LB_GAME).map(s=>[s.id,s.name])]){const b=document.createElement('button');b.textContent=lab;b.setAttribute('aria-pressed',LBTAB===id);b.onclick=()=>{LBTAB=id;renderLb()};T.appendChild(b)}
-  const a0=curAcc();$('lbTogRow').hidden=!a0;if(a0)$('lbWorld').checked=!!a0.lb;
-  if(LBTAB==='world'){const L=$('lbList');L.textContent='';const msg=t=>{const e=document.createElement('p');e.className='hfoot';e.textContent=t;L.appendChild(e)};
-    $('lbMe').textContent=a0?`You: ${a0.name}${a0.lb?' · on the world board':' · tick the box below to join the world board'}`:'Sign in (👤) to join the world leaderboard.';
-    if(!lbWorldOn()){msg('The worldwide leaderboard is switched off until its online database is connected. Your choice to appear on it is saved, and your stars will be posted as soon as it is switched on.');$('lbNote').textContent='';return}
-    const show=list=>{L.textContent='';if(!list.length)msg('Nobody yet: finish a challenge to be first!');list.forEach((x,i)=>L.appendChild(lbRow(i,x.name,x.stars,x.done+' done',a0&&x.id===a0.uid)))};
-    if(lbWorldCache[LB_GAME])show(lbWorldCache[LB_GAME]);else msg('Loading…');
-    lbFetch(`/rest/v1/game_scores_top?select=id,name,stars,done&game=eq.${LB_GAME}&order=stars.desc,updated_at.asc&limit=50`).then(l=>{lbWorldCache[LB_GAME]=l||[];if(LBTAB==='world'&&!$('lbBox').hidden)show(lbWorldCache[LB_GAME])}).catch(()=>{if(!lbWorldCache[LB_GAME]){L.textContent='';msg('Could not reach the world leaderboard. Check your internet connection.')}});
-    $('lbNote').textContent='Top players worldwide in this simulator.';return}
-  const games=LBTAB==='all'?SIMLIST.map(s=>s.id):[LBTAB],L=$('lbList');L.textContent='';
-  const rows=ACC.list.map(a=>{let st=0,dn=0,gp=0;for(const g of games){const r=lbStars(g,a.id);st+=r.stars;dn+=r.done;if(r.stars)gp++}return{name:a.name,stars:st,sub:LBTAB==='all'?`${gp} game${gp===1?'':'s'}`:`${dn} done`,me:a.id===ACC.cur}}).sort((x,y)=>y.stars-x.stars||x.name.localeCompare(y.name));
-  rows.forEach((x,i)=>L.appendChild(lbRow(i,x.name,x.stars,x.sub,x.me)));
-  if(!rows.length){const e=document.createElement('p');e.className='hfoot';e.textContent='No accounts yet. Make one with 👤 to get on the board.';L.appendChild(e)}
-  const a=curAcc(),me=a?rows.find(r=>r.me):null;$('lbMe').textContent=a?`You: ${a.name} · ★ ${me?me.stars:0}${me&&rows.length>1?` · rank ${rows.indexOf(me)+1} of ${rows.length}`:''}`:'You are playing as a guest. Make an account (👤) to join the leaderboard.';
-  $('lbNote').textContent='Rankings include every account on this device. Stars from all our simulators add up in “All simulators”.'}
-function openLb(){LBOPEN++;if($('acct'))$('acct').hidden=true;$('lbBox').hidden=false;renderLb();if(typeof chEv==='function')chEv('leaderboard',{})}
-$('lbClose').onclick=()=>$('lbBox').hidden=true;$('lbBox').addEventListener('click',e=>{if(e.target.id==='lbBox')$('lbBox').hidden=true});
-for(const id of ['hLb','acctLb','dLb'])if($(id))$(id).addEventListener('click',openLb);
-$('lbWorld').addEventListener('change',()=>{const a=curAcc();if(!a)return;a.lb=$('lbWorld').checked;if(typeof saveAcc==='function')saveAcc();lbPost();toast(a.lb?'🌍 You are on the world leaderboard':'Hidden from the world leaderboard');renderLb()});
-$('lbOut').onclick=()=>{switchAcc('guest');renderLb()};
-// a sign-out button on the home page while signed in
+/* ===== account helpers shared by every simulator: a sign-out button on the home page while signed in ===== */
 {const h=$('hAcctBtn');if(h&&!$('hOut')){const b=document.createElement('button');b.className='chip';b.id='hOut';b.textContent='↩ Sign out';b.title='Sign out (back to guest)';b.onclick=()=>switchAcc('guest');h.after(b)}
   setInterval(()=>{const b=$('hOut');if(b)b.hidden=!curAcc()},500)}
-setInterval(lbPost,60000);setTimeout(lbPost,3000);
 
 </script>
 </body>
