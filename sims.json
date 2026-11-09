@@ -1,0 +1,18 @@
+[
+ {
+  "id": "barycenter",
+  "icon": "🪐",
+  "name": "Barycenter",
+  "tag": "Gravity, planets, stars and black holes",
+  "url": "https://jacob711-oss.github.io/barycenter/",
+  "color": "#e8b04a"
+ },
+ {
+  "id": "biosphere",
+  "icon": "🌿",
+  "name": "Biosphere",
+  "tag": "A living world of animals, plants and people",
+  "url": "https://jacob711-oss.github.io/barycenter/life/",
+  "color": "#7fe0a8"
+ }
+]
