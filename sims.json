@@ -16,19 +16,27 @@
   "color": "#7fe0a8"
  },
  {
-  "id": "tectonic",
+  "id": "lithosphere",
   "icon": "🌋",
-  "name": "Tectonic",
+  "name": "Lithosphere",
   "tag": "Drift continents, raise mountains and set off volcanoes",
-  "url": "https://jacob711-oss.github.io/barycenter/tectonic/",
+  "url": "https://jacob711-oss.github.io/barycenter/lithosphere/",
   "color": "#ff8a5c"
  },
  {
-  "id": "atmos",
+  "id": "troposphere",
   "icon": "🌀",
-  "name": "Atmos",
+  "name": "Troposphere",
   "tag": "Steer winds, brew hurricanes and change the climate",
-  "url": "https://jacob711-oss.github.io/barycenter/atmos/",
+  "url": "https://jacob711-oss.github.io/barycenter/troposphere/",
   "color": "#60d6e6"
+ },
+ {
+  "id": "catalyst",
+  "icon": "⚛️",
+  "name": "Catalyst",
+  "tag": "Mix atoms, spark reactions and build molecules",
+  "url": "https://jacob711-oss.github.io/barycenter/catalyst/",
+  "color": "#c48bff"
  }
 ]

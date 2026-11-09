@@ -259,10 +259,10 @@ body.mHome .legend,body.mDemo .legend{display:none!important}@media (max-width:7
 <div id="home" class="home" role="dialog" aria-label="Home">
   <div class="hcard">
     <div class="hhead"><h1 class="htitle">Bio<b>sphere</b></h1><p class="htag">A living world of plants and animals that eat, breed and evolve</p>
-      <div class="hacct"><button class="chip" id="hAcctBtn">👤 <span id="hAcctName">Guest</span></button><button class="chip" id="hPlays" title="Total plays by everyone">▶ <b id="hPlaysN">0</b> <span id="hPlaysL">plays</span></button><style>.sims{position:relative;display:inline-block;z-index:70}.hhead{position:relative;z-index:20}.sims>summary{list-style:none;cursor:pointer}.sims>summary::-webkit-details-marker{display:none}
+      <div class="hacct"><button class="chip" id="hAcctBtn">👤 <span id="hAcctName">Guest</span></button><button class="chip" id="hPlays" title="Total plays by everyone">▶ <b id="hPlaysN">0</b> <span id="hPlaysL">plays</span></button><button class="chip" id="hLb" title="Leaderboard">🏆 Leaderboard</button><style>.sims{position:relative;display:inline-block;z-index:70}.hhead{position:relative;z-index:20}.sims>summary{list-style:none;cursor:pointer}.sims>summary::-webkit-details-marker{display:none}
 .sims[open]>summary{background:rgba(255,255,255,.08)}.simsP{position:absolute;left:0;top:calc(100% + 6px);z-index:60;width:min(320px,86vw);padding:8px;border-radius:12px;background:#0c101c;border:1px solid rgba(255,255,255,.14);box-shadow:0 12px 40px rgba(0,0,0,.55);display:grid;gap:6px;text-align:left}
 .simsP a{display:grid;grid-template-columns:auto 1fr;gap:2px 10px;align-items:center;padding:9px 10px;border-radius:9px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.03);color:#e3e8f4;text-decoration:none;font:inherit}
-.simsP a:hover,.simsP a:focus-visible{background:rgba(255,255,255,.08);border-color:var(--sc,#7fe0a8)}.simsP .si{grid-row:span 2;font-size:24px}.simsP b{color:var(--sc,#fff);font-size:14px}.simsP small{color:#8b95ae;font-size:11.5px;line-height:1.3}.simsP .sn{color:#8b95ae;font-size:11px;padding:2px 4px}</style><details class="sims" id="hSims"><summary class="chip" title="Our other simulators">🧪 Try our other simulators ▾</summary><div class="simsP" id="hSimsP"></div></details><script>(()=>{const ME="biosphere",LIST=[{"id": "barycenter", "icon": "🪐", "name": "Barycenter", "tag": "Gravity, planets, stars and black holes", "url": "https://jacob711-oss.github.io/barycenter/", "color": "#e8b04a"}, {"id": "biosphere", "icon": "🌿", "name": "Biosphere", "tag": "A living world of animals, plants and people", "url": "https://jacob711-oss.github.io/barycenter/life/", "color": "#7fe0a8"}, {"id": "tectonic", "icon": "🌋", "name": "Tectonic", "tag": "Drift continents, raise mountains and set off volcanoes", "url": "https://jacob711-oss.github.io/barycenter/tectonic/", "color": "#ff8a5c"}, {"id": "atmos", "icon": "🌀", "name": "Atmos", "tag": "Steer winds, brew hurricanes and change the climate", "url": "https://jacob711-oss.github.io/barycenter/atmos/", "color": "#60d6e6"}],P=document.getElementById('hSimsP'),D=document.getElementById('hSims');
+.simsP a:hover,.simsP a:focus-visible{background:rgba(255,255,255,.08);border-color:var(--sc,#7fe0a8)}.simsP .si{grid-row:span 2;font-size:24px}.simsP b{color:var(--sc,#fff);font-size:14px}.simsP small{color:#8b95ae;font-size:11.5px;line-height:1.3}.simsP .sn{color:#8b95ae;font-size:11px;padding:2px 4px}</style><details class="sims" id="hSims"><summary class="chip" title="Our other simulators">🧪 Try our other simulators ▾</summary><div class="simsP" id="hSimsP"></div></details><script>(()=>{const ME="biosphere",LIST=[{"id": "barycenter", "icon": "🪐", "name": "Barycenter", "tag": "Gravity, planets, stars and black holes", "url": "https://jacob711-oss.github.io/barycenter/", "color": "#e8b04a"}, {"id": "biosphere", "icon": "🌿", "name": "Biosphere", "tag": "A living world of animals, plants and people", "url": "https://jacob711-oss.github.io/barycenter/life/", "color": "#7fe0a8"}, {"id": "lithosphere", "icon": "🌋", "name": "Lithosphere", "tag": "Drift continents, raise mountains and set off volcanoes", "url": "https://jacob711-oss.github.io/barycenter/lithosphere/", "color": "#ff8a5c"}, {"id": "troposphere", "icon": "🌀", "name": "Troposphere", "tag": "Steer winds, brew hurricanes and change the climate", "url": "https://jacob711-oss.github.io/barycenter/troposphere/", "color": "#60d6e6"}, {"id": "catalyst", "icon": "⚛️", "name": "Catalyst", "tag": "Mix atoms, spark reactions and build molecules", "url": "https://jacob711-oss.github.io/barycenter/catalyst/", "color": "#c48bff"}],P=document.getElementById('hSimsP'),D=document.getElementById('hSims');
 const draw=l=>{P.textContent='';for(const s of l){if(s.id===ME||!s.url)continue;const a=document.createElement('a');a.href=s.url;a.target='_blank';a.rel='noopener';a.style.setProperty('--sc',s.color||'#7fe0a8');
 a.innerHTML='<span class="si"></span><b></b><small></small>';a.children[0].textContent=s.icon||'🧪';a.children[1].textContent=s.name;a.children[2].textContent=s.tag||'';P.appendChild(a)}
 const n=document.createElement('div');n.className='sn';n.textContent='More simulators coming soon.';P.appendChild(n)};draw(LIST);
@@ -301,12 +301,26 @@ document.addEventListener('pointerdown',e=>{if(D.open&&!D.contains(e.target))D.o
     <div id="acctList" class="hview" style="gap:6px"></div>
     <form id="acctForm" class="aform"><input id="acctNew" maxlength="20" placeholder="Your name" autocomplete="off"><input id="acctPin" maxlength="4" inputmode="numeric" placeholder="PIN (optional)" autocomplete="off"><button class="btn primary" type="submit">Create account</button></form>
     <p class="hfoot" id="acctMsg" aria-live="polite"></p>
+    <button class="btn" id="acctLb" type="button">🏆 Leaderboard</button>
   </div>
 </div>
 <div id="chDone" class="home donebg" hidden role="dialog" aria-label="Challenge result">
   <div class="donecard panel">
     <div id="dStars" class="dstars"></div><h2 id="dTitle"></h2><p id="dText" class="hfoot" style="font-size:13px"></p>
-    <div class="actions" style="justify-content:center"><button id="dNext" class="btn primary">Next challenge</button><button id="dRetry" class="btn">Try again</button><button id="dList" class="btn ghost">All challenges</button></div>
+    <div class="actions" style="justify-content:center"><button id="dNext" class="btn primary">Next challenge</button><button id="dRetry" class="btn">Try again</button><button id="dList" class="btn ghost">All challenges</button><button id="dLb" class="btn ghost">🏆 Leaderboard</button></div>
+  </div>
+</div>
+<style>.lbrow{display:grid;grid-template-columns:34px 1fr auto auto;gap:10px;align-items:center;padding:7px 10px;border:1px solid var(--line);border-radius:8px;font-size:13px}
+.lbrow .r{font-family:var(--f-mono);color:var(--dim)}.lbrow .nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.lbrow .st{color:var(--flare);font-family:var(--f-mono)}.lbrow .dn{font-family:var(--f-mono);font-size:11px;color:var(--dim)}
+.lbrow.me{border-color:rgba(255,180,84,.7);background:rgba(40,28,12,.55)}.lbrow.top1 .r{color:#ffd76a}.lbrow.top2 .r{color:#d8dee9}.lbrow.top3 .r{color:#e0a36a}
+.lbtabs{display:flex;gap:4px;flex-wrap:wrap}.lbtabs button{font-family:var(--f-mono);font-size:11.5px;padding:5px 10px;border-radius:99px;border:1px solid var(--line);color:var(--dim);background:none;cursor:pointer}.lbtabs button[aria-pressed="true"]{color:var(--ink);border-color:var(--flare);background:rgba(255,195,90,.12)}</style>
+<div id="lbBox" class="ovl" hidden role="dialog" aria-label="Leaderboard">
+  <div class="obox panel">
+    <div class="hbar"><h2>🏆 Leaderboard</h2><button class="btn" id="lbClose" aria-label="Close">×</button></div>
+    <div class="lbtabs" id="lbTabs"></div>
+    <p class="hfoot" id="lbMe"></p>
+    <div id="lbList" class="hview" style="gap:4px"></div>
+    <p class="hfoot" id="lbNote"></p>
   </div>
 </div>
 
@@ -1598,6 +1612,7 @@ const snowCells=()=>{let n=0;for(let i=0;i<N;i++)if(!isWater(i)&&meanT(i)<-2)n++
 // find and inspect
 CC(1,{t:'Find a fox',g:'Find a fox and follow it with the camera.',hint:'Type fox in the search bar and press Enter.',setup:scn('meadow',()=>{const r=S.animals.filter(a=>a.sp==='rabbit');for(let k=0;k<6&&r.length;k++){const z=r[Math.floor(rnd()*r.length)];spawnAt('fox',z.x,z.y,2,true,0.9)}}),
   check:()=>{const ok=S.sel&&S.sel.sp==='fox';return[ok&&S.follow,ok?1:0,ok?'Found one':'Not found yet']},stars:byTime(20,45)});
+CC(1.05,{t:'Top of the board',g:'Open the leaderboard and look at the All simulators rankings.',hint:'Press 🏆 Leaderboard on the home page or in the 👤 account box, then the All simulators tab.',setup:()=>{loadScen('meadow');CH.ref.n=LBOPEN},check:()=>{const ok=LBOPEN>CH.ref.n&&LBTAB==='all'&&!$('lbBox').hidden;return[ok,LBOPEN>CH.ref.n?0.5:0,ok?'':'Open the leaderboard']},stars:byTime(20,45)});
 CC(1.1,{t:'Lend a hand',g:'Help 3 hungry animals: select each one and press Feed.',hint:'Click an animal, then press Feed in the Inspect tab. Look for ones with low energy.',setup:()=>{loadScen('meadow');CH.ref.n=FEEDS},check:()=>{const n=FEEDS-CH.ref.n;return[n>=3,n/3,`${Math.min(n,3)} of 3 animals fed`]},stars:byTime(30,70)});
 CC(1.2,{t:'Copycat',g:'Clone an animal: select one and press Clone.',hint:'Click any animal, then press Clone in the Inspect tab. The copy has exactly the same genes.',setup:()=>{loadScen('meadow');CH.ref.n=CLONES},check:()=>{const n=CLONES-CH.ref.n;return[n>=1,n?1:0,n?'Cloned!':'No clone yet']},stars:byTime(20,50)});
 CC(1.3,{t:'Berry patch',g:'Plant 8 berry bushes. Bears and people eat their berries.',hint:'Pick Berries in the toolbar and click on green land.',setup:scn('meadow'),check:()=>{const n=PLACED.bush||0;return[n>=8,n/8,`${Math.min(n,8)} of 8 planted`]},stars:byTime(25,60)});
@@ -1759,6 +1774,7 @@ const TSTEPS=[
  ['Watch the populations','Open the Life tab to see every species, the population graph and the endangered list (fewer than 15 left).',r=>LIFEOPEN>r.n,r=>{r.n=LIFEOPEN}],
  ['Microbes','Tiny life is everywhere. Switch to the Microbes view in the World tab, or zoom right in to see bacteria and fungi in the soil.',()=>S.view==='microbe'||cam.z>=6],
  ['Views','In the World tab, switch to the Temperature or Food view.',r=>VIEWCH>r.n,r=>{r.n=VIEWCH}],
+ ['Leaderboard','Click 👤 in the top bar, then 🏆 Leaderboard, to see who has the most stars here and across all our simulators.',r=>LBOPEN>r.n,r=>{r.n=LBOPEN}],
  ['Save your progress','Click 👤 in the top bar and create an account (a PIN is optional). Your stars save on this device.',r=>ACCN>r.n,r=>{r.n=ACCN}],
 ];
 let EVN=0;
@@ -1826,6 +1842,25 @@ function updateHud(){updateEventButtons();measureHud();const c=counts();let n=0,
   checkEndangered(c);if(!$('pane-life').hidden)renderLife();updateInspector();chTick();
   if(document.visibilityState==='visible'&&$('home').hidden){PROG.secs=(PROG.secs||0)+0.25}}
 addEventListener('resize',()=>{resize()});addEventListener('pagehide',saveProg);
+
+const SIMLIST=[{"id": "barycenter", "icon": "🪐", "name": "Barycenter", "tag": "Gravity, planets, stars and black holes", "url": "https://jacob711-oss.github.io/barycenter/", "color": "#e8b04a"}, {"id": "biosphere", "icon": "🌿", "name": "Biosphere", "tag": "A living world of animals, plants and people", "url": "https://jacob711-oss.github.io/barycenter/life/", "color": "#7fe0a8"}, {"id": "lithosphere", "icon": "🌋", "name": "Lithosphere", "tag": "Drift continents, raise mountains and set off volcanoes", "url": "https://jacob711-oss.github.io/barycenter/lithosphere/", "color": "#ff8a5c"}, {"id": "troposphere", "icon": "🌀", "name": "Troposphere", "tag": "Steer winds, brew hurricanes and change the climate", "url": "https://jacob711-oss.github.io/barycenter/troposphere/", "color": "#60d6e6"}, {"id": "catalyst", "icon": "⚛️", "name": "Catalyst", "tag": "Mix atoms, spark reactions and build molecules", "url": "https://jacob711-oss.github.io/barycenter/catalyst/", "color": "#c48bff"}],LB_GAME="biosphere";
+/* ===== leaderboard: every account's stars, in this simulator and across all of them (shared by every simulator) ===== */
+// needs: LB_GAME (this game's id), SIMLIST (all games), ACC, lsGet, curAcc, toast
+let LBOPEN=0,LBTAB=LB_GAME;
+const lbStars=(game,accId)=>{const k=game+'.progress'+(accId==='guest'?'':'.'+accId);let v=null;try{v=JSON.parse(localStorage.getItem(k)||'null')}catch(e){}const st=(v&&v.stars)||{};return{stars:Object.values(st).reduce((a,b)=>a+(+b||0),0),done:Object.values(st).filter(x=>x>0).length}};
+function lbRow(i,name,stars,sub,me){const r=document.createElement('div');r.className='lbrow'+(me?' me':'')+(i<3&&stars>0?' top'+(i+1):'');
+  r.innerHTML='<span class="r"></span><span class="nm"></span><span class="st"></span><span class="dn"></span>';r.children[0].textContent=i<3&&stars>0?['🥇','🥈','🥉'][i]:'#'+(i+1);r.children[1].textContent=name+(me?' (you)':'');r.children[2].textContent='★ '+stars;r.children[3].textContent=sub;return r}
+function renderLb(){if(typeof saveProg==='function')saveProg();const T=$('lbTabs');T.textContent='';
+  for(const [id,lab] of [[LB_GAME,(SIMLIST.find(s=>s.id===LB_GAME)||{name:'This game'}).name],['all','All simulators'],...SIMLIST.filter(s=>s.id!==LB_GAME).map(s=>[s.id,s.name])]){const b=document.createElement('button');b.textContent=lab;b.setAttribute('aria-pressed',LBTAB===id);b.onclick=()=>{LBTAB=id;renderLb()};T.appendChild(b)}
+  const games=LBTAB==='all'?SIMLIST.map(s=>s.id):[LBTAB],L=$('lbList');L.textContent='';
+  const rows=ACC.list.map(a=>{let st=0,dn=0,gp=0;for(const g of games){const r=lbStars(g,a.id);st+=r.stars;dn+=r.done;if(r.stars)gp++}return{name:a.name,stars:st,sub:LBTAB==='all'?`${gp} game${gp===1?'':'s'}`:`${dn} done`,me:a.id===ACC.cur}}).sort((x,y)=>y.stars-x.stars||x.name.localeCompare(y.name));
+  rows.forEach((x,i)=>L.appendChild(lbRow(i,x.name,x.stars,x.sub,x.me)));
+  if(!rows.length){const e=document.createElement('p');e.className='hfoot';e.textContent='No accounts yet. Make one with 👤 to get on the board.';L.appendChild(e)}
+  const a=curAcc(),me=a?rows.find(r=>r.me):null;$('lbMe').textContent=a?`You: ${a.name} · ★ ${me?me.stars:0}${me&&rows.length>1?` · rank ${rows.indexOf(me)+1} of ${rows.length}`:''}`:'You are playing as a guest. Make an account (👤) to join the leaderboard.';
+  $('lbNote').textContent='Rankings include every account on this device. Stars from all our simulators add up in “All simulators”.'}
+function openLb(){LBOPEN++;if($('acct'))$('acct').hidden=true;$('lbBox').hidden=false;renderLb();if(typeof chEv==='function')chEv('leaderboard',{})}
+$('lbClose').onclick=()=>$('lbBox').hidden=true;$('lbBox').addEventListener('click',e=>{if(e.target.id==='lbBox')$('lbBox').hidden=true});
+for(const id of ['hLb','acctLb','dLb'])if($(id))$(id).addEventListener('click',openLb);
 
 /* ================= start ================= */
 resize();buildRail();buildSpeeds();buildScen();setSpeed(7);setTool('select');updateAcctUI();gCount('get');showHome();requestAnimationFrame(frame);

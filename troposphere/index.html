@@ -1,0 +1,976 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="Steer the winds, brew hurricanes and tornadoes, and change the climate of a whole planet">
+<title>Troposphere Sandbox</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Oxanium:wght@500;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Simulator kit: shared with Barycenter and Biosphere */
+:root{
+  --voidRGB:5,9,14;--deepRGB:8,14,22;--accRGB:96,214,230;--lineRGB:150,200,230;--panel:rgba(9,16,26,.86);--ink:#e6eef5;--ink2:#cfdbe6;--dim:#8ea0b2;
+  --void:rgb(var(--voidRGB));
+  --line:rgba(var(--lineRGB),.16);
+  --line-strong:rgba(var(--lineRGB),.34);
+  --flare:#ffc35a;
+  --cool:rgb(var(--accRGB));
+  --danger:#ff6b5a;
+  --f-display:'Oxanium','Segoe UI',system-ui,sans-serif;
+  --f-body:'IBM Plex Sans',system-ui,-apple-system,sans-serif;
+  --f-mono:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+  --gut:max(16px, env(safe-area-inset-left, 0px));
+  --gutR:max(16px, env(safe-area-inset-right, 0px));
+  --top:calc(env(safe-area-inset-top, 0px) + 12px);
+  --bot:calc(env(safe-area-inset-bottom, 0px) + 12px);
+  color-scheme:dark;
+}
+[hidden]{display:none!important}
+html,body{height:100%;margin:0}
+body{background:var(--void);color:var(--ink);font-family:var(--f-body);overflow:hidden;-webkit-user-select:none;user-select:none}
+#world{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:none;cursor:grab}
+#world.place{cursor:crosshair}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+.k{font-family:var(--f-mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--dim)}
+.v{font-family:var(--f-mono);font-size:13px;font-variant-numeric:tabular-nums;color:var(--ink)}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+button:focus-visible,input:focus-visible{outline:2px solid var(--cool);outline-offset:2px}
+.btn{font-family:var(--f-mono);font-size:12px;padding:7px 11px;border:1px solid var(--line-strong);border-radius:7px;color:var(--ink);background:rgba(var(--accRGB),.06);white-space:nowrap}
+.btn:hover{background:rgba(var(--accRGB),.14)}
+.btn[aria-pressed="true"]{background:rgba(var(--accRGB),.22);border-color:var(--cool)}
+.btn.primary{background:rgba(255,195,90,.16);border-color:rgba(255,195,90,.6);color:#ffe6b8}
+.btn.danger{border-color:rgba(255,107,90,.5);color:#ffb1a6}
+.btn.ghost{border-color:transparent;color:var(--dim)}
+input[type=range]{accent-color:var(--cool);width:100%}
+
+/* top bar */
+.hud-top{position:fixed;top:var(--top);left:var(--gut);right:var(--gutR);display:flex;gap:10px;align-items:stretch;z-index:5;pointer-events:none}
+.hud-top>*{pointer-events:auto}
+.brand{padding:10px 14px;display:flex;flex-direction:column;justify-content:center}
+.brand h1{font-family:var(--f-display);font-weight:700;font-size:18px;letter-spacing:.1em;margin:0;text-transform:uppercase}.brand h1 b{color:var(--flare)}
+.brand .sub{font-size:11px;color:var(--dim)}
+.time{display:flex;gap:12px;align-items:center;padding:8px 12px}
+#pauseBtn{width:40px;height:40px;border-radius:9px;border:1px solid rgba(255,195,90,.55);background:rgba(255,195,90,.12);font-size:16px}
+.spds{display:flex;gap:3px}.spd{font-family:var(--f-mono);font-size:10px;padding:3px 5px;border-radius:5px;border:1px solid var(--line);color:var(--dim);white-space:nowrap}
+.spd:hover{color:var(--ink)}.spd[aria-pressed="true"]{color:var(--ink);border-color:rgba(255,195,90,.6);background:rgba(255,195,90,.14)}
+.tcol{display:flex;flex-direction:column;gap:4px}
+.right{margin-left:auto;display:flex;gap:10px;align-items:center;padding:8px 10px;flex-wrap:wrap;justify-content:flex-end}
+.stat{display:flex;flex-direction:column;gap:2px;min-width:54px}
+.findwrap{position:relative}
+.find{width:210px;font:inherit;font-size:13px;padding:8px 10px;border-radius:8px;border:1px solid var(--line-strong);background:rgba(0,0,0,.35);color:var(--ink)}
+.findlist{position:absolute;top:calc(100% + 4px);left:0;right:0;z-index:9;padding:4px;display:flex;flex-direction:column;gap:2px;max-height:300px;overflow:auto}
+.findlist button{text-align:left;padding:7px 9px;border-radius:6px;font-size:13px}.findlist button:hover,.findlist button.on{background:rgba(var(--accRGB),.14)}
+.findlist small{color:var(--dim);margin-left:6px}
+
+/* tool rail */
+.rail{position:fixed;left:var(--gut);top:calc(var(--top) + var(--hudH,64px) + 10px);bottom:var(--bot);width:86px;overflow-y:auto;overflow-x:hidden;z-index:4;padding:6px;display:flex;flex-direction:column;gap:3px;scrollbar-width:thin}
+.rail h3{font-family:var(--f-mono);font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--dim);margin:8px 2px 2px;font-weight:500}
+.tool{display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 2px;border-radius:7px;border:1px solid transparent;font-size:10.5px;color:var(--ink2);line-height:1.1;text-align:center}
+.tool .ico{font-size:19px;line-height:1}
+.tool:hover{background:rgba(var(--accRGB),.1)}.tool[aria-pressed="true"]{background:rgba(255,195,90,.15);border-color:rgba(255,195,90,.55);color:#fff}
+.placeopts{position:fixed;left:calc(var(--gut) + 96px);bottom:var(--bot);z-index:4;padding:8px 12px;display:flex;gap:14px;align-items:center;font-size:12px}
+.placeopts label{display:flex;gap:6px;align-items:center;color:var(--dim)}.placeopts input[type=range]{width:110px}
+.seg{display:flex;gap:3px}.seg button{font-family:var(--f-mono);font-size:11px;padding:3px 8px;border-radius:5px;border:1px solid var(--line);color:var(--dim)}.seg button[aria-pressed="true"]{color:var(--ink);border-color:var(--cool);background:rgba(var(--accRGB),.16)}
+
+/* dock */
+.dock{position:fixed;right:var(--gutR);top:calc(var(--top) + var(--hudH,64px) + 10px);bottom:var(--bot);width:330px;z-index:4;display:flex;flex-direction:column;overflow:hidden}
+.tabs{display:flex;border-bottom:1px solid var(--line)}.tab{flex:1;padding:10px 4px;font-family:var(--f-mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--dim);border-bottom:2px solid transparent}
+.tab[aria-selected="true"]{color:var(--ink);border-color:var(--flare)}
+.pane{padding:12px 14px;overflow:auto;flex:1;display:flex;flex-direction:column;gap:12px}
+.row{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.sl{display:flex;flex-direction:column;gap:4px}.sl .row span:last-child{font-family:var(--f-mono);font-size:12px}
+.evs{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.views{display:flex;gap:4px;flex-wrap:wrap}
+.splist{display:flex;flex-direction:column;gap:3px}
+.sprow{display:grid;grid-template-columns:14px 1fr auto;gap:8px;align-items:center;font-size:12.5px;padding:3px 4px;border-radius:5px}
+.sprow:hover{background:rgba(var(--accRGB),.08)}.sprow i{width:10px;height:10px;border-radius:50%;display:block}.sprow b{font-family:var(--f-mono);font-weight:500;font-size:12px}
+.sprow.zero{opacity:.4}
+#graph{width:100%;height:150px;display:block;border:1px solid var(--line);border-radius:8px;background:rgba(0,0,0,.25)}
+.gene{display:grid;grid-template-columns:86px 1fr 46px;gap:8px;align-items:center;font-size:12px}
+.gene .bar{height:6px;border-radius:3px;background:rgba(var(--accRGB),.12);overflow:hidden}.gene .bar span{display:block;height:100%;background:var(--cool)}
+.gene input{margin:0}
+.ititle{font-family:var(--f-display);font-weight:500;font-size:22px;margin:0}
+.isub{font-size:12.5px;color:var(--dim);margin-top:-8px}
+.kv{display:grid;grid-template-columns:1fr 1fr;gap:6px}.kv div{border:1px solid var(--line);border-radius:7px;padding:6px 8px}.kv .k{display:block}.kv .v{font-size:13px}
+.note{font-size:12px;color:var(--dim);line-height:1.5;margin:0}
+#iPic{width:100%;height:120px;border-radius:8px;background:rgb(var(--deepRGB));display:block}
+.toasts{position:fixed;left:50%;transform:translateX(-50%);top:calc(var(--top) + var(--hudH,64px) + 16px);z-index:8;display:flex;flex-direction:column;gap:6px;align-items:center;pointer-events:none}
+.toast{font-size:13px;padding:8px 14px;border-radius:99px;background:var(--panel);border:1px solid var(--line-strong);animation:tin .25s ease-out}
+@keyframes tin{from{opacity:0;transform:translateY(-6px)}}
+.hint{position:fixed;left:50%;transform:translateX(-50%);bottom:var(--bot);font-family:var(--f-mono);font-size:11.5px;color:var(--dim);background:var(--panel);border:1px solid var(--line);border-radius:99px;padding:7px 14px;white-space:nowrap;z-index:3;pointer-events:none}
+.zoomb{position:fixed;right:calc(var(--gutR) + 342px);bottom:var(--bot);z-index:4;display:flex;flex-direction:column;gap:4px;padding:4px}
+.zoomb button{width:32px;height:30px;border-radius:6px;border:1px solid var(--line);font-size:15px;color:var(--dim)}.zoomb button:hover{color:var(--ink)}
+
+/* scenarios */
+.scen{position:fixed;right:var(--gutR);top:calc(var(--top) + var(--hudH,64px) + 10px);width:min(520px,calc(100% - 32px));z-index:7;padding:14px;display:flex;flex-direction:column;gap:10px;max-height:calc(100% - 120px);overflow:auto}
+.scgrid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.scb{text-align:left;padding:10px 12px;border-radius:9px;border:1px solid var(--line);display:flex;flex-direction:column;gap:3px}.scb:hover{border-color:var(--cool)}
+.scb b{font-family:var(--f-display);font-weight:500;font-size:15px}.scb span{font-size:12px;color:var(--dim);line-height:1.35}
+
+/* home */
+.home{position:fixed;inset:0;z-index:20;pointer-events:none;background:linear-gradient(90deg,rgba(var(--voidRGB),.93) 0,rgba(var(--voidRGB),.78) 34%,rgba(var(--voidRGB),0) 62%)}
+.hcard{pointer-events:auto;position:absolute;left:var(--gut);top:calc(var(--top) + 16px);bottom:calc(var(--bot) + 16px);width:min(560px,calc(100% - 32px));overflow:auto;display:flex;flex-direction:column;gap:22px;padding:8px 4px}
+.htitle{font-family:var(--f-display);font-weight:700;font-size:clamp(40px,7vw,72px);letter-spacing:.08em;text-transform:uppercase;margin:0;line-height:1}.htitle b{color:var(--flare)}
+.htag{margin:10px 0 0;color:var(--dim);font-size:16px}
+.hacct{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+.chip{display:inline-flex;align-items:center;gap:6px;font-family:var(--f-mono);font-size:12px;padding:7px 12px;border-radius:99px;border:1px solid var(--line-strong);background:rgba(var(--deepRGB),.82);color:var(--ink);text-decoration:none}
+.chip:hover{border-color:var(--cool)}.chip b{color:var(--flare);font-weight:600}.chip.other{border-color:rgba(127,178,255,.5);color:#cfe0ff}
+.hview{display:flex;flex-direction:column;gap:12px}
+.hb{display:flex;flex-direction:column;align-items:flex-start;gap:4px;text-align:left;padding:18px 20px;border-radius:12px;border:1px solid var(--line-strong);background:rgba(var(--deepRGB),.84)}
+.hb:hover{border-color:var(--cool);background:rgba(var(--accRGB),.10)}.hb .ht{font-family:var(--f-display);font-weight:500;font-size:22px}.hb .hd{font-size:13px;color:var(--dim);line-height:1.4}
+.hb.primary{border-color:rgba(255,195,90,.6);background:rgba(40,30,12,.86)}.hb.primary:hover{background:rgba(60,44,14,.92)}
+.hfoot{margin:0;font-size:12px;color:var(--dim);line-height:1.5}
+.hbar{display:flex;align-items:center;gap:14px}.hbar h2{font-family:var(--f-display);font-weight:500;font-size:24px;margin:0;flex:1}.hstars{font-family:var(--f-mono);font-size:12px;color:var(--flare)}
+.hgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:6px}
+.ct{display:flex;flex-direction:column;align-items:flex-start;gap:3px;padding:8px 9px;border-radius:8px;border:1px solid var(--line);background:rgba(var(--deepRGB),.86);text-align:left;min-height:70px}
+.ct:hover:not(:disabled){border-color:var(--cool)}.ct:disabled{opacity:.45;cursor:not-allowed}.ct .cn{font-family:var(--f-mono);font-size:10px;color:var(--dim)}.ct .ctt{font-size:11.5px;line-height:1.25}
+.ct .cs{font-size:12px;color:var(--flare);letter-spacing:1px;margin-top:auto}.ct.next{border-color:rgba(255,195,90,.7);box-shadow:0 0 0 1px rgba(255,195,90,.3)}
+body.mHome .hud-top,body.mHome .rail,body.mHome .dock,body.mHome .placeopts,body.mHome .hint,body.mHome .zoomb,body.mHome .scen,body.mHome #chHud,body.mHome .toasts{display:none!important}
+body.mDemo .rail,body.mDemo .dock,body.mDemo .placeopts,body.mDemo .hint,body.mDemo .zoomb,body.mDemo .hud-top{display:none!important}
+.chhud{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(var(--bot) + 52px);width:min(600px,calc(100% - 480px));min-width:300px;padding:12px 14px;z-index:6;display:flex;flex-direction:column;gap:6px}
+.chtop{display:flex;justify-content:space-between}.chtitle{font-family:var(--f-display);font-weight:500;font-size:17px}.chgoal{font-size:13px;line-height:1.45;color:var(--ink2)}
+.chbarw{height:6px;border-radius:3px;background:rgba(var(--accRGB),.12);overflow:hidden}#chBar{display:block;height:100%;width:0;background:var(--flare);transition:width .25s}
+.chrow{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}.chprog{font-family:var(--f-mono);font-size:11.5px;color:var(--dim)}.chbtns{display:flex;gap:6px}
+.donebg{pointer-events:auto;display:grid;place-items:center;background:rgba(var(--voidRGB),.6)}
+.donecard{width:min(440px,calc(100% - 32px));padding:24px;text-align:center;display:flex;flex-direction:column;gap:10px}.donecard h2{font-family:var(--f-display);font-weight:500;margin:0}
+.dstars{font-size:34px;color:var(--flare);letter-spacing:4px}.dstars .off{color:rgba(255,255,255,.15)}
+.actions{display:flex;gap:8px;flex-wrap:wrap}
+.democap{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(var(--bot) + 10px);width:min(640px,calc(100% - 32px));padding:14px 18px;z-index:21;display:flex;flex-direction:column;gap:6px}
+.democap h2{font-family:var(--f-display);font-weight:500;font-size:22px;margin:0}.democap p{margin:0;font-size:14px;color:var(--ink2)}
+.ovl{position:fixed;inset:0;z-index:30;display:grid;place-items:center;background:rgba(var(--voidRGB),.6)}
+.obox{width:min(460px,calc(100% - 32px));max-height:min(80vh,640px);overflow:auto;padding:18px;display:flex;flex-direction:column;gap:12px}
+.obox h2{font-family:var(--f-display);font-weight:500;font-size:22px;margin:0;flex:1}
+.arow{display:flex;align-items:center;gap:8px;padding:9px 10px;border:1px solid var(--line);border-radius:8px}.arow.cur{border-color:rgba(255,195,90,.6);background:rgba(40,30,12,.5)}
+.arow .an{flex:1;min-width:0}.arow .as{font-family:var(--f-mono);font-size:11px;color:var(--dim)}
+.arow input,.aform input{font:inherit;font-size:13px;padding:7px 9px;border-radius:7px;border:1px solid var(--line-strong);background:rgba(0,0,0,.35);color:var(--ink);min-width:0}
+.arow input{width:80px}.aform{display:flex;gap:6px;flex-wrap:wrap}.aform input{flex:1 1 120px}
+.endbox{border:1px solid rgba(255,107,90,.45);background:rgba(60,16,12,.35);border-radius:8px;padding:8px 10px;display:flex;flex-direction:column;gap:4px}.endbox .k{color:#ffb1a6}.endrow{display:flex;justify-content:space-between;font-size:12.5px;text-align:left;padding:2px 0}.endrow b{font-family:var(--f-mono);font-weight:500;color:#ffb1a6}.endrow.ext{opacity:.6;text-decoration:line-through}
+.endbadge{position:fixed;right:calc(var(--gutR) + 342px);top:calc(var(--top) + var(--hudH,64px) + 12px);z-index:4;padding:7px 12px;border-color:rgba(255,107,90,.55);color:#ffc0b6;font-family:var(--f-mono);font-size:12px}
+@media (max-width:760px){.endbadge{right:var(--gutR);top:auto;bottom:calc(var(--bot) + 230px)}}
+body.mHome .endbadge,body.mDemo .endbadge{display:none!important}
+.dna{width:100%;height:28px;display:block;border-radius:6px;background:rgba(0,0,0,.25)}.fam{display:flex;gap:6px;flex-wrap:wrap;align-items:center}.gsel,.coatsel{font:inherit;font-size:12px;background:rgba(0,0,0,.35);color:var(--ink);border:1px solid var(--line-strong);border-radius:6px;padding:4px 6px}
+.legend{position:fixed;left:calc(var(--gut) + 96px);top:calc(var(--top) + var(--hudH,64px) + 12px);z-index:4;padding:8px 12px;width:220px;display:flex;flex-direction:column;gap:5px}.legend .lbar{height:10px;border-radius:5px}.legend .lticks{display:flex;justify-content:space-between;font-family:var(--f-mono);font-size:10.5px;color:var(--dim)}
+body.mHome .legend,body.mDemo .legend{display:none!important}@media (max-width:760px){.legend{left:var(--gut);top:auto;bottom:calc(var(--bot) + 190px)}}
+.pbig{font-family:var(--f-display);font-size:54px;line-height:1;color:var(--flare)}
+
+@media (max-width:1600px){.right .stat{display:none}.find{width:170px}}
+@media (max-width:1300px){.brand .sub{display:none}.find{width:140px}.brand{padding:10px}}
+@media (max-width:760px){
+  .hud-top{flex-wrap:wrap}.brand{display:none}.time{flex:1 1 100%}.right{flex:1 1 100%;justify-content:space-between}.findwrap{flex:1 1 100%;order:-1}.find{width:100%;box-sizing:border-box}
+  .rail{top:auto;left:var(--gut);right:var(--gutR);bottom:var(--bot);width:auto;height:64px;flex-direction:row;overflow-x:auto;overflow-y:hidden}
+  .rail h3{display:none}.tool{min-width:58px}
+  .placeopts{left:var(--gut);bottom:calc(var(--bot) + 72px)}
+  .dock{top:auto;bottom:calc(var(--bot) + 120px);left:var(--gut);right:var(--gutR);width:auto;height:42vh}
+  body:not(.dockOpen) .dock{display:none}
+  .zoomb{right:var(--gutR);bottom:calc(var(--bot) + 120px)}
+  .home{background:rgba(var(--voidRGB),.74)}
+  .chhud{width:auto;min-width:0;left:var(--gut);right:var(--gutR);transform:none;bottom:calc(var(--bot) + 124px);max-height:36vh;overflow:auto}
+  .hint{display:none}
+}
+#dockBtn{display:none}@media (max-width:760px){#dockBtn{display:inline-block}}
+.sprow{text-align:left;width:100%}@media (max-width:760px){#dateSub{display:none}}
+.slist{display:flex;flex-direction:column;gap:3px}
+.cat{font-family:var(--f-mono);font-size:11px;padding:1px 6px;border-radius:5px;border:1px solid var(--line-strong)}
+
+</style>
+</head>
+<body>
+<canvas id="world" aria-label="The planet&#x27;s weather: drag to look around, scroll to zoom"></canvas>
+
+<header class="hud-top">
+  <div class="brand panel"><h1>Tropo<b>sphere</b></h1><span class="sub">A weather and climate sandbox</span></div>
+  <div class="time panel">
+    <button id="pauseBtn" title="Pause or resume (Space)" aria-label="Pause">⏸</button>
+    <div class="tcol"><span class="k">Time rate</span><div class="spds" id="spds"></div><span class="v" id="rateTxt"></span></div>
+    <div class="tcol"><span class="k">Date</span><span class="v" id="dateTxt" style="white-space:nowrap"></span><span class="v" id="dateSub" style="font-size:11px;color:var(--dim)"></span></div>
+  </div>
+  <div class="right panel">
+    <div id="stats" style="display:contents"></div>
+    <div class="findwrap"><input id="find" class="find" placeholder="Find a storm, place or weather…" aria-label="Find a storm, place or weather…" autocomplete="off" spellcheck="false"><div id="findList" class="findlist panel" hidden></div></div>
+    <button id="homeBtn" class="btn" title="Back to the home page">⌂ Home</button>
+    <button id="acctBtn" class="btn" title="Account: save your progress on this device">👤</button>
+    <button id="scenBtn" class="btn">Worlds</button>
+    <button id="dockBtn" class="btn">Panel</button>
+  </div>
+</header>
+
+<nav class="rail panel" id="rail" aria-label="Tools"></nav>
+<div class="placeopts panel" id="placeopts" hidden>
+  <label>Brush <input type="range" id="brush" min="1" max="12" value="4"><span id="brushV" class="v">4</span></label>
+  <span id="toolNote" class="note"></span>
+</div>
+
+<aside class="dock panel" id="dock">
+  <div class="tabs" role="tablist"><button class="tab" role="tab" data-tab="world" aria-selected="true">World</button><button class="tab" role="tab" data-tab="climate" aria-selected="false">Climate</button><button class="tab" role="tab" data-tab="insp" aria-selected="false">Inspect</button></div>
+  <div class="pane" id="pane-world">
+    <div class="sl"><div class="row"><span class="k">Carbon dioxide</span><span id="co2V">280 ppm</span></div><input type="range" id="co2S" min="150" max="2000" step="10" value="280"></div>
+    <div class="sl"><div class="row"><span class="k">Sunlight</span><span id="sunV">100%</span></div><input type="range" id="sunS" min="85" max="115" step="0.5" value="100"></div>
+    <div class="sl"><div class="row"><span class="k">Axial tilt (seasons)</span><span id="tiltV">23°</span></div><input type="range" id="tiltS" min="0" max="60" step="1" value="23"></div>
+    <div class="sl"><div class="row"><span class="k">Planet spin (Coriolis)</span><span id="spinV">100%</span></div><input type="range" id="spinS" min="10" max="300" step="5" value="100"></div>
+    <div class="sl"><div class="row"><span class="k">Ocean warmth</span><span id="oceanV">+0 °C</span></div><input type="range" id="oceanS" min="-8" max="8" step="0.5" value="0"></div>
+    <span class="k">Events · press again to stop</span>
+    <div class="evs">
+      <button class="btn" data-ev="heatwave">☀ Heat wave</button><button class="btn" data-ev="coldsnap">❄ Polar vortex</button>
+      <button class="btn" data-ev="season">🌀 Hurricane season</button><button class="btn" data-ev="elnino">🌊 El Niño</button>
+      <button class="btn" data-ev="volcano">🌋 Volcanic winter</button><button class="btn" data-ev="drought">🏜 Drought</button>
+      <button class="btn" data-ev="outbreak">🌪 Tornado outbreak</button><button class="btn" data-ev="normal">↺ Stop all events</button>
+    </div>
+    <span class="k">Views</span>
+    <div class="views"><button class="btn" data-view="normal" aria-pressed="true">Satellite</button><button class="btn" data-view="wind" aria-pressed="false">Wind</button><button class="btn" data-view="temp" aria-pressed="false">Temperature</button><button class="btn" data-view="pressure" aria-pressed="false">Pressure</button><button class="btn" data-view="rain" aria-pressed="false">Rain radar</button><button class="btn" data-view="humid" aria-pressed="false">Humidity</button></div>
+    <div class="row"><span class="k">Wind streaks</span><button class="btn" id="streakBtn" aria-pressed="true">On</button></div>
+    <div class="row"><span class="k">Labels</span><button class="btn" id="lblBtn" aria-pressed="true">On</button></div>
+    <p class="note">Sunlight heats the equator more than the poles. Warm air rises and leaves low pressure; air rushes in, and the planet's spin twists it into giant swirls. Warm oceans feed water vapour into the air, which turns to cloud and rain when it rises and cools.</p>
+  </div>
+  <div class="pane" id="pane-climate" hidden>
+    <div class="kv" id="cStats"></div>
+    <span class="k">Over time</span>
+    <canvas id="graph"></canvas>
+    <p class="note" id="gKey"></p>
+    <span class="k">Storms · click one to follow it</span>
+    <div class="slist" id="slist"></div>
+    <span class="k">Records</span>
+    <div class="kv" id="cRec"></div>
+  </div>
+  <div class="pane" id="pane-insp" hidden>
+    <div id="inspEmpty"><p class="note">Click anywhere to read the weather there, or click a storm to track it. Double-click a storm to follow it with the camera.</p></div>
+    <div id="inspBody" class="hview" hidden></div>
+  </div>
+
+</aside>
+<div class="zoomb panel"><button id="zIn" title="Zoom in">+</button><button id="zOut" title="Zoom out">−</button><button id="zFit" title="Show everything">⤢</button></div>
+<div id="legend" class="legend panel" hidden><span class="k"></span><div class="lbar"></div><div class="lticks"><span></span><span></span><span></span></div></div>
+<div class="hint" id="hint">Drag to look around · scroll to zoom · click anywhere to read the weather there</div>
+<div class="toasts" id="toasts" aria-live="polite"></div>
+
+<div class="scen panel" id="scen" hidden>
+  <div class="row"><span class="k">Choose a world</span><button class="btn ghost" id="scenClose">×</button></div>
+  <div class="scgrid" id="scgrid"></div>
+</div>
+
+<div id="home" class="home" role="dialog" aria-label="Home">
+  <div class="hcard">
+    <div class="hhead"><h1 class="htitle">Tropo<b>sphere</b></h1><p class="htag">Steer the winds, brew hurricanes and tornadoes, and change the climate of a whole planet</p>
+      <div class="hacct"><button class="chip" id="hAcctBtn">👤 <span id="hAcctName">Guest</span></button><button class="chip" id="hPlays" title="Total plays by everyone">▶ <b id="hPlaysN">0</b> <span id="hPlaysL">plays</span></button><button class="chip" id="hLb" title="Leaderboard">🏆 Leaderboard</button><style>.sims{position:relative;display:inline-block;z-index:70}.hhead{position:relative;z-index:20}.sims>summary{list-style:none;cursor:pointer}.sims>summary::-webkit-details-marker{display:none}
+.sims[open]>summary{background:rgba(255,255,255,.08)}.simsP{position:absolute;left:0;top:calc(100% + 6px);z-index:60;width:min(320px,86vw);padding:8px;border-radius:12px;background:#0c101c;border:1px solid rgba(255,255,255,.14);box-shadow:0 12px 40px rgba(0,0,0,.55);display:grid;gap:6px;text-align:left}
+.simsP a{display:grid;grid-template-columns:auto 1fr;gap:2px 10px;align-items:center;padding:9px 10px;border-radius:9px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.03);color:#e3e8f4;text-decoration:none;font:inherit}
+.simsP a:hover,.simsP a:focus-visible{background:rgba(255,255,255,.08);border-color:var(--sc,#7fe0a8)}.simsP .si{grid-row:span 2;font-size:24px}.simsP b{color:var(--sc,#fff);font-size:14px}.simsP small{color:#8b95ae;font-size:11.5px;line-height:1.3}.simsP .sn{color:#8b95ae;font-size:11px;padding:2px 4px}</style><details class="sims" id="hSims"><summary class="chip" title="Our other simulators">🧪 Try our other simulators ▾</summary><div class="simsP" id="hSimsP"></div></details><script>(()=>{const ME="troposphere",LIST=[{"id": "barycenter", "icon": "🪐", "name": "Barycenter", "tag": "Gravity, planets, stars and black holes", "url": "https://jacob711-oss.github.io/barycenter/", "color": "#e8b04a"}, {"id": "biosphere", "icon": "🌿", "name": "Biosphere", "tag": "A living world of animals, plants and people", "url": "https://jacob711-oss.github.io/barycenter/life/", "color": "#7fe0a8"}, {"id": "lithosphere", "icon": "🌋", "name": "Lithosphere", "tag": "Drift continents, raise mountains and set off volcanoes", "url": "https://jacob711-oss.github.io/barycenter/lithosphere/", "color": "#ff8a5c"}, {"id": "troposphere", "icon": "🌀", "name": "Troposphere", "tag": "Steer winds, brew hurricanes and change the climate", "url": "https://jacob711-oss.github.io/barycenter/troposphere/", "color": "#60d6e6"}, {"id": "catalyst", "icon": "⚛️", "name": "Catalyst", "tag": "Mix atoms, spark reactions and build molecules", "url": "https://jacob711-oss.github.io/barycenter/catalyst/", "color": "#c48bff"}],P=document.getElementById('hSimsP'),D=document.getElementById('hSims');
+const draw=l=>{P.textContent='';for(const s of l){if(s.id===ME||!s.url)continue;const a=document.createElement('a');a.href=s.url;a.target='_blank';a.rel='noopener';a.style.setProperty('--sc',s.color||'#7fe0a8');
+a.innerHTML='<span class="si"></span><b></b><small></small>';a.children[0].textContent=s.icon||'🧪';a.children[1].textContent=s.name;a.children[2].textContent=s.tag||'';P.appendChild(a)}
+const n=document.createElement('div');n.className='sn';n.textContent='More simulators coming soon.';P.appendChild(n)};draw(LIST);
+try{fetch('https://jacob711-oss.github.io/barycenter/sims.json',{cache:'no-cache'}).then(r=>r.ok?r.json():null).then(l=>{if(Array.isArray(l)&&l.length)draw(l.filter(s=>s&&typeof s.name==='string'&&/^https:\/\//.test(s.url||'')))}).catch(()=>{})}catch(e){}
+document.addEventListener('pointerdown',e=>{if(D.open&&!D.contains(e.target))D.open=false});document.addEventListener('keydown',e=>{if(e.key==='Escape')D.open=false})})()</script></div></div>
+    <div id="hMain" class="hview">
+      <button class="hb" id="hChal"><span class="ht">Challenges</span><span class="hd" id="hChalSub">Goals from easy to fiendish</span></button>
+      <button class="hb" id="hDemo"><span class="ht">Demo &amp; tutorial</span><span class="hd">Watch the highlights, or learn the controls step by step</span></button>
+      <button class="hb primary" id="hFree"><span class="ht">Free play</span><span class="hd">The full sandbox: heat and cool the air, spin up storms, raise mountains and change the greenhouse</span></button>
+      <p class="hfoot">Simplified but real meteorology: sunlight and seasons, pressure and the Coriolis effect, evaporation, clouds and rain, storms and the greenhouse effect.</p>
+    </div>
+    <div id="hChalView" class="hview" hidden>
+      <div class="hbar"><button class="btn ghost hback">← Back</button><h2>Challenges</h2><span id="hStars" class="hstars"></span></div>
+      <p class="hfoot">Finish a challenge to unlock the next. Faster solutions earn more stars.</p>
+      <div id="hGrid" class="hgrid"></div>
+    </div>
+    <div id="hDemoView" class="hview" hidden>
+      <div class="hbar"><button class="btn ghost hback">← Back</button><h2>Demo &amp; tutorial</h2></div>
+      <button class="hb" id="hWatch"><span class="ht">Watch the demo</span><span class="hd">A tour of global winds, a category 5 hurricane, tornado alley, an ice age and a planet with no night</span></button>
+      <button class="hb primary" id="hTut"><span class="ht">Start the tutorial</span><span class="hd">Learn every control step by step; each step completes when you do it</span></button>
+    </div>
+  </div>
+</div>
+<div id="chHud" class="chhud panel" hidden aria-live="polite">
+  <div class="chtop"><span id="chNum" class="k"></span><span id="chTime" class="k"></span></div>
+  <div id="chTitle" class="chtitle"></div>
+  <div id="chGoal" class="chgoal"></div>
+  <div class="chbarw"><span id="chBar"></span></div>
+  <div class="chrow"><span id="chProg" class="chprog"></span><div class="chbtns"><button id="chHint" class="btn">Hint</button><button id="chRestart" class="btn">Restart</button><button id="chExit" class="btn ghost">Exit</button></div></div>
+</div>
+<div id="demoCap" class="democap panel" hidden><span class="k" id="demoStep"></span><h2 id="demoTitle"></h2><p id="demoText"></p><div class="actions"><button class="btn" id="demoNext">Next ›</button><button class="btn ghost" id="demoExit">Exit demo</button></div></div>
+<div id="acct" class="ovl" hidden role="dialog" aria-label="Accounts">
+  <div class="obox panel">
+    <div class="hbar"><h2>Accounts</h2><button class="btn" id="acctClose" aria-label="Close">×</button></div>
+    <p class="hfoot">Your stars, plays and time are saved in this browser on this device. Accounts are shared by all our simulators when they are opened from the same site.</p>
+    <div id="acctList" class="hview" style="gap:6px"></div>
+    <form id="acctForm" class="aform"><input id="acctNew" maxlength="20" placeholder="Your name" autocomplete="off"><input id="acctPin" maxlength="4" inputmode="numeric" placeholder="PIN (optional)" autocomplete="off"><button class="btn primary" type="submit">Create account</button></form>
+    <p class="hfoot" id="acctMsg" aria-live="polite"></p>
+    <button class="btn" id="acctLb" type="button">🏆 Leaderboard</button>
+  </div>
+</div>
+<div id="chDone" class="home donebg" hidden role="dialog" aria-label="Challenge result">
+  <div class="donecard panel">
+    <div id="dStars" class="dstars"></div><h2 id="dTitle"></h2><p id="dText" class="hfoot" style="font-size:13px"></p>
+    <div class="actions" style="justify-content:center"><button id="dNext" class="btn primary">Next challenge</button><button id="dRetry" class="btn">Try again</button><button id="dList" class="btn ghost">All challenges</button><button id="dLb" class="btn ghost">🏆 Leaderboard</button></div>
+  </div>
+</div>
+<style>.lbrow{display:grid;grid-template-columns:34px 1fr auto auto;gap:10px;align-items:center;padding:7px 10px;border:1px solid var(--line);border-radius:8px;font-size:13px}
+.lbrow .r{font-family:var(--f-mono);color:var(--dim)}.lbrow .nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.lbrow .st{color:var(--flare);font-family:var(--f-mono)}.lbrow .dn{font-family:var(--f-mono);font-size:11px;color:var(--dim)}
+.lbrow.me{border-color:rgba(255,180,84,.7);background:rgba(40,28,12,.55)}.lbrow.top1 .r{color:#ffd76a}.lbrow.top2 .r{color:#d8dee9}.lbrow.top3 .r{color:#e0a36a}
+.lbtabs{display:flex;gap:4px;flex-wrap:wrap}.lbtabs button{font-family:var(--f-mono);font-size:11.5px;padding:5px 10px;border-radius:99px;border:1px solid var(--line);color:var(--dim);background:none;cursor:pointer}.lbtabs button[aria-pressed="true"]{color:var(--ink);border-color:var(--flare);background:rgba(255,195,90,.12)}</style>
+<div id="lbBox" class="ovl" hidden role="dialog" aria-label="Leaderboard">
+  <div class="obox panel">
+    <div class="hbar"><h2>🏆 Leaderboard</h2><button class="btn" id="lbClose" aria-label="Close">×</button></div>
+    <div class="lbtabs" id="lbTabs"></div>
+    <p class="hfoot" id="lbMe"></p>
+    <div id="lbList" class="hview" style="gap:4px"></div>
+    <p class="hfoot" id="lbNote"></p>
+  </div>
+</div>
+
+
+<script>
+const SIMLIST=[{"id": "barycenter", "icon": "🪐", "name": "Barycenter", "tag": "Gravity, planets, stars and black holes", "url": "https://jacob711-oss.github.io/barycenter/", "color": "#e8b04a"}, {"id": "biosphere", "icon": "🌿", "name": "Biosphere", "tag": "A living world of animals, plants and people", "url": "https://jacob711-oss.github.io/barycenter/life/", "color": "#7fe0a8"}, {"id": "lithosphere", "icon": "🌋", "name": "Lithosphere", "tag": "Drift continents, raise mountains and set off volcanoes", "url": "https://jacob711-oss.github.io/barycenter/lithosphere/", "color": "#ff8a5c"}, {"id": "troposphere", "icon": "🌀", "name": "Troposphere", "tag": "Steer winds, brew hurricanes and change the climate", "url": "https://jacob711-oss.github.io/barycenter/troposphere/", "color": "#60d6e6"}, {"id": "catalyst", "icon": "⚛️", "name": "Catalyst", "tag": "Mix atoms, spark reactions and build molecules", "url": "https://jacob711-oss.github.io/barycenter/catalyst/", "color": "#c48bff"}],LB_GAME="troposphere";
+/* ===== simulator kit: core helpers shared by every simulator ===== */
+const $=id=>document.getElementById(id);
+const clamp=(v,a,b)=>v<a?a:v>b?b:v,lerp=(a,b,t)=>a+(b-a)*t,rr=(a,b)=>a+Math.random()*(b-a),ri=(a,b)=>Math.floor(rr(a,b+1)),pick=a=>a[Math.floor(Math.random()*a.length)];
+const mod=(a,n)=>((a%n)+n)%n;
+let W=innerWidth,H=innerHeight,DPR=Math.min(2,devicePixelRatio||1);
+const S={t:0,speed:1,speedI:0,paused:false,sel:null,view:'normal',tool:'select',brush:4,follow:false};
+const cam={x:0,y:0,z:4,ox:0};
+const CNT={moved:0,zoomed:0,scen:0,find:0,tool:0,view:0};const bump=k=>{CNT[k]=(CNT[k]||0)+1};
+function toast(msg,ms=3200){const el=document.createElement('div');el.className='toast panel';el.textContent=msg;const box=$('toasts');box.appendChild(el);while(box.children.length>4)box.firstChild.remove();setTimeout(()=>el.remove(),ms)}
+const fmtN=(v,d=0)=>Number(v).toLocaleString(undefined,{maximumFractionDigits:d,minimumFractionDigits:d});
+/* challenges */
+const CH={active:null,idx:-1,events:[],hold:{},t0:0,real0:0,done:false,failed:'',loading:false,ref:{}};
+function chEv(k,d){if(CH.active&&!CH.done&&!CH.loading)CH.events.push({k,...(d||{}),t:S.t})}
+const evN=k=>CH.events.filter(e=>e.k===k).length;
+const evHas=f=>CH.events.some(f);
+// hold a condition for an amount of simulated time (in the simulator's own time units)
+function hold(key,cond,dur){if(!cond){CH.hold[key]=null;return 0}if(CH.hold[key]==null)CH.hold[key]=S.t;return Math.min(1,(S.t-CH.hold[key])/dur)}
+const realSecs=()=>(performance.now()-CH.real0)/1000;
+const byTime=(t3,t2)=>()=>{const s=realSecs();return s<=t3?3:s<=t2?2:1};
+const CHALS=[];const CC=(diff,o)=>CHALS.push({diff,...o});
+const TSTEPS=[];const DEMO=[];
+const since=()=>S.t-CH.t0;
+
+/* ================= Troposphere: weather and climate ================= */
+// A 240 x 120 grid (1.5 degrees, about 167 km per cell at the equator) that wraps east-west.
+// Time is in days. Winds are in m/s; 1 m/s moves about 0.52 cells a day at the equator.
+const GW=240,GH=120,N=GW*GH,KM=167,MS2C=86.4/KM;
+const elev=new Float32Array(N),T=new Float32Array(N),Ts=new Float32Array(N),q=new Float32Array(N),cl=new Float32Array(N),rn=new Float32Array(N),sn=new Float32Array(N),ice=new Float32Array(N),
+  P=new Float32Array(N),Pa=new Float32Array(N),u=new Float32Array(N),v=new Float32Array(N),ravg=new Float32Array(N),tavg=new Float32Array(N),soil=new Float32Array(N),tmp=new Float32Array(N),tmp2=new Float32Array(N),tmp3=new Float32Array(N),sunC=new Float32Array(N),dT=new Float32Array(N);
+const WU=new Float32Array(N),WV=new Float32Array(N);let STEERED=0;
+const ENV={co2:280,sun:1,tilt:23,spin:1,ocean:0,dust:0,heat:0,cold:0,dry:0,nino:0,locked:false,evap:1};
+const EVT={heatwave:false,coldsnap:false,season:false,elnino:false,volcano:false,drought:false,outbreak:false};
+let STORMS=[],SYS=[],TORN=[],FLASH=[],PTS=[],HIST=[],RECS={hot:-99,hotI:0,cold:99,coldI:0,wind:0,windI:0,lowP:1013},STAT={avgT:14,ice:0,snow:0,rain:0,storms:0,maxCat:0,avgT0:14},LBL=true,STREAK=true,dirtyImg=true,lastImg=0,HL=[];
+let LIGHT=0,TORNS=0,HURRS=0,LANDF=0,HEATED=0,COOLED=0,WETTED=0,PRESSED=0,RAISEDM=0,EVN=0,EVSTOP=0,SLIDED=0,NAMEI=0,USERSTORM=0;
+const isOcean=i=>elev[i]<=0;
+const cxOf=i=>i%GW,cyOf=i=>(i/GW)|0,idx=(x,y)=>clamp(Math.floor(y),0,GH-1)*GW+mod(Math.floor(x),GW);
+const latOf=y=>90-(y+0.5)*180/GH,lonOf=x=>(x+0.5)*360/GW-180;
+const COS=new Float32Array(GH);for(let y=0;y<GH;y++)COS[y]=Math.max(0.12,Math.cos(latOf(y)*Math.PI/180));
+const wdx=dx=>{dx=mod(dx,GW);return dx>GW/2?dx-GW:dx};
+let RS=1;function seed(s){RS=s>>>0||1}function R(){RS|=0;RS=RS+0x6D2B79F5|0;let t=Math.imul(RS^RS>>>15,1|RS);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}
+const NAMES=['Ava','Basil','Cora','Dmitri','Elena','Felix','Greta','Hugo','Isla','Jonas','Kira','Leon','Mira','Nico','Opal','Pavel','Quinn','Rosa','Sami','Tess','Umar','Vera','Wes','Xena','Yuri','Zara'];
+const qsat=t=>3.8*Math.exp(17.27*t/(t+237.3));
+function fbm(oct,base,pers){const out=new Float32Array(N);let amp=1,tot=0;
+  for(let o=0;o<oct;o++){const nx=Math.max(2,Math.round(GW/(base/2**o))),sp=GW/nx,ny=Math.ceil(GH/sp)+2,L=new Float32Array(nx*ny);for(let k=0;k<L.length;k++)L[k]=R()*2-1;
+    for(let y=0;y<GH;y++){const fy=y/sp,y0=Math.floor(fy),ty=fy-y0,sy=ty*ty*(3-2*ty);for(let x=0;x<GW;x++){const fx=x/sp,x0=Math.floor(fx),tx=fx-x0,sx=tx*tx*(3-2*tx),xa=x0%nx,xb=(x0+1)%nx;
+      const a=L[y0*nx+xa],b=L[y0*nx+xb],c=L[(y0+1)*nx+xa],d=L[(y0+1)*nx+xb];out[y*GW+x]+=amp*((a+(b-a)*sx)+((c+(d-c)*sx)-(a+(b-a)*sx))*sy)}}tot+=amp;amp*=pers}
+  for(let i=0;i<N;i++)out[i]/=tot;return out}
+function quantile(arr,q){const s=Float32Array.from(arr).sort();return s[Math.floor(clamp(q,0,1)*(s.length-1))]}
+
+/* ---------- worlds ---------- */
+function makeLand(sd,frac,shape){seed(sd);const n=fbm(6,80,0.52),m=fbm(4,30,0.5);for(let i=0;i<N;i++){n[i]+=0.2*m[i]+(shape?shape(cxOf(i),cyOf(i)):0)}
+  const thr=frac>0?quantile(n,1-frac):9,mt=fbm(5,40,0.55);for(let i=0;i<N;i++){const d=n[i]-thr;elev[i]=d>0?40+d*2500+Math.max(0,mt[i])*3200*Math.min(1,d*6):-200-Math.min(1,-d*6)*4000}}
+function resetEnv(){WU.fill(0);WV.fill(0);Object.assign(ENV,{co2:280,sun:1,tilt:23,spin:1,ocean:0,dust:0,heat:0,cold:0,dry:0,nino:0,locked:false,evap:1});for(const k in EVT)EVT[k]=false;STORMS=[];SYS=[];TORN=[];FLASH=[];HIST=[];NAMEI=0;RECS={hot:-99,hotI:0,cold:99,coldI:0,wind:0,windI:0,lowP:1013};Pa.fill(0);dT.fill(0)}
+const SCENS={
+  earth:()=>{makeLand(11,0.29)},
+  hurricane:()=>{makeLand(11,0.29);ENV.ocean=1.5;S.t=228},
+  tornado:()=>{makeLand(4,0.36,(x,y)=>Math.exp(-(((wdx(x-70)/40)**2)+((y-38)/14)**2))*0.5);S.t=125},
+  iceage:()=>{makeLand(11,0.32);ENV.co2=180;ENV.ocean=-2},
+  hothouse:()=>{makeLand(11,0.27);ENV.co2=1400},
+  monsoon:()=>{makeLand(8,0.3,(x,y)=>Math.exp(-(((wdx(x-140)/55)**2)+((y-38)/16)**2))*0.9-Math.exp(-(((wdx(x-140)/70)**2)+((y-75)/14)**2))*0.7);S.t=150},
+  locked:()=>{makeLand(15,0.25);ENV.locked=true;ENV.tilt=0;ENV.spin=0.3},
+  water:()=>{makeLand(19,0.03);ENV.ocean=1},
+  desert:()=>{makeLand(23,0.72);ENV.evap=0.5},
+};
+const SCENLIST=[{id:'earth',name:'Earth-like',desc:'Oceans, continents and seasons much like our own planet.'},{id:'hurricane',name:'Hurricane season',desc:'Late summer with warm oceans: tropical storms are brewing.'},
+  {id:'tornado',name:'Tornado alley',desc:'Spring on a wide continent where warm, wet air meets cold, dry air.'},{id:'iceage',name:'Ice age',desc:'Low carbon dioxide and cold oceans. Ice sheets reach far from the poles.'},
+  {id:'hothouse',name:'Hothouse',desc:'Five times today’s carbon dioxide. No ice, fierce storms.'},{id:'monsoon',name:'Monsoon',desc:'A giant continent beside a warm ocean: summer brings torrential rain.'},
+  {id:'locked',name:'No night',desc:'A tidally locked planet: one side always faces the sun, the other is in endless night.'},{id:'water',name:'Water world',desc:'Almost all ocean, with a few small islands.'},{id:'desert',name:'Desert planet',desc:'Mostly dry land with small seas.'}];
+function initFields(){for(let i=0;i<N;i++){const y=cyOf(i),la=Math.abs(latOf(y));const t=(ENV.locked?-10:TANN(la))+ENV.ocean*0.5+3*Math.log2(ENV.co2/280)-6.5*Math.max(0,elev[i])/1000;T[i]=t;Ts[i]=Math.max(-1.8,t+1);tavg[i]=t;q[i]=qsat(t)*0.6;cl[i]=0.2;rn[i]=0;sn[i]=t<-8&&!isOcean(i)?20:0;ice[i]=isOcean(i)&&t<-2?1:0;soil[i]=0.5;ravg[i]=isOcean(i)?0.2:0.1+0.3*Math.exp(-(((la-5)/18)**2))+0.15*Math.exp(-(((la-50)/12)**2))}
+  for(let k=0;k<60;k++)physics(1,true);for(let k=0;k<40;k++)physics(0.25,false);STAT.avgT0=STAT.avgT}
+
+/* ---------- sunlight ---------- */
+const DOY=()=>mod(S.t,365);
+function decl(){return ENV.tilt*Math.PI/180*Math.sin(2*Math.PI*(DOY()-80)/365)}
+function sunAt(y,x,daily){const la=latOf(y)*Math.PI/180,d=decl();
+  if(ENV.locked){const lo=lonOf(x)*Math.PI/180;return Math.max(0,Math.cos(la)*Math.cos(lo))*1.35}
+  if(daily){const ws=Math.acos(clamp(-Math.tan(la)*Math.tan(d),-1,1));return(ws*Math.sin(la)*Math.sin(d)+Math.cos(la)*Math.cos(d)*Math.sin(ws))/Math.PI*2.2}
+  const hr=mod(S.t,1)*24,lo=lonOf(x),ha=((hr-12)*15+lo)*Math.PI/180;return Math.max(0,Math.sin(la)*Math.sin(d)+Math.cos(la)*Math.cos(d)*Math.cos(ha))}
+const dayCycle=()=>S.speed<=0.26&&!ENV.locked;
+
+/* ---------- weather systems (lows and highs that drift with the winds) ---------- */
+function addSys(x,y,dp,r,life){SYS.push({x,y,dp,r:r||5,life:life||rr(4,9),age:0});if(SYS.length>40)SYS.shift()}
+function spawnSystems(dt){for(const hemi of [1,-1]){if(Math.random()<dt*0.9){const la=hemi*rr(38,62),y=(90-la)/180*GH,x=Math.random()*GW;addSys(x,y,Math.random()<0.6?-rr(10,28):rr(8,18),rr(4,7))}}}
+function newStormName(){return NAMES[NAMEI++%NAMES.length]+(NAMEI>NAMES.length?' '+Math.ceil(NAMEI/NAMES.length):'')}
+function addStorm(x,y,pc,user){const s={x,y,pc:pc||1004,name:newStormName(),age:0,land:!isOcean(idx(x,y)),track:[[x,y]],peak:0,user:!!user,id:Math.random()};STORMS.push(s);if(STORMS.length>10)STORMS.shift();HURRS++;chEv('storm',{user:!!user});return s}
+const vmax=s=>Math.max(0,6.3*Math.sqrt(Math.max(0,1010-s.pc)));
+const catOf=s=>{const k=vmax(s)*3.6;return k>=252?5:k>=209?4:k>=178?3:k>=154?2:k>=119?1:0};
+const catName=s=>{const c=catOf(s);return c?`Category ${c} hurricane`:vmax(s)*3.6>=63?'Tropical storm':'Tropical depression'};
+function stormStep(dt){
+  if(Math.random()<dt*(0.05+(EVT.season?0.5:0))*(1+Math.max(0,ENV.ocean)*0.3)){for(let k=0;k<30;k++){const hemi=Math.random()<.5?1:-1,la=hemi*rr(7,20),y=(90-la)/180*GH,x=Math.random()*GW,i=idx(x,y);if(isOcean(i)&&Ts[i]>26.5){addStorm(x,y,1006);break}}}
+  for(const s of STORMS){const i=idx(s.x,s.y),la=latOf(s.y),oc=isOcean(i),sst=Ts[i];s.age+=dt;
+    // steering: the average wind around the storm, plus a slow poleward drift
+    let su=0,sv=0,n=0;for(const [dx,dy] of [[-5,0],[5,0],[0,-5],[0,5],[-4,-4],[4,4],[-4,4],[4,-4]]){const j=idx(s.x+dx,s.y+dy);su+=u[j];sv+=v[j];n++}su/=n;sv/=n;
+    sv-=la>=0?1.6:-1.6;su-=1.0;if(s.steer&&s.steerT>0){su=s.steer.u;sv=s.steer.v;s.steerT-=dt}
+    s.x=mod(s.x+su*MS2C/COS[clamp(Math.floor(s.y),0,GH-1)]*dt*0.75,GW);s.y=clamp(s.y+sv*MS2C*dt*0.75,2,GH-3);
+    const pot=oc&&!ice[i]?Math.max(0,sst-26)*14+Math.max(0,ENV.ocean)*2:0,target=oc?1010-Math.min(140,pot*2.2):1012;
+    if(oc&&sst>26)s.pc+=(target-s.pc)*Math.min(1,dt*0.35);else s.pc+=dt*(oc?14:22);
+    s.pc=Math.max(870,s.pc);const c=catOf(s);if(c>s.peak){s.peak=c;if(c>=1)chEv('cat',{c,user:s.user,name:s.name});if(c>=4&&(c>s.saidCat||0)){s.saidCat=c;toast(`🌀 ${s.name} is now a category ${c} hurricane`)}}
+    const nowLand=!oc;if(nowLand&&!s.land&&c>=1){LANDF++;chEv('landfall',{c,name:s.name});toast(`🌀 ${s.name} makes landfall as a category ${c} hurricane`)}s.land=nowLand;
+    const tl=s.track[s.track.length-1];if(Math.hypot(wdx(s.x-tl[0]),s.y-tl[1])>1.2){s.track.push([s.x,s.y]);if(s.track.length>200)s.track.shift()}
+    if(s.pc>=1009||Math.abs(la)>48)s.dead=true}
+  STORMS=STORMS.filter(s=>!s.dead);
+  for(const s of SYS){s.age+=dt;const j=idx(s.x,s.y);let su=u[j],sv=v[j]*0.6;if(s.steer&&s.steerT>0){su=s.steer.u;sv=s.steer.v;s.steerT-=dt}s.x=mod(s.x+su*MS2C/COS[clamp(Math.floor(s.y),0,GH-1)]*dt*0.8,GW);s.y=clamp(s.y+sv*MS2C*dt*0.8,3,GH-4)}SYS=SYS.filter(s=>s.age<s.life)}
+function tornadoStep(dt){
+  const chance=dt*(0.25+(EVT.outbreak?6:0));if(Math.random()<chance*4){for(let k=0;k<40;k++){const i=Math.floor(Math.random()*N);if(isOcean(i))continue;const la=Math.abs(latOf(cyOf(i)));if(la<22||la>52)continue;
+      const wet=q[i]>9,warm=T[i]>17,shear=Math.hypot(u[i],v[i])>5,storm=rn[i]>0.6||EVT.outbreak;if(wet&&warm&&shear&&storm&&Math.random()<0.5){addTornado(cxOf(i)+Math.random(),cyOf(i)+Math.random(),false);break}}}
+  for(const t of TORN){t.age+=dt;const j=idx(t.x,t.y);let su=u[j]+3,sv=v[j];if(t.steer){su=t.steer.u;sv=t.steer.v}t.x=mod(t.x+su*MS2C*dt*1.5,GW);t.y+=sv*MS2C*dt*1.5;t.path.push([t.x,t.y]);if(t.path.length>40)t.path.shift()}TORN=TORN.filter(t=>t.age<t.life)}
+function addTornado(x,y,user){const ef=Math.min(5,Math.floor(-Math.log(Math.random()+1e-9)*1.1));const t={x,y,ef,age:0,life:rr(0.03,0.12)*(1+ef*0.4),path:[[x,y]],user};TORN.push(t);if(TORN.length>30)TORN.shift();TORNS++;chEv('tornado',{ef,user:!!user});if(ef>=4)toast(`🌪 A violent EF${ef} tornado touches down`);return t}
+
+/* ---------- physics ---------- */
+function advect(F,dt,out){for(let y=0;y<GH;y++){const cy=COS[y];for(let x=0;x<GW;x++){const i=y*GW+x,sx0=x-u[i]*MS2C/cy*dt,sy0=clamp(y+v[i]*MS2C*dt,0,GH-1.001);
+  const x0=Math.floor(sx0),tx=sx0-x0,y0=Math.floor(sy0),ty=sy0-y0,xa=mod(x0,GW),xb=mod(x0+1,GW),y1=Math.min(GH-1,y0+1);
+  out[i]=(F[y0*GW+xa]*(1-tx)+F[y0*GW+xb]*tx)*(1-ty)+(F[y1*GW+xa]*(1-tx)+F[y1*GW+xb]*tx)*ty}}F.set(out)}
+function advect3(dt){for(let y=0;y<GH;y++){const cy=COS[y];for(let x=0;x<GW;x++){const i=y*GW+x;let sx0=x-u[i]*MS2C/cy*dt,sy0=y-v[i]*MS2C*dt;if(sy0<0)sy0=0;else if(sy0>GH-1.001)sy0=GH-1.001;
+  const x0=Math.floor(sx0),tx=sx0-x0,y0=sy0|0,ty=sy0-y0,xa=((x0%GW)+GW)%GW,xb=xa+1===GW?0:xa+1,y1=y0+1<GH?y0+1:y0,a=y0*GW+xa,b=y0*GW+xb,c=y1*GW+xa,d=y1*GW+xb,w0=(1-tx)*(1-ty),w1=tx*(1-ty),w2=(1-tx)*ty,w3=tx*ty;
+  tmp[i]=T[a]*w0+T[b]*w1+T[c]*w2+T[d]*w3;tmp2[i]=q[a]*w0+q[b]*w1+q[c]*w2+q[d]*w3;tmp3[i]=cl[a]*w0+cl[b]*w1+cl[c]*w2+cl[d]*w3}}T.set(tmp);q.set(tmp2);cl.set(tmp3)}
+const BASEP=la=>{const a=Math.abs(la);return 1013-5*Math.exp(-((a/9)**2))+8*Math.exp(-(((a-31)/9)**2))-11*Math.exp(-(((a-62)/9)**2))+6*Math.exp(-(((a-88)/8)**2))};
+const QANN=new Float32Array(GH);let QTILT=-1,CHA=null;
+function updQann(){if(QTILT===ENV.tilt)return;QTILT=ENV.tilt;const t0=S.t;for(let y=0;y<GH;y++){let s=0;for(let d=0;d<365;d+=5){S.t=d;s+=sunAt(y,0,true)}QANN[y]=s/73}S.t=t0}
+const TANN=la=>{const s2=Math.sin(la*Math.PI/180)**2;return 28-32*s2-12*s2*s2};
+function physics(dt,fast){updQann();const day=!fast&&dayCycle(),gh=3*Math.log2(ENV.co2/280),sunk=(ENV.sun-1)*70,evf=ENV.evap*(EVT.drought?0.35:1),dust=ENV.dust;
+  // zonal mean temperature, for thermal pressure anomalies
+  const zm=new Float32Array(GH);for(let y=0;y<GH;y++){let s=0;for(let x=0;x<GW;x++)s+=T[y*GW+x];zm[y]=s/GW}
+  const DL=new Float32Array(GH),dd=decl(),sd=Math.sin(dd),cd=Math.cos(dd),hr=mod(S.t,1)*24;if(!CHA||CHA.length!==GW)CHA=new Float32Array(GW);for(let x=0;x<GW;x++)CHA[x]=ENV.locked?Math.max(0,Math.cos(lonOf(x)*Math.PI/180)):Math.cos(((hr-12)*15+lonOf(x))*Math.PI/180);
+  for(let y=0;y<GH;y++){const dl=sunAt(y,0,true);DL[y]=dl;const la=latOf(y)*Math.PI/180,sl=Math.sin(la),cl0=Math.cos(la),r=y*GW;
+    if(ENV.locked)for(let x=0;x<GW;x++)sunC[r+x]=cl0*CHA[x]*1.35;else if(day)for(let x=0;x<GW;x++){const v0=sl*sd+cl0*cd*CHA[x];sunC[r+x]=v0>0?v0:0}else for(let x=0;x<GW;x++)sunC[r+x]=dl}
+  for(let i=0;i<N;i++){const y=(i/GW)|0,la=latOf(y),oc=isOcean(i),e=Math.max(0,elev[i]);
+    const white=(oc?(ice[i]>.5?1:0):sn[i]>2?1:0);
+    let Te=ENV.locked?-58+95*Math.sqrt(sunC[i]/1.35):TANN(la)+33*(DL[y]-QANN[y])*(oc?0.7:1)+(day?(sunC[i]-DL[y]*0.55)*(oc?2:9):0);
+    Te+=gh+sunk-dust-6.5*e/1000-white*5+cl[i]*(day?-1.5:2)+dT[i];
+    if(EVT.heatwave&&!oc&&Math.abs(la)<55&&Math.abs(la)>15)Te+=9;if(EVT.coldsnap&&Math.abs(la)>35)Te-=14;
+    if(oc){const nino=EVT.elnino&&Math.abs(la)<12&&lonOf(i%GW)>-170&&lonOf(i%GW)<-80?3:0;const tse=Math.max(-1.8,Te+1+ENV.ocean+nino);Ts[i]+=(tse-Ts[i])*Math.min(1,dt/(fast?4:45));
+      if(Ts[i]<-1.6)ice[i]=Math.min(1,ice[i]+dt*0.05);else if(Ts[i]>-0.5)ice[i]=Math.max(0,ice[i]-dt*0.08);
+      const tgt=ice[i]>.5?Math.min(Te,-2):Ts[i];T[i]+=(tgt-T[i])*Math.min(1,dt/(ice[i]>.5?3:1.2))}
+    else T[i]+=(Te-T[i])*Math.min(1,dt/(day?0.6:2.5));
+    // evaporation
+    const ws=Math.hypot(u[i],v[i]),qs=qsat(T[i]);
+    const ev=(oc?(ice[i]>.5?0.05:1):0.25*soil[i])*Math.max(0,qs*0.78-q[i])*0.6*(1+ws/12)*evf;q[i]+=ev*dt}
+  // pressure: background belts, thermal lows over warm air, drifting weather systems, storms and pushes
+  for(let y=0;y<GH;y++){const bp=BASEP(latOf(y));for(let x=0;x<GW;x++){const i=y*GW+x;P[i]=bp-0.45*(T[i]-zm[y])*(isOcean(i)?0.6:1)+Pa[i]}}
+  for(const s of SYS){const r=s.r,r2=r*r,amp=Math.min(1,s.age,(s.life-s.age)/1.5);for(let dy=-r*2;dy<=r*2;dy++){const yy=Math.floor(s.y)+dy;if(yy<0||yy>=GH)continue;for(let dx=-r*2;dx<=r*2;dx++){const d2=dx*dx+dy*dy;if(d2>4*r2)continue;const f0=1-d2/(4*r2);P[yy*GW+mod(Math.floor(s.x)+dx,GW)]+=s.dp*f0*f0*f0*amp}}}
+  for(const s of STORMS){const r=2.2,dp=s.pc-1010;for(let dy=-6;dy<=6;dy++){const yy=Math.floor(s.y)+dy;if(yy<0||yy>=GH)continue;for(let dx=-6;dx<=6;dx++){const d2=dx*dx+dy*dy;P[yy*GW+mod(Math.floor(s.x)+dx,GW)]+=dp*Math.exp(-d2/(r*r))}}}
+  for(let i=0;i<N;i++)Pa[i]*=Math.exp(-dt/2.5);
+  // wind: turns from straight-downhill (equator) toward along the isobars (mid-latitudes) because of the Coriolis effect
+  for(let y=0;y<GH;y++){const la=latOf(y),th=Math.min(1.25,Math.abs(la)*Math.PI/180*2.6*Math.sqrt(ENV.spin))*Math.sign(la),c=Math.cos(th),s=Math.sin(th),cy=COS[y],yn=Math.max(0,y-1),ys=Math.min(GH-1,y+1);
+    for(let x=0;x<GW;x++){const i=y*GW+x,gx=(P[y*GW+(x+1)%GW]-P[y*GW+(x+GW-1)%GW])/(2*cy),gy=(P[yn*GW+x]-P[ys*GW+x])/2;// gy: northward gradient
+      const dx=-gx,dy=-gy;// toward low pressure, east/north components
+      let ue=dx*c+dy*s,vn=-dx*s+dy*c;const k=isOcean(i)?9:6.5,cap=70;ue*=k;vn*=k;ue+=WU[i];vn-=WV[i];const m=Math.hypot(ue,vn);if(m>cap){ue*=cap/m;vn*=cap/m}
+      u[i]+=(ue-u[i])*Math.min(1,dt*3);v[i]+=(-vn-v[i])*Math.min(1,dt*3)}}// v is stored southward-positive (screen down)
+  if(fast)return;
+  advect3(dt);
+  // clouds and rain: rising air (low pressure, upslopes, storms) cools and condenses
+  let totT=0,totW=0;
+  for(let y=0;y<GH;y++){const cy=COS[y],yn=Math.max(0,y-1),ys=Math.min(GH-1,y+1),la=latOf(y);for(let x=0;x<GW;x++){const i=y*GW+x,oc=isOcean(i);
+    const up=Math.max(0,(u[i]*(Math.max(0,elev[y*GW+(x+1)%GW])-Math.max(0,elev[y*GW+(x+GW-1)%GW]))/cy-v[i]*(Math.max(0,elev[yn*GW+x])-Math.max(0,elev[ys*GW+x])))/2/1000);
+    const lift=up*3.5+Math.max(0,1008-P[i])*0.4+Math.max(0,T[i]-25)*0.3*(oc?0.4:1);
+    const qs=qsat(T[i]-lift),ex=q[i]-qs*0.9;let r=0;
+    if(ex>0){r=ex*0.55;q[i]-=r*dt*4;if(q[i]<0)q[i]=0;cl[i]+=(Math.min(1,0.45+ex*0.15)-cl[i])*Math.min(1,dt*6);T[i]+=r*dt*0.6}
+    else cl[i]*=Math.exp(-dt*(P[i]>1016?4:2));
+    rn[i]=r*12;ravg[i]+=(rn[i]-ravg[i])*Math.min(1,dt/60);tavg[i]+=(T[i]-tavg[i])*Math.min(1,dt/120);
+    if(!oc){soil[i]=clamp(soil[i]+r*dt*0.3-dt*0.02*Math.max(0,T[i])/20,0,1);if(r>0&&T[i]<0.5)sn[i]+=r*dt*8;if(T[i]>0.5&&sn[i]>0)sn[i]=Math.max(0,sn[i]-dt*(T[i])*1.2)}
+    else sn[i]=0;
+    totT+=T[i]*cy;totW+=cy;
+    if(T[i]>RECS.hot){RECS.hot=T[i];RECS.hotI=i}if(T[i]<RECS.cold){RECS.cold=T[i];RECS.coldI=i}}}
+  STAT.avgT=totT/totW;
+  // lightning in strong, warm thunderstorms
+  if(!fast)for(let k=0;k<6;k++){const i=Math.floor(Math.random()*N);if(rn[i]>1.4&&T[i]>14&&Math.random()<dt*14)flash(cxOf(i)+Math.random(),cyOf(i)+Math.random(),false)}}
+function flash(x,y,user){FLASH.push({x,y,age:0,seg:Array.from({length:5},()=>[rr(-1,1),rr(0.3,1)])});if(FLASH.length>60)FLASH.shift();LIGHT++;chEv('lightning',{user:!!user})}
+
+/* ---------- player actions ---------- */
+function brushCells(wx,wy,r,f){const cx=Math.floor(wx),cy=Math.floor(wy);for(let dy=-r;dy<=r;dy++)for(let dx=-r;dx<=r;dx++){const d=Math.hypot(dx,dy)/(r+0.5);if(d>1)continue;const y=cy+dy;if(y<0||y>=GH)continue;f(y*GW+mod(cx+dx,GW),1-d*d)}dirtyImg=true}
+function doEvent(ev){EVN++;chEv('event',{ev});
+  if(ev==='normal'){if(Object.values(EVT).some(Boolean)||ENV.dust>0.3)EVSTOP++;for(const k in EVT)EVT[k]=false;ENV.dust=0;toast('All events stopped');syncEvents();return}
+  if(EVT[ev]){EVT[ev]=false;if(ev==='volcano')ENV.dust=0;EVSTOP++;chEv('stop',{ev});toast('Stopped');syncEvents();return}
+  EVT[ev]=true;
+  const msg={heatwave:'☀ A heat wave bakes the continents',coldsnap:'❄ The polar vortex breaks loose: bitter cold spills south',season:'🌀 Hurricane season: the tropics are brewing storms',elnino:'🌊 El Niño: the eastern tropical ocean warms up',volcano:'🌋 A huge eruption fills the sky with ash: the planet cools',drought:'🏜 Drought: the air dries out and the rains fail',outbreak:'🌪 Tornado outbreak: violent storms over the plains'}[ev];
+  if(ev==='volcano')ENV.dust=4;if(ev==='season'){for(let k=0;k<3;k++){for(let t=0;t<40;t++){const hemi=DOY()>150&&DOY()<320?1:-1,y=(90-hemi*rr(9,18))/180*GH,x=Math.random()*GW,i=idx(x,y);if(isOcean(i)){Ts[i]=Math.max(Ts[i],28.5);addStorm(x,y,1000);break}}}}
+  toast(msg);syncEvents()}
+function syncEvents(){const lab={heatwave:'☀ Heat wave',coldsnap:'❄ Polar vortex',season:'🌀 Hurricane season',elnino:'🌊 El Niño',volcano:'🌋 Volcanic winter',drought:'🏜 Drought',outbreak:'🌪 Tornado outbreak'};
+  document.querySelectorAll('[data-ev]').forEach(b=>{const ev=b.dataset.ev;if(!(ev in EVT))return;b.setAttribute('aria-pressed',EVT[ev]);b.textContent=EVT[ev]?'■ Stop '+lab[ev].slice(2).toLowerCase():lab[ev]})}
+function syncWorldUI(){const set=(id,v,t)=>{$(id).value=v;$(id.replace('S','V')).textContent=t};set('co2S',ENV.co2,ENV.co2+' ppm');set('sunS',Math.round(ENV.sun*1000)/10,(Math.round(ENV.sun*1000)/10)+'%');set('tiltS',ENV.tilt,ENV.tilt+'°');set('spinS',Math.round(ENV.spin*100),Math.round(ENV.spin*100)+'%');set('oceanS',ENV.ocean,(ENV.ocean>=0?'+':'')+ENV.ocean+' °C');syncEvents()}
+for(const [id,k,f,t] of [['co2S','co2',v=>v,v=>v+' ppm'],['sunS','sun',v=>v/100,v=>v+'%'],['tiltS','tilt',v=>v,v=>v+'°'],['spinS','spin',v=>v/100,v=>v+'%'],['oceanS','ocean',v=>v,v=>(v>=0?'+':'')+v+' °C']])
+  $(id).addEventListener('input',e=>{const v=+e.target.value;ENV[k]=f(v);$(id.replace('S','V')).textContent=t(v);SLIDED++;chEv('slider',{k})});
+document.querySelectorAll('[data-ev]').forEach(b=>b.onclick=()=>doEvent(b.dataset.ev));
+$('lblBtn').onclick=()=>{LBL=!LBL;$('lblBtn').setAttribute('aria-pressed',LBL);$('lblBtn').textContent=LBL?'On':'Off'};
+$('streakBtn').onclick=()=>{STREAK=!STREAK;$('streakBtn').setAttribute('aria-pressed',STREAK);$('streakBtn').textContent=STREAK?'On':'Off'};
+
+/* ---------- stats ---------- */
+function computeStats(){let tw=0,iw=0,sw=0,lw=0,rw=0,mw=0,mwI=0;for(let i=0;i<N;i++){const c=COS[(i/GW)|0];tw+=c;if(isOcean(i)){if(ice[i]>.5)iw+=c}else{lw+=c;if(sn[i]>2)sw+=c}rw+=rn[i]*c;const w=Math.hypot(u[i],v[i]);if(w>mw){mw=w;mwI=i}}
+  for(const s of STORMS){const w=vmax(s);if(w>mw){mw=w;mwI=idx(s.x,s.y)}RECS.lowP=Math.min(RECS.lowP,s.pc)}if(mw>RECS.wind){RECS.wind=mw;RECS.windI=mwI}
+  let minP=1e9;for(let i=0;i<N;i++)if(P[i]<minP)minP=P[i];RECS.lowP=Math.min(RECS.lowP,minP);
+  Object.assign(STAT,{ice:iw/tw,snow:lw?sw/lw:0,rain:rw/tw,storms:STORMS.filter(s=>catOf(s)>=1).length,maxCat:Math.max(0,...STORMS.map(catOf)),windNow:mw,maxP:Math.max(...P),minP})}
+function sampleHist(force){const last=HIST[HIST.length-1];if(!force&&last&&S.t-last.t<Math.max(0.5,S.speed*0.6))return;HIST.push({t:S.t,temp:STAT.avgT,ice:STAT.ice,co2:ENV.co2});if(HIST.length>240)HIST.shift()}
+function findHL(){const C=[];const r=9;for(let y=r;y<GH-r;y+=3)for(let x=0;x<GW;x+=3){const p=P[y*GW+x];let mx=true,mn=true,ring=0,rn2=0;for(let dy=-r;dy<=r&&(mx||mn);dy+=3)for(let dx=-r;dx<=r;dx+=3){if(!dx&&!dy)continue;const o=P[(y+dy)*GW+mod(x+dx,GW)];if(o>=p)mx=false;if(o<=p)mn=false;ring+=o;rn2++}
+  const pr=Math.abs(p-ring/Math.max(1,rn2));if(mx&&p>1018&&pr>2.5)C.push({x:x+.5,y:y+.5,t:'H',p,pr});if(mn&&p<1006&&pr>2.5)C.push({x:x+.5,y:y+.5,t:'L',p,pr})}
+  C.sort((a,b)=>b.pr-a.pr);HL=[];for(const c of C)if(!HL.some(h=>Math.abs(wdx(h.x-c.x))<14&&Math.abs(h.y-c.y)<10))HL.push(c);HL=HL.slice(0,24)}
+
+/* ---------- rendering ---------- */
+const SC3=3,IW=GW*SC3,IH=GH*SC3;const img=document.createElement('canvas');img.width=IW;img.height=IH;const ig=img.getContext('2d');const ID=ig.createImageData(IW,IH);
+const DET=(()=>{const out=new Float32Array(IW*IH);let amp=1,tot=0;for(const sp of [14,7,3.5,1.7]){const nx=Math.round(IW/sp),ny=Math.ceil(IH/sp)+2,L=new Float32Array(nx*ny);for(let k=0;k<L.length;k++)L[k]=Math.random()*2-1;
+  for(let y=0;y<IH;y++){const fy=y*nx/IW,y0=Math.floor(fy),ty=fy-y0,sy=ty*ty*(3-2*ty);for(let x=0;x<IW;x++){const fx=x*nx/IW,x0=Math.floor(fx),tx=fx-x0,sx=tx*tx*(3-2*tx),xa=x0%nx,xb=(x0+1)%nx,a=L[y0*nx+xa],b=L[y0*nx+xb],c=L[(y0+1)*nx+xa],d=L[(y0+1)*nx+xb];out[y*IW+x]+=amp*((a+(b-a)*sx)+((c+(d-c)*sx)-(a+(b-a)*sx))*sy)}}tot+=amp;amp*=0.55}
+  for(let i=0;i<out.length;i++)out[i]/=tot;return out})();
+function ramp(stops,val){if(val<=stops[0][0])return stops[0][1];for(let k=1;k<stops.length;k++)if(val<=stops[k][0]){const [a,ca]=stops[k-1],[b,cb]=stops[k],t=(val-a)/(b-a);return[ca[0]+(cb[0]-ca[0])*t,ca[1]+(cb[1]-ca[1])*t,ca[2]+(cb[2]-ca[2])*t]}return stops[stops.length-1][1]}
+const TEMPR=[[-50,[230,235,255]],[-30,[150,120,230]],[-15,[80,120,230]],[0,[80,200,230]],[12,[110,210,120]],[22,[240,215,90]],[32,[240,120,50]],[45,[170,20,40]]];
+const RAINR=[[0,[0,0,0]],[0.15,[30,90,60]],[0.6,[40,180,70]],[1.5,[240,220,60]],[3,[240,120,40]],[6,[220,40,90]]];
+const HUMR=[[0,[90,60,30]],[0.3,[170,140,80]],[0.6,[110,170,140]],[0.85,[60,140,210]],[1,[40,80,200]]];
+const PRESR=[[970,[160,40,120]],[995,[90,90,200]],[1008,[100,160,200]],[1016,[230,230,220]],[1025,[240,180,90]],[1040,[200,80,40]]];
+const LC=new Float32Array(N*3),CL=new Float32Array(N),NIGHT=new Float32Array(N),LN=new Float32Array(N);
+function cellColors(){const vw=S.view,day=dayCycle()||ENV.locked;for(let i=0;i<N;i++)LN[i]=clamp(elev[i]>0?0.15+elev[i]/600:elev[i]/600-0.15,-1,1);
+  for(let i=0;i<N;i++){const o=i*3,oc=isOcean(i);let c;
+    if(vw==='temp')c=ramp(TEMPR,T[i]);
+    else if(vw==='pressure')c=ramp(PRESR,P[i]);
+    else if(vw==='humid')c=ramp(HUMR,clamp(q[i]/qsat(T[i]),0,1));
+    else{if(oc){c=ice[i]>.5?[218,228,238]:[14+Ts[i]*0.4,40+Ts[i]*0.9,80+Ts[i]*1.1];}
+      else{const e=elev[i],r=ravg[i],t=tavg[i];{const sm=(a,b,x)=>{const k=clamp((x-a)/(b-a),0,1);return k*k*(3-2*k)},mix=(A,B,k)=>[A[0]+(B[0]-A[0])*k,A[1]+(B[1]-A[1])*k,A[2]+(B[2]-A[2])*k];
+          const warm=sm(8,22,t);let veg=mix(mix([176,158,124],[206,178,118],warm),mix([116,148,80],[164,156,84],warm),sm(0.06,0.22,r));veg=mix(veg,mix([50,104,58],[26,92,44],warm),sm(0.3,0.65,r));
+          c=mix(veg,[136,140,124],sm(4,-3,t));c=mix(c,[228,234,240],sm(-5,-12,t));if(sn[i]>0.5)c=mix(c,[238,242,247],clamp(sn[i]/8,0,1));
+        if(e>2000){const k=clamp((e-2000)/2500,0,1);c=[c[0]+(130-c[0])*k,c[1]+(118-c[1])*k,c[2]+(106-c[2])*k]}}}
+      if(vw==='wind'||vw==='rain'){const g=(c[0]+c[1]+c[2])/3*0.38;c=[g*0.8,g*0.9,g*1.1]}}
+    LC[o]=c[0];LC[o+1]=c[1];LC[o+2]=c[2];CL[i]=vw==='normal'?clamp((cl[i]-0.22)*1.6,0,0.95):0;NIGHT[i]=day?clamp(sunC[i]*3,0,1):1}}
+function renderImage(){cellColors();const d=ID.data,vw=S.view,rainv=vw==='rain',nat=vw==='normal';
+  for(let py=0;py<IH;py++){const gy=clamp((py+0.5)/SC3-0.5,0,GH-1.001),y0=Math.floor(gy),ty=gy-y0,y1=Math.min(GH-1,y0+1);
+    for(let px=0;px<IW;px++){const gx=(px+0.5)/SC3-0.5,x0=Math.floor(gx),tx=gx-x0,xa=mod(x0,GW),xb=mod(x0+1,GW),ia=y0*GW+xa,ib=y0*GW+xb,ic=y1*GW+xa,ie=y1*GW+xb,w0=(1-tx)*(1-ty),w1=tx*(1-ty),w2=(1-tx)*ty,w3=tx*ty;
+      const pi=py*IW+px,dt=DET[pi];const lv=LN[ia]*w0+LN[ib]*w1+LN[ic]*w2+LN[ie]*w3,land=lv+dt*0.75>0;
+      const pick=(land===(elev[ia]>0))?ia:(land===(elev[ib]>0))?ib:(land===(elev[ic]>0))?ic:ie;
+      let r,g,b;const C=LC;if((elev[ia]>0)===land&&(elev[ib]>0)===land&&(elev[ic]>0)===land&&(elev[ie]>0)===land){r=C[ia*3]*w0+C[ib*3]*w1+C[ic*3]*w2+C[ie*3]*w3;g=C[ia*3+1]*w0+C[ib*3+1]*w1+C[ic*3+1]*w2+C[ie*3+1]*w3;b=C[ia*3+2]*w0+C[ib*3+2]*w1+C[ic*3+2]*w2+C[ie*3+2]*w3}else{r=C[pick*3];g=C[pick*3+1];b=C[pick*3+2]}
+      if(land&&nat){const s=1+dt*0.18+(elev[ia]-elev[ib]+elev[ia]-elev[ic])/5000;r*=s;g*=s;b*=s}
+      if(rainv){const rv=rn[ia]*w0+rn[ib]*w1+rn[ic]*w2+rn[ie]*w3+dt*0.12;if(rv>0.15){const c=ramp(RAINR,rv);r=c[0];g=c[1];b=c[2]}}
+      if(nat){const cv=CL[ia]*w0+CL[ib]*w1+CL[ic]*w2+CL[ie]*w3,ca=clamp(cv*1.25+dt*0.75*Math.min(1,cv*3)-0.05,0,0.96);if(ca>0){const w=235+dt*18;r+=(w-r)*ca;g+=(w-g)*ca;b+=(w+6-b)*ca}}
+      const nl=NIGHT[ia]*w0+NIGHT[ib]*w1+NIGHT[ic]*w2+NIGHT[ie]*w3;if(nl<1){const k=0.22+0.78*nl;r*=k;g*=k;b*=k*1.08}
+      const o=pi*4;d[o]=r;d[o+1]=g;d[o+2]=b;d[o+3]=255}}
+  ig.putImageData(ID,0,0);dirtyImg=false;lastImg=performance.now()}
+function legendFor(vw){if(vw==='temp')setLegend('Temperature','linear-gradient(90deg,#e6ebff,#9678e6,#5078e6,#50c8e6,#6ed278,#f0d75a,#f07832,#aa1428)',['−50 °C','12 °C','45 °C']);
+  else if(vw==='pressure')setLegend('Air pressure','linear-gradient(90deg,#a02878,#5a5ac8,#64a0c8,#e6e6dc,#f0b45a,#c85028)',['970 hPa','1013','1040 hPa']);
+  else if(vw==='rain')setLegend('Rain','linear-gradient(90deg,#1e5a3c,#28b446,#f0dc3c,#f07828,#dc285a)',['drizzle','heavy','torrential']);
+  else if(vw==='humid')setLegend('Relative humidity','linear-gradient(90deg,#5a3c1e,#aa8c50,#6eaa8c,#3c8cd2,#2850c8)',['dry','50%','saturated']);
+  else if(vw==='wind')setLegend('Wind speed','linear-gradient(90deg,#3c6e8c,#78c8dc,#f0e678,#f07832,#e6286e)',['calm','50 km/h','150+ km/h']);
+  else setLegend(null)}
+const windCol=w=>{const k=w*3.6;return k<20?'rgba(110,170,200,':k<50?'rgba(150,215,230,':k<90?'rgba(240,230,120,':k<150?'rgba(240,130,60,':'rgba(240,50,120,'};
+function initPts(){PTS=[];for(let k=0;k<1500;k++)PTS.push({x:Math.random()*GW,y:Math.random()*GH,a:Math.random()*3,tr:[]})}
+function render(c,now){c.fillStyle='rgb(5,9,14)';c.fillRect(0,0,W,H);
+  if(dirtyImg&&now-lastImg>(S.paused?60:dayCycle()?120:200))renderImage();
+  const z=cam.z,x0=sx(0),y0=sy(0),ww=GW*z;c.imageSmoothingEnabled=true;c.imageSmoothingQuality='high';
+  const k0=Math.floor((-x0)/ww)-1,k1=Math.ceil((W-x0)/ww)+1;for(let k=k0;k<=k1;k++)c.drawImage(img,x0+k*ww,y0,ww,GH*z);
+  const wrapX=x=>{let X=sx(x);return X-Math.floor((X+ww/2)/ww)*ww};
+  const each=(x,f)=>{const X=wrapX(x);for(let k=-1;k<=Math.ceil(W/ww)+1;k++){const XX=X+k*ww;if(XX>-80&&XX<W+80)f(XX)}};
+  // wind streaks: each particle leaves a short fading trail along the flow
+  if(STREAK&&(S.view==='wind'||S.view==='normal')){const al=S.view==='wind'?0.9:0.35,B=[[],[],[],[],[]];
+    for(let pi2=0;pi2<PTS.length;pi2+=(S.view==='wind'?1:3)){const p=PTS[pi2];if(p.tr.length<2)continue;const i=idx(p.x,p.y),k=Math.hypot(u[i],v[i])*3.6;B[k<20?0:k<50?1:k<90?2:k<150?3:4].push(p)}
+    const cols=['110,170,200','150,215,230','240,230,120','240,130,60','240,50,120'];c.lineWidth=S.view==='wind'?1.5:1;c.lineCap='round';
+    B.forEach((list,bi)=>{c.strokeStyle=`rgba(${cols[bi]},${al})`;c.beginPath();for(const p of list){const t=p.tr;let X0=wrapX(t[0][0]);const Y0=sy(t[0][1]);if(Y0<-20||Y0>H+20)continue;
+      for(let kk=-1;kk<=Math.ceil(W/ww);kk++){const off=kk*ww;if(X0+off<-60||X0+off>W+60)continue;c.moveTo(X0+off,Y0);let px=t[0][0];let XX=X0+off;for(let j=1;j<t.length;j++){XX+=wdx(t[j][0]-px)*z;px=t[j][0];c.lineTo(XX,sy(t[j][1]))}}}c.stroke()})}
+  // pressure isobars labels H / L
+  if(S.view==='pressure'||(S.view==='normal'&&LBL&&z<9)){c.font='700 20px "Oxanium",sans-serif';c.textAlign='center';c.textBaseline='middle';for(const hl of HL){const Y=sy(hl.y);each(hl.x,X=>{c.fillStyle=hl.t==='H'?'rgba(80,140,255,.9)':'rgba(255,90,80,.9)';c.fillText(hl.t,X,Y);if(S.view==='pressure'){c.font='600 10px "IBM Plex Mono",monospace';c.fillText(Math.round(hl.p),X,Y+15);c.font='700 20px "Oxanium",sans-serif'}})}c.textBaseline='alphabetic'}
+  // storms
+  for(const s of STORMS){const cat=catOf(s),Y=sy(s.y),R=Math.max(14,z*(2.4+cat*0.5)),rot=now/1000*(1.5+cat*0.4)*(s.y<GH/2?-1:1);
+    if(LBL){c.strokeStyle='rgba(255,255,255,.35)';c.setLineDash([3,4]);c.lineWidth=1.2;c.beginPath();s.track.forEach((p,k)=>{const XX=wrapX(p[0]),YY=sy(p[1]);k?c.lineTo(XX,YY):c.moveTo(XX,YY)});c.stroke();c.setLineDash([])}
+    each(s.x,X=>{c.save();c.translate(X,Y);c.rotate(rot);for(let arm=0;arm<3;arm++){c.beginPath();for(let t=0;t<1;t+=0.04){const a=arm*2.094+t*4.2,rr0=R*(0.25+t*1.1);c.lineTo(Math.cos(a)*rr0,Math.sin(a)*rr0*(s.y<GH/2?1:-1))}c.strokeStyle=`rgba(245,248,255,${0.55+cat*0.07})`;c.lineWidth=R*0.32;c.lineCap='round';c.stroke()}
+      c.fillStyle='rgba(245,248,255,.85)';c.beginPath();c.arc(0,0,R*0.42,0,7);c.fill();if(cat>=1){c.fillStyle='rgba(30,50,80,.9)';c.beginPath();c.arc(0,0,R*0.1+1.5,0,7);c.fill()}c.restore();
+      if(LBL){c.font='600 11px "IBM Plex Mono",monospace';c.textAlign='center';const lab=`${s.name}${cat?' · cat '+cat:''}`;c.fillStyle='rgba(0,0,0,.6)';const tw=c.measureText(lab).width+10;c.fillRect(X-tw/2,Y+R*1.3,tw,16);c.fillStyle=cat>=4?'#ff8a6a':cat>=1?'#ffd27a':'#e6eef5';c.fillText(lab,X,Y+R*1.3+12)}
+      if(S.sel&&S.sel.storm===s){c.strokeStyle='#ffc35a';c.lineWidth=2;c.beginPath();c.arc(X,Y,R*1.6,0,7);c.stroke()}})}
+  // tornadoes
+  for(const t of TORN){const Y=sy(t.y);each(t.x,X=>{c.strokeStyle='rgba(120,100,90,.6)';c.lineWidth=2;c.beginPath();t.path.forEach((p,k)=>{const XX=X+(p[0]-t.x)*z,YY=Y+(p[1]-t.y)*z;k?c.lineTo(XX,YY):c.moveTo(XX,YY)});c.stroke();
+    const s=Math.max(7,z*0.9);c.fillStyle='rgba(70,60,60,.9)';c.beginPath();c.moveTo(X-s,Y-s*1.8);c.lineTo(X+s,Y-s*1.8);c.lineTo(X+s*0.15,Y+s*0.4);c.lineTo(X-s*0.15,Y+s*0.4);c.closePath();c.fill();
+    if(LBL&&z>=4){c.font='600 10px "IBM Plex Mono",monospace';c.textAlign='center';c.fillStyle='#ffd0b0';c.fillText('EF'+t.ef,X,Y-s*2.2)}})}
+  // lightning
+  for(const f of FLASH){const Y=sy(f.y);each(f.x,X=>{const al=Math.max(0,1-f.age*3);if(al<=0)return;c.strokeStyle=`rgba(255,255,210,${al})`;c.lineWidth=2;c.beginPath();let px=X,py=Y-18;c.moveTo(px,py);for(const [dx,dy] of f.seg){px+=dx*6;py+=dy*8;c.lineTo(px,py)}c.stroke();c.fillStyle=`rgba(255,255,220,${al*0.25})`;c.beginPath();c.arc(X,Y,16,0,7);c.fill()})}
+  // records
+  if(LBL&&S.view==='temp'){c.font='600 11px "IBM Plex Mono",monospace';c.textAlign='center';for(const [i,t,col] of [[RECS.hotI,RECS.hot,'#ffb38a'],[RECS.coldI,RECS.cold,'#b8c8ff']]){const Y=sy(cyOf(i)+.5);each(cxOf(i)+.5,X=>{c.fillStyle=col;c.fillText(`● ${t.toFixed(0)} °C`,X,Y-6)})}}
+  if(S.sel&&S.sel.i!=null){const i=S.sel.i,Y=sy(cyOf(i));each(cxOf(i),X=>{const s=Math.max(8,z);c.strokeStyle='#ffc35a';c.lineWidth=2;c.strokeRect(X-1,Y-1,s+2,s+2)})}
+  if(STEERD){const X0=sx(STEERD.ax),Y0=sy(STEERD.ay),X1=sx(STEERD.ax+wdx(STEERD.bx-STEERD.ax)),Y1=sy(STEERD.by),a=Math.atan2(Y1-Y0,X1-X0);c.strokeStyle='#ffc35a';c.fillStyle='#ffc35a';c.lineWidth=3;c.beginPath();c.moveTo(X0,Y0);c.lineTo(X1,Y1);c.stroke();c.beginPath();c.moveTo(X1+Math.cos(a)*10,Y1+Math.sin(a)*10);c.lineTo(X1+Math.cos(a+2.5)*9,Y1+Math.sin(a+2.5)*9);c.lineTo(X1+Math.cos(a-2.5)*9,Y1+Math.sin(a-2.5)*9);c.fill();c.font='600 12px "IBM Plex Mono",monospace';c.textAlign='left';c.fillText(STEERD.obj?STEERD.kind:'push the wind',X1+12,Y1)}
+  if(HOVER&&TB[S.tool]){const r=(S.brush+0.5)*z;c.strokeStyle='rgba(255,255,255,.6)';c.lineWidth=1;c.beginPath();c.arc(sx(HOVER[0]),sy(HOVER[1]),r,0,7);c.stroke()}
+}
+
+/* ---------- tools ---------- */
+const TB={heat:1,cool:1,wet:1,dry:1,mountain:1,sea:1};let HOVER=null,lastPress=0,STEERD=null;
+function applyTool(t,wx,wy,type){const r=S.brush;
+  if(t==='heat'){brushCells(wx,wy,r,(i,f)=>{T[i]+=4*f;dT[i]=Math.min(25,dT[i]+1.5*f);if(isOcean(i))Ts[i]+=1.5*f});HEATED++}
+  else if(t==='cool'){brushCells(wx,wy,r,(i,f)=>{T[i]-=4*f;dT[i]=Math.max(-40,dT[i]-1.5*f);if(isOcean(i))Ts[i]-=1.5*f});COOLED++}
+  else if(t==='wet'){brushCells(wx,wy,r,(i,f)=>{q[i]=Math.min(qsat(T[i])*1.3+2,q[i]+3*f);soil[i]=Math.min(1,soil[i]+0.1*f)});WETTED++}
+  else if(t==='dry'){brushCells(wx,wy,r,(i,f)=>{q[i]*=1-0.5*f;cl[i]*=1-0.6*f;soil[i]*=1-0.2*f});WETTED++}
+  else if(t==='mountain'){brushCells(wx,wy,r,(i,f)=>{elev[i]=Math.min(8800,Math.max(elev[i],0)+400*f)});RAISEDM++}
+  else if(t==='sea'){brushCells(wx,wy,r,(i,f)=>{elev[i]=Math.min(elev[i],-300-2000*f);sn[i]=0});RAISEDM++}
+  chEv('brush',{t})}
+const SIM={id:'troposphere',name:'Troposphere',world:{w:GW,h:GH,wrapX:true,maxZ:40,followZ:7},home:'earth',freeScen:'earth',tutScen:'earth',defSpeed:2,homeSpeed:2,inspectTab:'insp',canFollow:true,
+  speeds:[['1 hr',1/24],['6 hr',0.25],['1 day',1],['1 wk',7],['1 mo',30]],
+  fmtRate:v=>v<1?`${Math.round(v*24)} hour${v*24>1.5?'s':''} / s`:v<7?`${fmtN(v,0)} day / s`:v<30?`${fmtN(v/7,0)} week / s`:`${fmtN(v/30,0)} month / s`,
+  dateTxt:()=>{const y=Math.floor(S.t/365)+1,d=DOY(),M=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'],mi=Math.min(11,Math.floor(d/30.42)),dd=Math.floor(d-mi*30.42)+1,hr=Math.floor(mod(S.t,1)*24);return`Year ${y}, ${dd} ${M[mi]}${S.speed<=1?` · ${String(hr).padStart(2,'0')}:00`:''}`},
+  dateSub:()=>`${STAT.avgT.toFixed(1)} °C average · ${ENV.co2} ppm CO₂`,
+  stepSize:sp=>clamp(sp/10,0.004,0.35),
+  tools:[['',[['select','👆','Inspect']]],['Air',[['heat','🔥','Heat','Paint to warm the air and sea. Warm air rises and pulls in wind.',1],['cool','🧊','Cool','Paint to chill the air and sea.',1],['wet','💧','Moisten','Paint water vapour into the air. Rising damp air makes clouds and rain.',1],['dry','🏜️','Dry','Paint to dry the air out and clear the clouds.',1]]],
+    ['Pressure',[['low','🌀','Low','Click to make a low-pressure system. Air spirals into it, bringing clouds and rain.'],['high','☀️','High','Click to make a high-pressure system: clear, calm skies.']]],
+    ['Steer',[['steer','🧭','Steer','Drag from a storm, tornado or weather system to send it that way. Drag anywhere else to push the wind in that direction.']]],
+    ['Storms',[['hurricane','🌀','Hurricane','Click on warm ocean to start a tropical storm. Warm water makes it stronger.'],['tornado','🌪️','Tornado','Click on land to touch down a tornado.'],['lightning','⚡','Lightning','Click to strike lightning.']]],
+    ['Land',[['mountain','⛰️','Mountain','Paint to raise mountains. Wind blowing up them drops rain; the far side stays dry.',1],['sea','🌊','Sea','Paint to flood the land with sea.',1]]]],
+  scens:SCENLIST,
+  load(id){resetEnv();S.t=0;(SCENS[id]||SCENS.earth)();this.t0=S.t;initFields();computeStats();findHL();HIST=[];sampleHist(true);syncWorldUI();legendFor(S.view);if(!PTS.length)initPts();dirtyImg=true;lastImg=0},
+  after(){S.t=this.t0||0;dirtyImg=true},
+  step(dt){spawnSystems(dt);physics(dt,false);stormStep(dt);tornadoStep(dt);if(ENV.dust>0&&!EVT.volcano)ENV.dust=Math.max(0,ENV.dust-dt*0.02);if(EVT.volcano)ENV.dust=Math.min(6,ENV.dust+dt*0.5);
+    {const f=Math.exp(-dt/6),g=Math.exp(-dt/5);for(let i=0;i<N;i++){dT[i]*=f;if(WU[i]||WV[i]){WU[i]*=g;WV[i]*=g;if(Math.abs(WU[i])+Math.abs(WV[i])<0.2){WU[i]=0;WV[i]=0}}}}dirtyImg=true},
+  frame(dt){const sp=1.6;this.fk=(this.fk||0)+1;for(const p of PTS){const i=idx(p.x,p.y);p.x=mod(p.x+u[i]*MS2C/COS[clamp(Math.floor(p.y),0,GH-1)]*dt*sp,GW);p.y+=v[i]*MS2C*dt*sp;p.a+=dt;if(this.fk%2===0){p.tr.push([p.x,p.y]);if(p.tr.length>14)p.tr.shift()}if(p.y<0||p.y>=GH||p.a>5+Math.random()*4){p.x=Math.random()*GW;p.y=Math.random()*GH;p.a=0;p.tr=[]}}
+    for(const f of FLASH)f.age+=dt;FLASH=FLASH.filter(f=>f.age<0.5)},
+  render,
+  stats:()=>[['Average',STAT.avgT.toFixed(1)+' °C'],['Hurricanes',STAT.storms],['Sea ice',Math.round(STAT.ice*100)+'%'],['Strongest wind',Math.round((STAT.windNow||0)*3.6)+' km/h']],
+  hud(){computeStats();findHL();sampleHist();renderClimate();renderInspect()},
+  pick(wx,wy){for(const s of STORMS)if(Math.abs(wdx(s.x-wx))<3&&Math.abs(s.y-wy)<3)return{storm:s};const y=Math.floor(wy);if(y<0||y>=GH)return null;return{i:idx(wx,wy)}},
+  selPos:s=>s.storm?(s.storm.dead||!STORMS.includes(s.storm)?null:[s.storm.x,s.storm.y]):[cxOf(s.i)+.5,cyOf(s.i)+.5],
+  pointer(type,wx,wy){const t=S.tool;HOVER=[wx,wy];
+    if(t==='steer'){if(type==='down'){let obj=null,kind='wind';for(const s0 of STORMS)if(Math.abs(wdx(s0.x-wx))<3&&Math.abs(s0.y-wy)<3){obj=s0;kind='storm'}if(!obj)for(const t0 of TORN)if(Math.abs(wdx(t0.x-wx))<2&&Math.abs(t0.y-wy)<2){obj=t0;kind='tornado'}if(!obj)for(const s0 of SYS)if(Math.abs(wdx(s0.x-wx))<3&&Math.abs(s0.y-wy)<3){obj=s0;kind='system'}STEERD={obj,kind,ax:obj?obj.x:wx,ay:obj?obj.y:wy,bx:wx,by:wy}}
+      else if(type==='drag'&&STEERD){STEERD.bx=wx;STEERD.by=wy}
+      else if(type==='up'&&STEERD){const d=STEERD;STEERD=null;const dx=wdx(wx-d.ax),dy=wy-d.ay,L=Math.hypot(dx,dy);if(L<0.8){if(d.obj){d.obj.steer=null;d.obj.steerT=0;toast('Released: it drifts with the winds again')}return}
+        const sp=clamp(L*1.2,3,45),st={u:dx/L*sp,v:dy/L*sp},dir=compass(st.u,st.v);STEERED++;chEv('steer',{kind:d.kind,u:st.u,v:st.v});
+        if(d.kind==='storm'){d.obj.steer=st;d.obj.steerT=8;toast(`🧭 ${d.obj.name} turns ${dir}`)}else if(d.kind==='tornado'){d.obj.steer=st;toast(`🧭 The tornado veers ${dir}`)}else if(d.kind==='system'){d.obj.steer=st;d.obj.steerT=10;toast(`🧭 The ${d.obj.dp<0?'low':'high'} heads ${dir}`)}
+        else{const r=S.brush+2;brushCells(d.ax,d.ay,r,(j,f)=>{WU[j]=clamp(WU[j]+st.u*f,-60,60);WV[j]=clamp(WV[j]+st.v*f,-60,60)});const steps=Math.ceil(L);for(let k=1;k<=steps;k++)brushCells(d.ax+dx*k/steps,d.ay+dy*k/steps,Math.max(1,r-1),(j,f)=>{WU[j]=clamp(WU[j]+st.u*f*0.5,-60,60);WV[j]=clamp(WV[j]+st.v*f*0.5,-60,60)});toast(`🧭 The wind now blows ${dir} here`)}}
+      return}
+    if(type==='up')return;const i=idx(wx,wy);
+    if(t==='low'||t==='high'){if(type!=='down')return;addSys(wx,wy,t==='low'?-26:22,5,8);PRESSED++;chEv('press',{t});toast(t==='low'?'🌀 A low-pressure system forms':'☀️ A high-pressure system builds');return}
+    if(t==='hurricane'&&type==='down'){if(!isOcean(i)){toast('Hurricanes need warm ocean: click on the sea');return}if(Math.abs(latOf(wy))<4){toast('Too close to the equator: storms need the Coriolis effect to spin');return}if(Ts[i]<26.5)toast(`The water here is only ${Ts[i].toFixed(0)} °C: storms need 26.5 °C or warmer to grow`);const s=addStorm(wx,wy,996,true);USERSTORM++;S.sel={storm:s};return}
+    if(t==='tornado'&&type==='down'){if(isOcean(i)){toast('Tornadoes touch down on land');return}addTornado(wx,wy,true);return}
+    if(t==='lightning'&&type==='down'){flash(wx,wy,true);return}
+    if(TB[t]&&(type==='down'||type==='drag')){const now=performance.now();if(type==='drag'&&now-lastPress<40)return;lastPress=now;applyTool(t,wx,wy)}},
+  hover(wx,wy){HOVER=[wx,wy]},
+  viewChanged:vw=>{legendFor(vw);dirtyImg=true;lastImg=0},
+  find(qs){const out=[],add=(label,sub,go)=>out.push({label,sub,go});
+    for(const s of STORMS)if(s.name.toLowerCase().includes(qs)||'hurricane storm cyclone typhoon'.includes(qs)||qs.includes('hurric')||qs.includes('storm'))add(`🌀 ${s.name}`,catName(s),()=>{S.sel={storm:s};S.follow=true;flyToW(s.x,s.y,6);S.follow=true;showTab('insp')});
+    if('hottest heat warmest'.includes(qs)||qs.includes('hot'))add('Hottest place',RECS.hot.toFixed(0)+' °C',()=>{const i=RECS.hotI;S.sel={i};flyToW(cxOf(i),cyOf(i),5);showTab('insp')});
+    if('coldest cold freezing'.includes(qs)||qs.includes('cold'))add('Coldest place',RECS.cold.toFixed(0)+' °C',()=>{const i=RECS.coldI;S.sel={i};flyToW(cxOf(i),cyOf(i),5);showTab('insp')});
+    if('windiest wind gale'.includes(qs)||qs.includes('wind'))add('Windiest place',Math.round(RECS.wind*3.6)+' km/h',()=>{let m=0,mi=0;for(let i=0;i<N;i++){const w=Math.hypot(u[i],v[i]);if(w>m){m=w;mi=i}}S.sel={i:mi};flyToW(cxOf(mi),cyOf(mi),5);showTab('insp')});
+    if('tornado twister'.includes(qs)||qs.includes('torn'))for(const t of TORN)add(`🌪 EF${t.ef} tornado`,'on the ground now',()=>{S.sel={i:idx(t.x,t.y)};flyToW(t.x,t.y,8)});
+    for(const [,items] of SIM.tools)for(const [id,ico,name] of items)if(id!=='select'&&(name.toLowerCase().includes(qs)||id.includes(qs)))add(`${ico} Use the ${name} tool`,'tool',()=>setTool(id));
+    for(const [ev,lab] of [['heatwave','☀ Heat wave'],['coldsnap','❄ Polar vortex'],['season','🌀 Hurricane season'],['elnino','🌊 El Niño'],['volcano','🌋 Volcanic winter'],['drought','🏜 Drought'],['outbreak','🌪 Tornado outbreak']])if(lab.toLowerCase().includes(qs)||ev.includes(qs))add(lab,'event',()=>doEvent(ev));
+    for(const s of SCENLIST)if(s.name.toLowerCase().includes(qs))add('World: '+s.name,s.desc,()=>{loadScen(s.id);toast(s.name)});
+    return out},
+  tabShown(id){if(id==='climate')renderClimate(true)},
+  selChanged(){INSPK='';renderInspect()},
+};
+/* ---------- panels ---------- */
+function kv(rows){return rows.map(([k,vv])=>`<div><span class="k">${k}</span><span class="v">${vv}</span></div>`).join('')}
+const fmtLat=y=>{const l=latOf(y);return Math.abs(l).toFixed(0)+'°'+(l>=0?'N':'S')},fmtLon=x=>{const l=lonOf(x);return Math.abs(l).toFixed(0)+'°'+(l>=0?'E':'W')};
+const compass=(ue,vs)=>{const a=(Math.atan2(-vs,ue)*180/Math.PI+360)%360;return['east','north-east','north','north-west','west','south-west','south','south-east'][Math.round(a/45)%8]};
+const fromDir=(ue,vs)=>compass(-ue,-vs);
+function renderClimate(force){if($('pane-climate').hidden&&!force)return;
+  $('cStats').innerHTML=kv([['Average temperature',STAT.avgT.toFixed(1)+' °C'],['Change',(STAT.avgT-STAT.avgT0>=0?'+':'')+(STAT.avgT-STAT.avgT0).toFixed(1)+' °C'],['Sea ice',Math.round(STAT.ice*100)+'%'],['Snow on land',Math.round(STAT.snow*100)+'%'],['Hurricanes now',STAT.storms],['Tornadoes now',TORN.length],['Carbon dioxide',ENV.co2+' ppm'],['Lightning so far',fmtN(LIGHT)]]);
+  const g=$('graph'),gc=g.getContext('2d'),w=g.width=g.clientWidth*DPR,hh=g.height=g.clientHeight*DPR;gc.clearRect(0,0,w,hh);
+  if(HIST.length>1){const t0=HIST[0].t,t1=HIST[HIST.length-1].t,X=t=>8+(w-16)*(t-t0)/Math.max(1e-6,t1-t0);const line=(f,lo,hi,col)=>{gc.strokeStyle=col;gc.lineWidth=2*DPR;gc.beginPath();HIST.forEach((p,k)=>{const y=hh-8-(hh-16)*clamp((f(p)-lo)/(hi-lo),0,1);k?gc.lineTo(X(p.t),y):gc.moveTo(X(p.t),y)});gc.stroke()};
+    const lo=Math.min(...HIST.map(p=>p.temp))-1,hi=Math.max(...HIST.map(p=>p.temp))+1;line(p=>p.temp,lo,hi,'#ff8a5c');line(p=>p.ice,0,0.3,'#dfe9f5');line(p=>p.co2,100,2100,'#7fd18a')}
+  $('gKey').innerHTML='<span style="color:#ff8a5c">■ average temperature</span> · <span style="color:#dfe9f5">■ sea ice</span> · <span style="color:#7fd18a">■ CO₂</span>';
+  const L=$('slist');const ss=[...STORMS].sort((a,b)=>a.pc-b.pc);L.innerHTML='';if(!ss.length)L.innerHTML='<p class="note">No tropical storms right now. They form over oceans warmer than 26.5 °C, mostly in late summer.</p>';
+  for(const s of ss){const r=document.createElement('button');r.className='sprow';r.innerHTML='<i></i><span></span><b></b>';r.children[0].style.background=catOf(s)>=4?'#ff6b5a':catOf(s)>=1?'#ffc35a':'#cfdbe6';r.children[1].textContent=`${s.name} · ${catName(s)}`;r.children[2].textContent=Math.round(vmax(s)*3.6)+' km/h';r.onclick=()=>{S.sel={storm:s};S.follow=true;flyToW(s.x,s.y,6);S.follow=true;showTab('insp')};L.appendChild(r)}
+  $('cRec').innerHTML=kv([['Hottest',RECS.hot.toFixed(1)+' °C'],['Coldest',RECS.cold.toFixed(1)+' °C'],['Strongest wind',Math.round(RECS.wind*3.6)+' km/h'],['Lowest pressure',Math.round(RECS.lowP)+' hPa']])}
+let INSPK='';
+function renderInspect(){const b=S.sel;$('inspEmpty').hidden=!!b;$('inspBody').hidden=!b;if(!b)return;const body=$('inspBody');
+  if(b.storm){const s=b.storm;if(!STORMS.includes(s)){body.innerHTML=`<h2 class="ititle">${s.name}</h2><p class="note">This storm has died out. Peak strength: ${s.peak?'category '+s.peak:'tropical storm'}.</p>`;INSPK='';return}
+    if(INSPK!=='s'+s.id){INSPK='s'+s.id;body.innerHTML=`<h2 class="ititle" id="iT"></h2><div class="isub" id="iS"></div><div class="kv" id="iK"></div><div class="sl"><div class="row"><span class="k">Steer it</span><span id="sDirV">drifting</span></div><input type="range" id="sDir" min="0" max="359" step="1" value="0"></div><div class="actions"><button class="btn" id="sDrift">Let it drift</button><button class="btn" id="sUp">Strengthen</button><button class="btn" id="sDn">Weaken</button><button class="btn" id="sFol">Follow</button></div><p class="note">Hurricanes feed on warm ocean water. Over land or cold seas they lose their fuel and fade. The eye is calm; the eyewall around it has the strongest winds.</p>`;
+      $('sUp').onclick=()=>{s.pc=Math.max(880,s.pc-12);chEv('stormedit',{});toast(`${s.name} strengthens`)};$('sDn').onclick=()=>{s.pc=Math.min(1009,s.pc+12);chEv('stormedit',{weaken:1});toast(`${s.name} weakens`)};$('sFol').onclick=()=>{S.follow=true;cam.z=Math.max(cam.z,6)};$('sDir').oninput=e=>{const a=+e.target.value*Math.PI/180;s.steer={u:Math.cos(a)*9,v:-Math.sin(a)*9};s.steerT=8;STEERED++;chEv('steer',{kind:'storm',u:s.steer.u,v:s.steer.v});$('sDirV').textContent='heading '+compass(s.steer.u,s.steer.v)};$('sDrift').onclick=()=>{s.steer=null;s.steerT=0;$('sDirV').textContent='drifting'}}
+    if(!(s.steer&&s.steerT>0))$('sDirV').textContent='drifting with the winds';$('iT').textContent=s.name;$('iS').textContent=`${catName(s)} · ${fmtLat(s.y)} ${fmtLon(s.x)}`;const i=idx(s.x,s.y);
+    $('iK').innerHTML=kv([['Top winds',Math.round(vmax(s)*3.6)+' km/h'],['Central pressure',Math.round(s.pc)+' hPa'],['Sea temperature',isOcean(i)?Ts[i].toFixed(1)+' °C':'over land'],['Age',s.age.toFixed(1)+' days'],['Peak',s.peak?'category '+s.peak:'tropical storm'],['Heading',compass(u[i],v[i])]]);return}
+  const i=b.i,ws=Math.hypot(u[i],v[i]),rh=clamp(q[i]/qsat(T[i]),0,1);INSPK='';
+  const sky=rn[i]>2.5?'Torrential rain':rn[i]>0.9?(T[i]<0.5?'Heavy snow':'Heavy rain'):rn[i]>0.15?(T[i]<0.5?'Snow':'Rain'):cl[i]>0.6?'Overcast':cl[i]>0.3?'Partly cloudy':'Clear';
+  body.innerHTML=`<h2 class="ititle">${sky}</h2><div class="isub">${fmtLat(cyOf(i))} ${fmtLon(cxOf(i))} · ${isOcean(i)?(ice[i]>.5?'sea ice':'ocean'):elev[i]>2000?'mountains':sn[i]>2?'snow-covered land':'land'}</div><div class="kv">${kv([['Temperature',T[i].toFixed(1)+' °C'],['Pressure',Math.round(P[i])+' hPa'],['Wind',`${Math.round(ws*3.6)} km/h from the ${fromDir(u[i],v[i])}`],['Humidity',Math.round(rh*100)+'%'],['Cloud',Math.round(cl[i]*100)+'%'],['Rain',(rn[i]).toFixed(1)+' mm/h'],[isOcean(i)?'Sea temperature':'Elevation',isOcean(i)?Ts[i].toFixed(1)+' °C':fmtN(Math.round(elev[i]))+' m'],['Snow',sn[i]>0.5?Math.round(sn[i])+' cm':'none']])}</div><p class="note">Average here: ${tavg[i].toFixed(0)} °C and ${ravg[i]<0.12?'very dry':ravg[i]<0.35?'fairly dry':ravg[i]<0.6?'damp':'very wet'}.</p>`}
+
+/* ================= Troposphere: challenges, tutorial, demo ================= */
+const bestCat=()=>Math.max(0,...CH.events.filter(e=>e.k==='cat').map(e=>e.c));
+const landCellsWhere=f=>{let n=0;for(let i=0;i<N;i++)if(!isOcean(i)&&f(i))n++;return n};
+const nearEq=i=>Math.abs(latOf(cyOf(i)))<=10;
+// getting started
+CC(1,{t:'Storm watch',g:'Find a hurricane and select it.',hint:'Type hurricane in the search bar and press Enter.',scen:'hurricane',setup:()=>{if(!STORMS.length){const s=addStorm(150,42,975);s.name='Ava'}},check:()=>{const ok=S.sel&&S.sel.storm;return[ok,ok?1:0,ok?'Tracking '+S.sel.storm.name:'Not found yet']},stars:byTime(20,45)});
+CC(1.1,{t:'Fast forward',g:'Run time at 1 week per second.',hint:'Press “1 wk” next to the pause button.',scen:'earth',check:()=>{const ok=!S.paused&&S.speed>=7;return[ok,ok?1:0,'']},stars:byTime(10,30)});
+CC(1.2,{t:'Day and night',g:'Slow time to 1 hour per second and watch night fall somewhere.',hint:'Press “1 hr”. The dark band is night moving across the planet.',scen:'earth',check:()=>{const ok=!S.paused&&S.speed<=1/24+1e-6;return[ok,ok?1:0,'']},stars:byTime(15,40)});
+CC(1.3,{t:'Read the winds',g:'Switch to the Wind view and find a place with winds over 60 km/h.',hint:'World tab → Views → Wind. Then click on bright yellow or orange streaks.',scen:'earth',check:()=>{const w=S.sel&&S.sel.i!=null?Math.hypot(u[S.sel.i],v[S.sel.i])*3.6:0,ok=S.view==='wind'&&w>=60;return[ok,(S.view==='wind'?.5:0)+Math.min(.5,w/120),S.view!=='wind'?'Turn on the Wind view':`Selected: ${Math.round(w)} km/h`]},stars:byTime(30,70)});
+CC(1.4,{t:'Thunderstorm',g:'Watch 30 lightning strikes.',hint:'Lightning flashes in heavy, warm rain. Use the Lightning tool, or Moisten warm land and wait.',scen:'earth',check:()=>{const n=evN('lightning');return[n>=30,n/30,`${Math.min(n,30)} of 30 strikes`]},stars:byTime(25,60)});
+CC(1.5,{t:'Twister',g:'Touch down 3 tornadoes.',hint:'Pick Tornado and click on land.',scen:'tornado',check:()=>{const n=evN('tornado');return[n>=3,n/3,`${Math.min(n,3)} of 3 tornadoes`]},stars:byTime(15,40)});
+CC(1.6,{t:'Make it rain',g:'Make it rain on 25 squares of desert at once.',hint:'Pick Moisten and paint over a desert (sandy yellow land). Then add a Low for lift.',scen:'desert',check:()=>{const n=landCellsWhere(i=>ravg[i]<0.15&&rn[i]>0.3);return[n>=25,n/25,`${n} of 25 desert squares getting rain`]},stars:byTime(30,70)});
+CC(1.7,{t:'Spin it up',g:'Start a hurricane yourself and grow it to category 1.',hint:'Pick Hurricane and click on deep blue warm sea between 8° and 20° from the equator.',scen:'hurricane',check:()=>{const ok=CH.events.some(e=>e.k==='cat'&&e.user&&e.c>=1);return[ok,ok?1:USERSTORM?.4:0,ok?'A hurricane is born':'']},stars:byTime(30,70)});
+CC(1.8,{t:'Highs and lows',g:'Make one low and one high pressure system.',hint:'Pick Low and click, then pick High and click.',scen:'earth',check:()=>{const l=CH.events.some(e=>e.k==='press'&&e.t==='low'),h2=CH.events.some(e=>e.k==='press'&&e.t==='high');return[l&&h2,(l?.5:0)+(h2?.5:0),'']},stars:byTime(15,40)});
+CC(1.9,{t:'Greenhouse',g:'Double the carbon dioxide and warm the planet by 1.5 °C.',hint:'World tab → Carbon dioxide slider. Then let time run: the oceans take a while to warm.',scen:'earth',setup:()=>{CH.ref.t=STAT.avgT},check:()=>{const d=STAT.avgT-CH.ref.t;return[d>=1.5,clamp(d/1.5,0,1),`${d>=0?'+':''}${d.toFixed(2)} °C`]},stars:byTime(30,80)});
+// storms
+CC(1.65,{t:'Turn the wind',g:'Make the wind blow toward the west somewhere in the stormy westerlies (40°–60° from the equator), at over 40 km/h.',hint:'Pick 🧭 Steer and drag a long arrow pointing left across the middle latitudes. Then click there to check.',scen:'earth',check:()=>{const i=S.sel&&S.sel.i!=null?S.sel.i:-1,la=i>=0?Math.abs(latOf(cyOf(i))):0,ok=i>=0&&la>=40&&la<=60&&u[i]<0&&Math.hypot(u[i],v[i])*3.6>40;return[ok,STEERED?0.5:0,ok?'The wind has turned!':STEERED?'Click on the place you pushed to check it':'Push the wind with Steer first']},stars:byTime(30,70)});
+CC(2.1,{t:'Change course',g:'Steer a hurricane so it travels east for at least 2 days.',hint:'Pick 🧭 Steer and drag from the storm toward the east (right), or select it and use the Steer it slider.',scen:'hurricane',setup:()=>{if(!STORMS.length){const s=addStorm(150,42,980);s.name='Ava'}CH.ref.x={}},check:()=>{let best=0;for(const s of STORMS){if(s.steer&&s.steerT>0&&s.steer.u>2){CH.ref.x[s.id]=CH.ref.x[s.id]??S.t;best=Math.max(best,S.t-CH.ref.x[s.id])}else delete CH.ref.x[s.id]}return[best>=2,best/2,best?`Heading east for ${best.toFixed(1)} of 2 days`:'Steer a storm east']},stars:byTime(30,70)});
+CC(2.6,{t:'Category 5',g:'Grow a hurricane to category 5 (winds over 252 km/h).',hint:'Hurricanes strengthen over very warm water. Raise the Ocean warmth slider, or Heat the sea in the storm’s path.',scen:'hurricane',check:()=>{const c=bestCat();return[c>=5,c/5,`Strongest so far: ${c?'category '+c:'none'}`]},stars:byTime(45,110)});
+CC(2.2,{t:'Landfall',g:'Have a category 3 or stronger hurricane hit land.',hint:'Storms drift west and then curve toward the poles. Start one near a coast, or steer it with highs and lows.',scen:'hurricane',check:()=>{const ok=CH.events.some(e=>e.k==='landfall'&&e.c>=3);return[ok,ok?1:0,ok?'Landfall!':`Landfalls so far: ${evN('landfall')}`]},stars:byTime(45,110)});
+CC(3.2,{t:'Save the coast',g:'A category 4 hurricane is heading for land. Weaken it below category 1 before it hits.',hint:'Cool the sea in front of it with the Cool tool, steer it with a High, or select it and press Weaken.',scen:'hurricane',
+  setup:()=>{STORMS=[];let best=null;for(let k=0;k<400;k++){const x=Math.random()*GW,y=(90-rr(14,20))/180*GH,i=idx(x,y);if(!isOcean(i))continue;let land=false;for(let d=4;d<=12;d++)if(!isOcean(idx(x-d,y-d*0.3))){land=true;break}if(land){best=[x,y];break}}const [x,y]=best||[150,40];const s=addStorm(x,y,935);s.name='Greta';s.peak=4;CH.ref.s=s},
+  check:()=>{const s=CH.ref.s,alive=STORMS.includes(s),c=alive?catOf(s):0;return[!alive||c===0,alive?1-c/4:1,alive?`${s.name}: ${c?'category '+c:'tropical storm'}`:`${s.name} has faded away`]},fail:()=>CH.events.some(e=>e.k==='landfall'&&e.name==='Greta'&&e.c>=1)?'Greta made landfall as a hurricane':'',stars:byTime(40,100)});
+CC(2.9,{t:'Three at once',g:'Have 3 hurricanes (category 1 or more) at the same time.',hint:'Press 🌀 Hurricane season, warm the oceans, or start them yourself.',scen:'hurricane',check:()=>{const n=STAT.storms;return[n>=3,n/3,`${n} of 3 hurricanes`]},stars:byTime(40,100)});
+CC(2.4,{t:'Tornado alley',g:'Have 6 tornadoes touch down by themselves.',hint:'Tornadoes need warm, wet air, strong winds and thunderstorms over land. Try 🌪 Tornado outbreak, or Moisten and Heat the plains.',scen:'tornado',check:()=>{const n=CH.events.filter(e=>e.k==='tornado'&&!e.user).length;return[n>=6,n/6,`${n} of 6 tornadoes`]},stars:byTime(45,110)});
+CC(3.4,{t:'EF5',g:'See a violent EF5 tornado.',hint:'The strongest tornadoes are rare. Start lots of them, or trigger a tornado outbreak and wait.',scen:'tornado',check:()=>{const m=Math.max(-1,...CH.events.filter(e=>e.k==='tornado').map(e=>e.ef));return[m>=5,Math.max(0,m)/5,m<0?'No tornadoes yet':`Strongest: EF${m}`]},stars:byTime(45,120)});
+CC(2.7,{t:'Deep low',g:'Make a storm with central pressure below 950 hPa.',hint:'Hurricanes have the lowest pressures. Grow one over warm water.',scen:'hurricane',check:()=>{const p=Math.min(1013,...STORMS.map(s=>s.pc));return[p<950,clamp((1010-p)/60,0,1),`Lowest now: ${Math.round(p)} hPa`]},stars:byTime(40,100)});
+CC(2.3,{t:'Big high',g:'Build a high-pressure system above 1045 hPa.',hint:'Stack several Highs in one place, or cool a cold continent further.',scen:'earth',check:()=>{const p=STAT.maxP||0;return[p>=1045,clamp((p-1013)/32,0,1),`Highest now: ${Math.round(p)} hPa`]},stars:byTime(30,80)});
+// temperature records
+CC(2.1,{t:'Scorcher',g:'Make somewhere reach 55 °C.',hint:'Deserts in summer get hottest. Use ☀ Heat wave or the Heat tool on dry land.',scen:'desert',check:()=>{let m=-99;for(let i=0;i<N;i++)if(T[i]>m)m=T[i];return[m>=55,clamp(m/55,0,1),`Hottest now: ${m.toFixed(1)} °C`]},stars:byTime(30,80)});
+CC(2.5,{t:'Big chill',g:'Make somewhere reach −70 °C.',hint:'Polar winter nights get coldest. Try ❄ Polar vortex or the Cool tool on an ice sheet.',scen:'iceage',check:()=>{let m=99;for(let i=0;i<N;i++)if(T[i]<m)m=T[i];return[m<=-70,clamp(-m/70,0,1),`Coldest now: ${m.toFixed(1)} °C`]},stars:byTime(30,80)});
+CC(3.0,{t:'Snow on the equator',g:'Get snow lying on land within 10° of the equator.',hint:'High mountains near the equator are coldest. Raise a big Mountain there and Cool it, or chill the whole planet.',scen:'earth',check:()=>{const n=landCellsWhere(i=>nearEq(i)&&sn[i]>2);return[n>0,n?1:0,n?'Tropical snow!':'No snow near the equator yet']},stars:byTime(45,110)});
+CC(2.8,{t:'Snowy world',g:'Cover half of all land with snow.',hint:'Lower the carbon dioxide or the sunlight, and let the winter come.',scen:'earth',check:()=>{const f=STAT.snow;return[f>=.5,f/.5,`${Math.round(f*100)}% of land snowy`]},stars:byTime(40,100)});
+// climate
+CC(3.3,{t:'Melt the poles',g:'Shrink the sea ice below 2% of the planet.',hint:'Raise carbon dioxide and ocean warmth. Ice takes a while to melt.',scen:'earth',check:()=>{const f=STAT.ice;return[f<.02,clamp((0.12-f)/0.1,0,1),`Sea ice ${(f*100).toFixed(1)}%`]},stars:byTime(45,120)});
+CC(3.6,{t:'Ice age',g:'Spread sea ice over 15% of the planet without Volcanic winter.',hint:'Lower carbon dioxide and sunlight. White ice reflects sunlight, so it cools things further.',scen:'earth',check:()=>{const f=STAT.ice,ok=f>=.15&&!EVT.volcano;return[ok,f/.15,`Sea ice ${(f*100).toFixed(1)}%${EVT.volcano?' · stop the volcanic winter':''}`]},stars:byTime(45,120)});
+CC(2.9,{t:'Volcanic winter',g:'Trigger a volcanic winter and cool the planet by 2 °C.',hint:'World tab → 🌋 Volcanic winter. Ash blocks the sunlight.',scen:'earth',setup:()=>{CH.ref.t=STAT.avgT},check:()=>{const d=CH.ref.t-STAT.avgT;return[d>=2,clamp(d/2,0,1),`${d.toFixed(2)} °C cooler`]},stars:byTime(30,80)});
+CC(3.5,{t:'Steady climate',g:'Carbon dioxide is rising by itself. Keep the average temperature within 0.7 °C of the start for 2 years.',hint:'Push the Carbon dioxide slider back down, dim the sunlight, or brighten the planet with clouds.',scen:'earth',setup:()=>{CH.ref.t=STAT.avgT},
+  check:()=>{ENV.co2=Math.min(2000,ENV.co2+(S.paused?0:0.5));$('co2S').value=ENV.co2;$('co2V').textContent=Math.round(ENV.co2)+' ppm';const d=Math.abs(STAT.avgT-CH.ref.t),p=hold('k',d<=0.7,730);return[p>=1,p,`Off by ${d.toFixed(2)} °C · ${Math.round(p*730)} of 730 days`]},stars:byTime(60,150)});
+CC(3.1,{t:'Monsoon',g:'Bring heavy rain to 20% of the giant continent at once.',hint:'Monsoon rains come when the land heats up in summer and pulls in wet ocean air. Let summer arrive, or Heat the land.',scen:'monsoon',check:()=>{let n=0,t=0;for(let i=0;i<N;i++){const x=cxOf(i),y=cyOf(i);if(isOcean(i)||Math.abs(wdx(x-140))>55||y<22||y>56)continue;t++;if(rn[i]>0.8)n++}const f=t?n/t:0;return[f>=.2,f/.2,`${Math.round(f*100)}% of the continent in heavy rain`]},stars:byTime(45,110)});
+CC(3.8,{t:'Rain shadow',g:'Raise a mountain over 3,000 m and make it rain on its slopes.',hint:'Pick Mountain and paint a ridge near a coast where the wind blows in from the sea. Rising air drops its rain.',scen:'earth',check:()=>{const n=landCellsWhere(i=>elev[i]>3000&&rn[i]>0.6&&RAISEDM>0);return[n>=3,n/3,`${n} of 3 rainy mountain squares`]},stars:byTime(45,110)});
+CC(4.0,{t:'Warm the dark side',g:'On the planet with no night, raise the average temperature of the dark side above −15 °C.',hint:'More carbon dioxide traps heat; a faster spin and warm oceans carry heat around the planet.',scen:'locked',check:()=>{let s=0,n=0;for(let i=0;i<N;i++){const lo=lonOf(cxOf(i));if(Math.abs(lo)>100){s+=T[i];n++}}const m=s/n;return[m>-15,clamp((m+45)/30,0,1),`Dark side: ${m.toFixed(1)} °C`]},stars:byTime(45,120)});
+CC(1.05,{t:'Top of the board',g:'Open the leaderboard and look at the All simulators rankings.',hint:'Press 🏆 Leaderboard on the home page or in the 👤 account box, then the All simulators tab.',setup:()=>{CH.ref.n=LBOPEN},check:()=>{const ok=LBOPEN>CH.ref.n&&LBTAB==='all'&&!$('lbBox').hidden;return[ok,LBOPEN>CH.ref.n?0.5:0,ok?'':'Open the leaderboard']},stars:byTime(20,45)});
+CC(2.0,{t:'Make it yours',g:'Create an account (👤 at the top), then strike lightning.',hint:'Click 👤, type a name and press Create account. Then pick Lightning and click.',scen:'earth',setup:()=>{CH.ref.a=ACCN},check:()=>{const a=ACCN>CH.ref.a,l=CH.events.some(e=>e.k==='lightning'&&e.user);return[a&&l,(a?.5:0)+(l?.5:0),a?(l?'':'Now strike lightning'):'Create or sign in to an account first']},stars:byTime(60,150)});
+
+/* tutorial */
+TSTEPS.push(
+ ['Look around','Drag with the mouse (or one finger) to move across the planet. W, A, S and D work too.',r=>CNT.moved>r.m+150,r=>{r.m=CNT.moved}],
+ ['Zoom','Scroll (or pinch) to zoom in.',r=>CNT.zoomed>r.z+2,r=>{r.z=CNT.zoomed}],
+ ['Pause time','Press Space or the ⏸ button to pause.',()=>S.paused],
+ ['Speed up','Resume, then press “1 wk” to run a week every second.',()=>!S.paused&&S.speed>=7],
+ ['Day and night','Press “1 hr” and watch the night side move across the planet.',()=>!S.paused&&S.speed<=1/24+1e-6],
+ ['Read the weather','Click anywhere. The Inspect tab shows temperature, wind, pressure, humidity and rain there.',()=>S.sel&&S.sel.i!=null],
+ ['Wind view','In the World tab, switch to the Wind view. Streaks show where the air is flowing.',()=>S.view==='wind'],
+ ['Pressure view','Switch to the Pressure view. Air flows from highs (H) to lows (L), twisted by the planet’s spin.',()=>S.view==='pressure'],
+ ['Heat','Pick 🔥 Heat and paint over some land. Warm air rises and pulls in wind.',r=>HEATED>r.n,r=>{r.n=HEATED}],
+ ['Cool','Pick 🧊 Cool and paint somewhere.',r=>COOLED>r.n,r=>{r.n=COOLED}],
+ ['Moisten','Pick 💧 Moisten and paint water vapour into the air: clouds and rain follow.',r=>WETTED>r.n,r=>{r.n=WETTED}],
+ ['Low pressure','Pick 🌀 Low and click to make a low-pressure system. Watch the wind spiral into it.',r=>PRESSED>r.n,r=>{r.n=PRESSED}],
+ ['Steer','Pick 🧭 Steer and drag across the map to push the wind that way (or drag from a storm to send it somewhere).',r=>STEERED>r.n,r=>{r.n=STEERED}],
+ ['Hurricane','Pick 🌀 Hurricane and click on warm tropical sea to start a storm.',r=>USERSTORM>r.n,r=>{r.n=USERSTORM}],
+ ['Tornado','Pick 🌪️ Tornado and click on land.',r=>TORNS>r.n,r=>{r.n=TORNS}],
+ ['Lightning','Pick ⚡ Lightning and click.',r=>LIGHT>r.n,r=>{r.n=LIGHT}],
+ ['Mountain','Pick ⛰️ Mountain and paint a ridge. Winds blowing up it drop their rain.',r=>RAISEDM>r.n,r=>{r.n=RAISEDM}],
+ ['Greenhouse','In the World tab, drag the Carbon dioxide slider.',r=>SLIDED>r.n,r=>{r.n=SLIDED}],
+ ['Cause an event','Press one of the events, such as ☀ Heat wave or 🌀 Hurricane season.',r=>EVN>r.n,r=>{r.n=EVN}],
+ ['Stop the event','Press the same button again (it now says ■ Stop) or ↺ Stop all events.',r=>EVSTOP>r.n,r=>{r.n=EVSTOP}],
+ ['The Climate tab','Open the Climate tab to see the average temperature, ice, storms and records.',r=>(CNT.tab_climate||0)>r.n,r=>{r.n=CNT.tab_climate||0}],
+ ['Other worlds','Press Worlds in the top bar and pick a different planet.',r=>CNT.scen>r.n,r=>{r.n=CNT.scen}],
+ ['Leaderboard','Click 👤 in the top bar, then 🏆 Leaderboard, to see who has the most stars here and across all our simulators.',r=>LBOPEN>r.n,r=>{r.n=LBOPEN}],
+ ['Save your progress','Click 👤 in the top bar and create an account (a PIN is optional). Your stars save on this device.',r=>ACCN>r.n,r=>{r.n=ACCN}],
+);
+
+/* demo */
+DEMO.push(
+ ['earth','The winds of the world','Trade winds near the equator, westerlies in the middle latitudes: the planet’s spin twists the air into great swirls.',()=>{setSpeed(2);setView('wind')}],
+ ['hurricane','Hurricane','Over warm ocean, a storm feeds on rising moist air and spins up into a hurricane with a calm eye at its heart.',()=>{setSpeed(2);const s=addStorm(150,42,930);s.name='Ava';S.sel={storm:s};S.follow=true;cam.z=6}],
+ ['tornado','Tornado alley','Warm, wet air from the south meets cold, dry air from the north over the plains, and twisters touch down.',()=>{setSpeed(1);doEvent('outbreak');flyToW(70,38,4)}],
+ ['earth','Day and night','At one hour per second you can watch the night side sweep across the planet, and the land cool after dark.',()=>{setSpeed(0)}],
+ ['iceage','Ice age','With little carbon dioxide, ice spreads from the poles. White ice reflects sunlight, so it gets colder still.',()=>{setSpeed(4);setView('temp')}],
+ ['monsoon','Monsoon','In summer the giant continent heats up and sucks in wet ocean air, bringing torrential rain.',()=>{setSpeed(3);setView('rain')}],
+ ['locked','A planet with no night','One side always faces its sun. Winds carry heat from the scorching day side to the frozen night side.',()=>{setSpeed(2);setView('temp')}],
+);
+
+/* ===== simulator kit: UI, home, accounts, challenges, tutorial, demo, main loop ===== */
+const cv=$('world'),ctx=cv.getContext('2d');
+function resize(){W=innerWidth;H=innerHeight;DPR=Math.min(2,devicePixelRatio||1);cv.width=Math.round(W*DPR);cv.height=Math.round(H*DPR);measureHud();if(SIM.resize)SIM.resize()}
+function measureHud(){const h=document.querySelector('.hud-top');if(h)document.documentElement.style.setProperty('--hudH',Math.round(h.getBoundingClientRect().height)+'px')}
+const sx=wx=>(wx-cam.x)*cam.z+W/2+cam.ox,sy=wy=>(wy-cam.y)*cam.z+H/2;
+const wxOf=px=>(px-W/2-cam.ox)/cam.z+cam.x,wyOf=py=>(py-H/2)/cam.z+cam.y;
+function fitWorld(){const w=SIM.world.w,h=SIM.world.h,m=innerWidth<760?1:0.82;cam.z=SIM.world.wrapX?Math.max(W/w,H/h):Math.min(W/w,(H-90)/h)*m;cam.x=w/2;cam.y=h/2;clampCam()}
+function minZoom(){const w=SIM.world.w,h=SIM.world.h;return SIM.world.wrapX?H/h:Math.min(W/w,H/h)*0.5}
+function clampCam(){const h=SIM.world.h,w=SIM.world.w;cam.z=clamp(cam.z,minZoom(),SIM.world.maxZ||40);if(SIM.world.wrapX){const hy=H/2/cam.z;cam.y=clamp(cam.y,Math.min(h/2,hy),Math.max(h/2,h-hy))}else cam.y=clamp(cam.y,0,h);if(SIM.world.wrapX)cam.x=mod(cam.x,w);else cam.x=clamp(cam.x,0,w)}
+function zoomAt(f,px,py){const wx=wxOf(px),wy=wyOf(py);cam.z*=f;clampCam();cam.x+=wx-wxOf(px);cam.y+=wy-wyOf(py);clampCam();bump('zoomed')}
+function flyToW(x,y,z){S.follow=false;cam.x=x;cam.y=y;if(z)cam.z=Math.max(cam.z,z);clampCam()}
+
+/* speeds */
+function buildSpeeds(){const b=$('spds');b.textContent='';SIM.speeds.forEach(([l,v],i)=>{const e=document.createElement('button');e.className='spd';e.textContent=l;e.onclick=()=>{setSpeed(i);setPaused(false)};b.appendChild(e)})}
+function setSpeed(i){i=clamp(i,0,SIM.speeds.length-1);S.speedI=i;S.speed=SIM.speeds[i][1];[...$('spds').children].forEach((e,k)=>e.setAttribute('aria-pressed',k===i));updateRate()}
+function setPaused(p){S.paused=p;$('pauseBtn').textContent=p?'▶':'⏸';$('pauseBtn').setAttribute('aria-label',p?'Resume':'Pause');updateRate()}
+function updateRate(){$('rateTxt').textContent=S.paused?'Paused':SIM.fmtRate(S.speed)+(S.achieved<S.speed*0.8&&!S.paused?` (running ${SIM.fmtRate(Math.max(S.achieved,S.speed*0.01))})`:'')}
+$('pauseBtn').onclick=()=>setPaused(!S.paused);
+
+/* tools */
+function buildRail(){const r=$('rail');r.textContent='';for(const [g,items] of SIM.tools){if(g){const h=document.createElement('h3');h.textContent=g;r.appendChild(h)}
+  for(const [id,ico,name] of items){const b=document.createElement('button');b.className='tool';b.dataset.tool=id;b.innerHTML='<span class="ico"></span><span></span>';b.children[0].textContent=ico;b.children[1].textContent=name;b.onclick=()=>setTool(id);r.appendChild(b)}}}
+function toolInfo(id){for(const [,items] of SIM.tools)for(const t of items)if(t[0]===id)return t;return null}
+function setTool(id){S.tool=id;document.querySelectorAll('.tool').forEach(b=>b.setAttribute('aria-pressed',b.dataset.tool===id));const t=toolInfo(id);
+  $('placeopts').hidden=id==='select'||!t;$('toolNote').textContent=t&&t[3]||'';$('brush').parentElement.hidden=!(t&&t[4]);cv.classList.toggle('place',id!=='select');if(id!=='select')bump('tool');if(SIM.toolChanged)SIM.toolChanged(id)}
+$('brush').oninput=e=>{S.brush=+e.target.value;$('brushV').textContent=S.brush};
+
+/* dock tabs */
+function showTab(id){document.querySelectorAll('.tab').forEach(t=>t.setAttribute('aria-selected',t.dataset.tab===id));document.querySelectorAll('#dock .pane').forEach(p=>p.hidden=p.id!=='pane-'+id);bump('tab_'+id);if(SIM.tabShown)SIM.tabShown(id)}
+document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>showTab(t.dataset.tab));
+$('dockBtn').onclick=()=>document.body.classList.toggle('dockOpen');
+function setView(v){S.view=v;document.querySelectorAll('[data-view]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.view===v));bump('view');if(SIM.viewChanged)SIM.viewChanged(v)}
+document.querySelectorAll('[data-view]').forEach(b=>b.onclick=()=>setView(b.dataset.view));
+function setLegend(title,grad,ticks){const L=$('legend');if(!title){L.hidden=true;return}L.hidden=false;L.children[0].textContent=title;L.children[1].style.background=grad;[...L.children[2].children].forEach((s,i)=>s.textContent=ticks[i]||'')}
+
+/* scenarios */
+function buildScen(){const g=$('scgrid');g.textContent='';for(const s of SIM.scens){const b=document.createElement('button');b.className='scb';b.innerHTML='<b></b><span></span>';b.children[0].textContent=s.name;b.children[1].textContent=s.desc;b.onclick=()=>{$('scen').hidden=true;loadScen(s.id);bump('scen');toast(s.name)};g.appendChild(b)}}
+function loadScen(id){S.t=0;S.sel=null;S.follow=false;SIM.load(id);S.scen=id;fitWorld();if(SIM.after)SIM.after()}
+$('scenBtn').onclick=()=>$('scen').hidden=!$('scen').hidden;$('scenClose').onclick=()=>$('scen').hidden=true;
+
+/* find */
+let findItems=[],findI=0;
+function renderFind(){const L=$('findList'),q=$('find').value.trim();findItems=q?SIM.find(q.toLowerCase()).slice(0,10):[];findI=0;L.hidden=!findItems.length;L.textContent='';
+  findItems.forEach((it,i)=>{const b=document.createElement('button');b.className=i===findI?'on':'';b.innerHTML='<span></span><small></small>';b.children[0].textContent=it.label;b.children[1].textContent=it.sub||'';b.onmousedown=e=>{e.preventDefault();doFind(i)};L.appendChild(b)})}
+function doFind(i){const it=findItems[i];if(!it)return;$('find').value='';$('findList').hidden=true;$('find').blur();it.go();bump('find')}
+$('find').oninput=renderFind;$('find').onblur=()=>setTimeout(()=>$('findList').hidden=true,120);
+$('find').onkeydown=e=>{if(e.key==='Enter'){doFind(findI)}else if(e.key==='ArrowDown'||e.key==='ArrowUp'){findI=clamp(findI+(e.key==='ArrowDown'?1:-1),0,findItems.length-1);[...$('findList').children].forEach((b,k)=>b.className=k===findI?'on':'');e.preventDefault()}else if(e.key==='Escape'){$('find').blur()}};
+
+/* pointer input */
+const ptrs=new Map();let drag=null,pinch=null;
+cv.addEventListener('contextmenu',e=>e.preventDefault());
+cv.addEventListener('pointerdown',e=>{cv.setPointerCapture(e.pointerId);ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY});
+  if(ptrs.size===2){const [a,b]=[...ptrs.values()];pinch={d:Math.hypot(a.x-b.x,a.y-b.y),z:cam.z};if(drag&&drag.tool)SIM.pointer('up',wxOf(e.clientX),wyOf(e.clientY),e);drag=null;return}
+  const pan=S.tool==='select'||e.button===1||e.button===2;
+  drag={x0:e.clientX,y0:e.clientY,lx:e.clientX,ly:e.clientY,moved:0,pan,tool:!pan};
+  if(!pan)SIM.pointer('down',wxOf(e.clientX),wyOf(e.clientY),e)});
+cv.addEventListener('pointermove',e=>{const p=ptrs.get(e.pointerId);if(p){p.x=e.clientX;p.y=e.clientY}
+  if(pinch&&ptrs.size===2){const [a,b]=[...ptrs.values()];const d=Math.hypot(a.x-b.x,a.y-b.y);const f=pinch.z*d/pinch.d/cam.z;zoomAt(f,(a.x+b.x)/2,(a.y+b.y)/2);return}
+  if(!drag){if(SIM.hover)SIM.hover(wxOf(e.clientX),wyOf(e.clientY));return}
+  const dx=e.clientX-drag.lx,dy=e.clientY-drag.ly;drag.lx=e.clientX;drag.ly=e.clientY;drag.moved+=Math.abs(dx)+Math.abs(dy);
+  if(drag.pan){S.follow=false;cam.x-=dx/cam.z;cam.y-=dy/cam.z;clampCam();CNT.moved+=Math.abs(dx)+Math.abs(dy)}else SIM.pointer('drag',wxOf(e.clientX),wyOf(e.clientY),e)});
+function endPtr(e){ptrs.delete(e.pointerId);if(ptrs.size<2)pinch=null;if(!drag)return;const d=drag;drag=null;
+  if(d.tool)SIM.pointer('up',wxOf(e.clientX),wyOf(e.clientY),e);else if(d.moved<6&&e.button!==2){S.follow=false;S.sel=SIM.pick(wxOf(e.clientX),wyOf(e.clientY))||null;if(S.sel&&SIM.inspectTab){showTab(SIM.inspectTab);document.body.classList.add('dockOpen')}if(SIM.selChanged)SIM.selChanged()}}
+cv.addEventListener('pointerup',endPtr);cv.addEventListener('pointercancel',endPtr);
+cv.addEventListener('dblclick',e=>{if(S.sel&&S.tool==='select'&&SIM.canFollow){S.follow=true;cam.z=Math.max(cam.z,SIM.world.followZ||cam.z)}});
+cv.addEventListener('wheel',e=>{e.preventDefault();zoomAt(Math.exp(-e.deltaY*0.0015),e.clientX,e.clientY)},{passive:false});
+$('zIn').onclick=()=>zoomAt(1.4,W/2+cam.ox,H/2);$('zOut').onclick=()=>zoomAt(1/1.4,W/2+cam.ox,H/2);$('zFit').onclick=()=>{fitWorld();bump('zoomed')};
+const keys=new Set();
+addEventListener('keydown',e=>{if(e.target.tagName==='INPUT'||e.target.tagName==='SELECT'||e.target.tagName==='TEXTAREA')return;const k=e.key.toLowerCase();
+  if(k===' '){e.preventDefault();setPaused(!S.paused)}else if(k==='escape'){if(S.tool!=='select')setTool('select');else{S.sel=null;S.follow=false;if(SIM.selChanged)SIM.selChanged()}}
+  else if(k==='+'||k==='=')zoomAt(1.25,W/2+cam.ox,H/2);else if(k==='-')zoomAt(0.8,W/2+cam.ox,H/2);else keys.add(k)});
+addEventListener('keyup',e=>keys.delete(e.key.toLowerCase()));
+function camKeys(dt){let dx=0,dy=0;if(keys.has('a')||keys.has('arrowleft'))dx--;if(keys.has('d')||keys.has('arrowright'))dx++;if(keys.has('w')||keys.has('arrowup'))dy--;if(keys.has('s')||keys.has('arrowdown'))dy++;
+  if(dx||dy){S.follow=false;const sp=600*dt/cam.z;cam.x+=dx*sp;cam.y+=dy*sp;clampCam();CNT.moved+=600*dt}}
+
+/* accounts (shared by every simulator on the site) */
+const lsGet=k=>{try{return JSON.parse(localStorage.getItem(k)||'null')}catch(e){return null}};
+const lsSet=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}};
+const ACC_KEY='barycenter.accounts',PROG_KEY=SIM.id+'.progress';
+let ACC=lsGet(ACC_KEY);if(!ACC||!Array.isArray(ACC.list))ACC={list:[],cur:'guest',devicePlays:0};if(ACC.cur!=='guest'&&!ACC.list.some(a=>a.id===ACC.cur))ACC.cur='guest';
+let ACCN=0;
+const progKey=id=>id==='guest'?PROG_KEY:PROG_KEY+'.'+id;
+const blankProg=()=>({stars:{},plays:0,secs:0});
+let PROG=blankProg();
+function loadProg(){const v=lsGet(progKey(ACC.cur));PROG=Object.assign(blankProg(),v&&typeof v.stars==='object'?v:{})}
+function saveProg(){lsSet(progKey(ACC.cur),PROG)}
+function saveAcc(){const cur=lsGet(ACC_KEY);if(cur&&Array.isArray(cur.list)){for(const a of ACC.list){const o=cur.list.find(x=>x.id===a.id);if(o)Object.keys(o).forEach(k=>{if(!(k in a))a[k]=o[k]})}for(const o of cur.list)if(!ACC.list.some(a=>a.id===o.id))ACC.list.push(o);if(cur.devicePlays>ACC.devicePlays)ACC.devicePlays=cur.devicePlays}lsSet(ACC_KEY,ACC)}
+const curAcc=()=>ACC.list.find(a=>a.id===ACC.cur);
+const accName=()=>(curAcc()||{name:'Guest'}).name;
+const pinHash=p=>{let h=5381;for(const c of 'bary:'+p)h=((h*33)^c.charCodeAt(0))>>>0;return h.toString(36)};
+const GCOUNT='https://abacus.jasoncameron.dev',GPATH='barycenter-sandbox/'+SIM.id+'-plays';let GLOBAL=null;
+function gCount(op){try{const ctl=new AbortController();setTimeout(()=>ctl.abort(),6000);fetch(`${GCOUNT}/${op}/${GPATH}`,{signal:ctl.signal,cache:'no-store'}).then(r=>r.ok?r.json():null).then(j=>{if(j&&Number.isFinite(+j.value)){GLOBAL=Math.max(GLOBAL||0,+j.value);updateAcctUI()}}).catch(()=>{})}catch(e){}}
+function countPlay(){PROG.plays++;ACC.devicePlays=(ACC.devicePlays||0)+1;saveProg();saveAcc();if(GLOBAL!=null)GLOBAL++;updateAcctUI();gCount('hit')}
+function updateAcctUI(){$('hAcctName').textContent=curAcc()?accName():'Guest · make an account';$('hPlaysN').textContent=(GLOBAL!=null?GLOBAL:PROG.plays).toLocaleString();$('hPlaysL').textContent=GLOBAL!=null?'plays by everyone':'plays';$('acctBtn').title=`Account: ${accName()} (saved on this device)`}
+function switchAcc(id,quiet){if(id===ACC.cur)return;saveProg();ACC.cur=id;saveAcc();loadProg();ACCN++;updateAcctUI();if(!$('home').hidden)homeView($('hChalView').hidden?'hMain':'hChalView');if(!quiet)toast(`Signed in as ${accName()}`);renderAcct()}
+let acctPend=null;
+function renderAcct(msg){const L=$('acctList');L.textContent='';$('acctMsg').textContent=msg||'';
+  for(const a of [{id:'guest',name:'Guest',guest:1},...ACC.list]){const pr=a.id===ACC.cur?PROG:(lsGet(progKey(a.id))||{stars:{},plays:0}),cur=a.id===ACC.cur,r=document.createElement('div');r.className='arow'+(cur?' cur':'');
+    const nm=document.createElement('div');nm.className='an';nm.innerHTML='<div></div><div class="as"></div>';nm.children[0].textContent=(a.pin?'🔒 ':'')+a.name+(cur?' (signed in)':'');nm.children[1].textContent=`★ ${Object.values(pr.stars||{}).reduce((x,y)=>x+y,0)} in ${SIM.name} · ${pr.plays||0} plays`;r.appendChild(nm);
+    if(!cur){if(acctPend===a.id){const inp=document.createElement('input');inp.placeholder='PIN';inp.maxLength=4;const go=document.createElement('button');go.className='btn primary';go.textContent='OK';const t=()=>{if(pinHash(inp.value)===a.pin){acctPend=null;switchAcc(a.id)}else renderAcct('Wrong PIN')};go.onclick=t;inp.onkeydown=e=>{if(e.key==='Enter')t()};r.append(inp,go);setTimeout(()=>inp.focus(),0)}
+      else{const b=document.createElement('button');b.className='btn';b.textContent=a.guest?'Use guest':'Sign in';b.onclick=()=>{if(a.pin){acctPend=a.id;renderAcct()}else switchAcc(a.id)};r.appendChild(b)}}
+    else if(!a.guest){const so=document.createElement('button');so.className='btn';so.textContent='Sign out';so.onclick=()=>switchAcc('guest');r.appendChild(so)}
+    L.appendChild(r)}}
+function openAcct(){acctPend=null;$('acct').hidden=false;renderAcct()}
+$('acctForm').addEventListener('submit',e=>{e.preventDefault();const name=$('acctNew').value.trim().replace(/\s+/g,' ').slice(0,20),pin=$('acctPin').value.trim();
+  if(!name)return renderAcct('Type a name first');if(/^guest$/i.test(name)||ACC.list.some(a=>a.name.toLowerCase()===name.toLowerCase()))return renderAcct('That name is taken on this device');if(pin&&!/^\d{4}$/.test(pin))return renderAcct('A PIN is 4 digits (or leave it empty)');
+  const fromGuest=ACC.cur==='guest'&&(PROG.plays||Object.keys(PROG.stars).length);const a={id:'a'+Date.now().toString(36)+Math.floor(Math.random()*1e4).toString(36),name,created:Date.now()};if(pin)a.pin=pinHash(pin);
+  if(fromGuest){lsSet(progKey(a.id),PROG);lsSet(PROG_KEY,blankProg())}ACC.list.push(a);saveAcc();$('acctNew').value='';$('acctPin').value='';switchAcc(a.id,true);toast(`Account ${name} created`);renderAcct(fromGuest?'Your guest progress moved into this account.':'')});
+$('hAcctBtn').onclick=openAcct;$('acctBtn').onclick=openAcct;$('acctClose').onclick=()=>$('acct').hidden=true;$('acct').addEventListener('click',e=>{if(e.target.id==='acct')$('acct').hidden=true});
+$('hPlays').onclick=()=>{gCount('get');toast(GLOBAL!=null?`${GLOBAL.toLocaleString()} plays by everyone · ${PROG.plays} by you`:`${PROG.plays} plays by you on this device`)};
+
+/* challenges */
+CHALS.sort((a,b)=>a.diff-b.diff);loadProg();
+const NCH=CHALS.length;
+const starsOf=i=>(CHALS[i]&&PROG.stars[CHALS[i].t])||0;
+const unlocked=i=>{if(i===0||starsOf(i-1)||starsOf(i))return true;for(let j=i+1;j<NCH;j++)if(starsOf(j))return true;return false};
+function totalStars(){let n=0;for(let i=0;i<NCH;i++)n+=starsOf(i);return n}
+const doneCount=()=>CHALS.filter((c,i)=>starsOf(i)>0).length;
+function setMode(m){document.body.classList.toggle('mHome',m==='home');document.body.classList.toggle('mDemo',m==='demo')}
+function homeView(v){for(const id of ['hMain','hChalView','hDemoView'])$(id).hidden=id!==v;if(v==='hChalView')renderGrid();const d=doneCount();$('hChalSub').textContent=d?`${d} of ${NCH} complete · ${totalStars()} of ${NCH*3} stars`:`${NCH} goals, from easy to fiendish`;updateAcctUI()}
+function showHome(){stopDemo(true);if(CH.active)endChallenge();if(TUT.on)endTutorial();$('chDone').hidden=true;$('scen').hidden=true;
+  CH.loading=true;loadScen(SIM.home);CH.loading=false;setSpeed(SIM.homeSpeed??SIM.defSpeed);setPaused(false);setTool('select');setView('normal');
+  cam.ox=innerWidth>900?innerWidth*0.2:0;setMode('home');$('home').hidden=false;homeView('hMain')}
+function leaveHome(){cam.ox=0;$('home').hidden=true;setMode('');fitWorld()}
+$('homeBtn').onclick=showHome;document.querySelectorAll('.hback').forEach(b=>b.onclick=()=>homeView('hMain'));
+$('hChal').onclick=()=>homeView('hChalView');$('hDemo').onclick=()=>homeView('hDemoView');
+function startFree(){leaveHome();loadScen(SIM.freeScen||SIM.home);setSpeed(SIM.defSpeed);countPlay()}
+$('hFree').onclick=startFree;
+function renderGrid(){const g=$('hGrid');g.textContent='';let next=-1;
+  CHALS.forEach((c,i)=>{const st=starsOf(i),un=unlocked(i);if(un&&!st&&next<0)next=i;const b=document.createElement('button');b.className='ct'+(i===next?' next':'');b.disabled=!un;b.title=un?`${c.t}: ${c.g}`:'Finish the previous challenge to unlock';
+    b.innerHTML='<span class="cn"></span><span class="ctt"></span><span class="cs"></span>';b.children[0].textContent=`#${i+1}`;b.children[1].textContent=un?c.t:'Locked';b.children[2].textContent=un?(st?'★'.repeat(st)+'☆'.repeat(3-st):'☆☆☆'):'🔒';b.onclick=()=>startChallenge(i);g.appendChild(b)});
+  $('hStars').textContent=`★ ${totalStars()} / ${NCH*3}`;if(next>=0)setTimeout(()=>{const el=g.children[next];if(el)el.scrollIntoView({block:'nearest'})},30)}
+function startChallenge(i){const c=CHALS[i];if(!c||!unlocked(i))return;leaveHome();countPlay();$('chDone').hidden=true;
+  CH.active=c;CH.idx=i;CH.events=[];CH.hold={};CH.ref={};CH.done=false;CH.failed='';CH.loading=true;try{loadScen(c.scen||SIM.home);setSpeed(c.speed??SIM.defSpeed);if(c.setup)c.setup()}finally{CH.loading=false}
+  CH.t0=S.t;CH.real0=performance.now();setPaused(false);setTool('select');
+  $('chHud').hidden=false;$('chNum').textContent=`Challenge ${i+1} of ${NCH}`;$('chTitle').textContent=c.t;$('chGoal').textContent=c.g;$('chProg').textContent='';$('chBar').style.width='0%';$('chHint').hidden=!c.hint;$('chRestart').textContent='Restart'}
+function endChallenge(){CH.active=null;$('chHud').hidden=true}
+function chTick(){if(TUT.on)tutTick();if(!CH.active||CH.done)return;const c=CH.active;let r;try{r=c.check()}catch(e){console.warn(e);r=[false,0,'']}
+  const [done,p,txt]=r;$('chProg').textContent=txt||'';$('chBar').style.width=Math.round(clamp(p||0,0,1)*100)+'%';const t=realSecs();$('chTime').textContent=`${Math.floor(t/60)}:${String(Math.floor(t%60)).padStart(2,'0')}`;
+  if(done){CH.done=true;const st=clamp((c.stars||byTime(60,150))(),1,3),prev=starsOf(CH.idx);if(st>prev)PROG.stars[c.t]=st;saveProg();
+    $('dStars').innerHTML='★'.repeat(st)+'<span class="off">'+'★'.repeat(3-st)+'</span>';$('dTitle').textContent=`Challenge ${CH.idx+1} complete!`;$('dText').textContent=`${c.t} · ${Math.floor(t/60)}:${String(Math.floor(t%60)).padStart(2,'0')}${st<3?' · Faster solutions earn more stars.':' · Perfect!'}${prev>st?` Your best is still ${prev} ★.`:''}`;
+    $('dNext').hidden=CH.idx>=NCH-1;$('dNext').textContent='Next challenge';$('dRetry').hidden=false;$('dList').textContent='All challenges';$('chDone').hidden=false;$('chHud').hidden=true;return}
+  const f=c.fail&&c.fail();if(f){CH.done=true;$('dStars').innerHTML='<span class="off">★★★</span>';$('dTitle').textContent='Not this time';$('dText').textContent=f+'. Try again?';$('dNext').hidden=true;$('dRetry').hidden=false;$('dList').textContent='All challenges';$('chDone').hidden=false;$('chHud').hidden=true}}
+$('chRestart').addEventListener('click',()=>{if(TUT.on){TUT.i++;tutStep();return}startChallenge(CH.idx)});
+$('chExit').addEventListener('click',()=>{if(TUT.on){endTutorial();showHome();homeView('hDemoView');return}endChallenge();showHome();homeView('hChalView')});
+$('chHint').onclick=()=>{if(CH.active)toast('Hint: '+CH.active.hint,6000)};
+$('dNext').onclick=()=>{if(TUT.finished){TUT.finished=false;showHome();homeView('hChalView');return}startChallenge(CH.idx+1)};
+$('dRetry').onclick=()=>{if(TUT.finished){TUT.finished=false;startTutorial();return}startChallenge(CH.idx)};
+$('dList').onclick=()=>{if(TUT.finished){TUT.finished=false;$('chDone').hidden=true;startFree();return}endChallenge();showHome();homeView('hChalView')};
+
+/* tutorial */
+const TUT={on:false,i:0,ref:{},finished:false};
+function startTutorial(){leaveHome();countPlay();$('chDone').hidden=true;CH.loading=true;loadScen(SIM.tutScen||SIM.home);CH.loading=false;setSpeed(SIM.defSpeed);setPaused(false);TUT.on=true;TUT.i=0;TUT.finished=false;tutStep()}
+function tutStep(){const st=TSTEPS[TUT.i];if(!st){TUT.on=false;TUT.finished=true;$('chHud').hidden=true;$('dStars').innerHTML='★★★';$('dTitle').textContent='Tutorial complete!';$('dText').textContent='You know all the controls. Try the challenges, or build anything in free play.';$('dNext').hidden=false;$('dNext').textContent='Challenges';$('dRetry').hidden=false;$('dList').textContent='Free play';$('chDone').hidden=false;$('chRestart').textContent='Restart';return}
+  TUT.ref={};if(st[3])st[3](TUT.ref);$('chHud').hidden=false;$('chNum').textContent=`Tutorial · step ${TUT.i+1} of ${TSTEPS.length}`;$('chTitle').textContent=st[0];$('chGoal').textContent=st[1];$('chProg').textContent='';$('chTime').textContent='';$('chBar').style.width=Math.round(TUT.i/TSTEPS.length*100)+'%';$('chHint').hidden=true;$('chRestart').textContent='Skip step'}
+function tutTick(){const st=TSTEPS[TUT.i];let ok=false;try{ok=st&&st[2](TUT.ref)}catch(e){}if(ok){TUT.i++;toast('✓ '+st[0]);tutStep()}}
+function endTutorial(){TUT.on=false;$('chHud').hidden=true;$('chRestart').textContent='Restart'}
+$('hTut').onclick=startTutorial;
+
+/* demo */
+let demoI=-1,demoTimer=0;
+function startDemo(){leaveHome();countPlay();setMode('demo');$('demoCap').hidden=false;demoI=-1;nextDemo()}
+function nextDemo(){clearTimeout(demoTimer);demoI=(demoI+1)%DEMO.length;const [id,t,x,f]=DEMO[demoI];CH.loading=true;loadScen(id);CH.loading=false;setView('normal');setPaused(false);if(f)f();
+  $('demoStep').textContent=`Demo · ${demoI+1} of ${DEMO.length}`;$('demoTitle').textContent=t;$('demoText').textContent=x;demoTimer=setTimeout(nextDemo,12000)}
+function stopDemo(quiet){clearTimeout(demoTimer);if(demoI<0&&quiet)return;demoI=-1;$('demoCap').hidden=true;setMode('');if(!quiet)showHome()}
+$('hWatch').onclick=startDemo;$('demoExit').onclick=()=>stopDemo();$('demoNext').onclick=nextDemo;
+
+/* main loop */
+let last=performance.now(),uiT=0,achAcc=0,achT=0,renderMs=4,stepMs=1;S.achieved=1;
+function frame(now){const dtR=Math.min(0.1,(now-last)/1000);last=now;camKeys(dtR);
+  try{
+    if(!S.paused){const want=S.speed*dtR,step=SIM.stepSize(S.speed),t0=performance.now(),budget=clamp(12.5-renderMs,2.5,9);let done=0;
+      while(done<want-1e-12){const el=performance.now()-t0;if(el+stepMs*0.9>budget&&done>0)break;const s0=performance.now(),d=Math.min(step,want-done);SIM.step(d);S.t+=d;done+=d;stepMs=stepMs*0.8+(performance.now()-s0)*0.2}
+      achAcc+=done}
+    achT+=dtR;if(achT>=0.5){S.achieved=achAcc/achT;achAcc=0;achT=0}
+    if(SIM.frame)SIM.frame(dtR);
+    if(S.follow&&S.sel&&SIM.selPos){const p=SIM.selPos(S.sel);if(p){cam.x=lerp(cam.x,p[0],Math.min(1,dtR*6));cam.y=lerp(cam.y,p[1],Math.min(1,dtR*6));clampCam()}}
+    const r0=performance.now();ctx.setTransform(DPR,0,0,DPR,0,0);SIM.render(ctx,now);renderMs=renderMs*0.85+(performance.now()-r0)*0.15;
+    uiT+=dtR;if(uiT>0.25){uiT=0;updateHud()}
+  }catch(err){console.error('['+SIM.name+']',err)}
+  requestAnimationFrame(frame)}
+function updateHud(){measureHud();const st=SIM.stats(),box=$('stats');if(box.children.length!==st.length){box.textContent='';for(const [k] of st){const d=document.createElement('div');d.className='stat';d.innerHTML='<span class="k"></span><span class="v"></span>';d.children[0].textContent=k;box.appendChild(d)}}
+  st.forEach(([k,v],i)=>{box.children[i].children[1].textContent=v});$('dateTxt').textContent=SIM.dateTxt();$('dateSub').textContent=SIM.dateSub?SIM.dateSub():'';updateRate();SIM.hud();chTick();
+  if(document.visibilityState==='visible'&&$('home').hidden)PROG.secs=(PROG.secs||0)+0.25}
+addEventListener('resize',resize);addEventListener('pagehide',saveProg);
+resize();buildRail();buildSpeeds();buildScen();if(SIM.init)SIM.init();setSpeed(SIM.defSpeed);setTool('select');updateAcctUI();gCount('get');showHome();requestAnimationFrame(frame);
+
+/* ===== leaderboard: every account's stars, in this simulator and across all of them (shared by every simulator) ===== */
+// needs: LB_GAME (this game's id), SIMLIST (all games), ACC, lsGet, curAcc, toast
+let LBOPEN=0,LBTAB=LB_GAME;
+const lbStars=(game,accId)=>{const k=game+'.progress'+(accId==='guest'?'':'.'+accId);let v=null;try{v=JSON.parse(localStorage.getItem(k)||'null')}catch(e){}const st=(v&&v.stars)||{};return{stars:Object.values(st).reduce((a,b)=>a+(+b||0),0),done:Object.values(st).filter(x=>x>0).length}};
+function lbRow(i,name,stars,sub,me){const r=document.createElement('div');r.className='lbrow'+(me?' me':'')+(i<3&&stars>0?' top'+(i+1):'');
+  r.innerHTML='<span class="r"></span><span class="nm"></span><span class="st"></span><span class="dn"></span>';r.children[0].textContent=i<3&&stars>0?['🥇','🥈','🥉'][i]:'#'+(i+1);r.children[1].textContent=name+(me?' (you)':'');r.children[2].textContent='★ '+stars;r.children[3].textContent=sub;return r}
+function renderLb(){if(typeof saveProg==='function')saveProg();const T=$('lbTabs');T.textContent='';
+  for(const [id,lab] of [[LB_GAME,(SIMLIST.find(s=>s.id===LB_GAME)||{name:'This game'}).name],['all','All simulators'],...SIMLIST.filter(s=>s.id!==LB_GAME).map(s=>[s.id,s.name])]){const b=document.createElement('button');b.textContent=lab;b.setAttribute('aria-pressed',LBTAB===id);b.onclick=()=>{LBTAB=id;renderLb()};T.appendChild(b)}
+  const games=LBTAB==='all'?SIMLIST.map(s=>s.id):[LBTAB],L=$('lbList');L.textContent='';
+  const rows=ACC.list.map(a=>{let st=0,dn=0,gp=0;for(const g of games){const r=lbStars(g,a.id);st+=r.stars;dn+=r.done;if(r.stars)gp++}return{name:a.name,stars:st,sub:LBTAB==='all'?`${gp} game${gp===1?'':'s'}`:`${dn} done`,me:a.id===ACC.cur}}).sort((x,y)=>y.stars-x.stars||x.name.localeCompare(y.name));
+  rows.forEach((x,i)=>L.appendChild(lbRow(i,x.name,x.stars,x.sub,x.me)));
+  if(!rows.length){const e=document.createElement('p');e.className='hfoot';e.textContent='No accounts yet. Make one with 👤 to get on the board.';L.appendChild(e)}
+  const a=curAcc(),me=a?rows.find(r=>r.me):null;$('lbMe').textContent=a?`You: ${a.name} · ★ ${me?me.stars:0}${me&&rows.length>1?` · rank ${rows.indexOf(me)+1} of ${rows.length}`:''}`:'You are playing as a guest. Make an account (👤) to join the leaderboard.';
+  $('lbNote').textContent='Rankings include every account on this device. Stars from all our simulators add up in “All simulators”.'}
+function openLb(){LBOPEN++;if($('acct'))$('acct').hidden=true;$('lbBox').hidden=false;renderLb();if(typeof chEv==='function')chEv('leaderboard',{})}
+$('lbClose').onclick=()=>$('lbBox').hidden=true;$('lbBox').addEventListener('click',e=>{if(e.target.id==='lbBox')$('lbBox').hidden=true});
+for(const id of ['hLb','acctLb','dLb'])if($(id))$(id).addEventListener('click',openLb);
+
+</script>
+</body>
+</html>
