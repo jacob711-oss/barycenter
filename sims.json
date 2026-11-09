@@ -22,5 +22,13 @@
   "tag": "Drift continents, raise mountains and set off volcanoes",
   "url": "https://jacob711-oss.github.io/barycenter/tectonic/",
   "color": "#ff8a5c"
+ },
+ {
+  "id": "atmos",
+  "icon": "🌀",
+  "name": "Atmos",
+  "tag": "Steer winds, brew hurricanes and change the climate",
+  "url": "https://jacob711-oss.github.io/barycenter/atmos/",
+  "color": "#60d6e6"
  }
 ]
