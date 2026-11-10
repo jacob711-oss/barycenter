@@ -449,6 +449,12 @@ body.mDemo .rail,body.mDemo .campad,body.mDemo .hint,body.mDemo .insp,body.mDemo
       <label class="fl" id="eKindL">Star type<select id="eKind"><option value="red">Red dwarf</option><option value="sun">Sun-like</option><option value="blue">Blue giant</option><option value="giant">Red giant</option><option value="white">White dwarf</option><option value="orange">Orange dwarf</option><option value="hyper">Hypergiant</option><option value="brown">Brown dwarf</option><option value="neutron">Neutron star</option><option value="black">Black dwarf</option><option value="bh">Black hole</option></select></label>
       <div class="row2"><label class="fl">Colour<input id="eColor" type="color"></label><label class="fl">Size <output id="eSizeO">1.0×</output><input id="eSize" type="range" min="0.2" max="5" step="0.1"></label></div>
     </div></details>
+    <details class="grp" id="gTemp" open><summary>Average temperature</summary><div class="ef">
+      <div class="fl">Now <output id="eTNow">—</output></div>
+      <div class="row2" style="grid-template-columns:1fr auto auto"><label class="fl"><span id="eTLab">Set average (°C)</span><input id="eTSet" type="number" step="any"></label><button class="btn" id="eTGo" style="align-self:end">Set</button><button class="btn" id="eTNat" style="align-self:end">Natural</button></div>
+      <input id="eTRange" type="range" min="-200" max="1000" step="1" aria-label="Average temperature" style="width:100%">
+      <p id="eTNote" class="note"></p>
+    </div></details>
     <details class="grp" id="gSurf" open><summary>Surface and texture</summary><div class="ef">
       <label class="fl">Surface type<select id="eSurf"></select></label>
       <label class="fl">Contrast <output id="eConO">1.00</output><input id="eCon" type="range" min="0.4" max="2" step="0.05"></label>
@@ -479,11 +485,6 @@ body.mDemo .rail,body.mDemo .campad,body.mDemo .hint,body.mDemo .insp,body.mDemo
       <div class="row2" style="grid-template-columns:1fr auto"><label class="fl">Orbits around<select id="eParent"></select></label><button class="btn" id="ePick" style="align-self:end" title="Then click the body it should orbit">Pick in view</button></div>
       <div id="eOrbitFields" class="ef" style="margin:0"><div class="row3"><label class="fl">Distance (AU)<input id="eA" type="number" step="any" min="0"></label><label class="fl">Eccentricity<input id="eE" type="number" step="0.01" min="0" max="0.95"></label><label class="fl">Incl. (°)<input id="eI" type="number" step="any"></label></div>
       <div class="actions"><button class="btn" id="eApply">Apply orbit</button><button class="btn" id="eSlow">Slower</button><button class="btn" id="eFast">Faster</button><button class="btn" id="eRev">Reverse</button><button class="btn" id="eStop">Stop</button></div></div>
-    </div></details>
-    <details class="grp" id="gTemp" open><summary>Average temperature</summary><div class="ef">
-      <div class="fl">Now <output id="eTNow">—</output></div>
-      <div class="row2" style="grid-template-columns:1fr auto auto"><label class="fl"><span id="eTLab">Set average (°C)</span><input id="eTSet" type="number" step="any"></label><button class="btn" id="eTGo" style="align-self:end">Set</button><button class="btn" id="eTNat" style="align-self:end">Natural</button></div>
-      <p id="eTNote" class="note"></p>
     </div></details>
     <details class="grp" id="gColl" open><summary>Collide with</summary><div class="ef">
       <p class="note">Send this object straight at another one. It homes in on its target until they crash.</p>
@@ -2291,24 +2292,26 @@ function fillEdit(b){
 const edited=fn=>()=>{const b=S.sel;if(!b)return;fn(b);S.dirty=true;updateInspector()};
 // ---- Average temperature (any object) ----
 let TEMPSET=0,COLLS=0;const HOMERS=[];
-const avgTempOf=b=>b.type==='rock'?b.T:b.type==='blackhole'?6.17e-8/b.m:starTemp(b);
+const avgTempOf=b=>b.type==='rock'?b.T:b.type==='blackhole'?(b.Tset||6.17e-8/b.m):starTemp(b);
 function naturalT(b){return targetTemp(b,b.T).T-(b.tOff||0)}
 function fillTemp(b){const T=avgTempOf(b),bh=b.type==='blackhole',rock=b.type==='rock';
-  $('eTNow').textContent=T==null?'—':bh?(T<0.01?T.toExponential(1):sig(T))+' K':fmtTK(T);$('eTNow').style.color=T==null||bh?'':heatColor(rock?T:Math.min(1500,T/5));
-  $('eTLab').textContent=rock?'Set average (°C)':'Set surface temperature (K)';
-  $('eTSet').disabled=$('eTGo').disabled=bh||T==null;$('eTNat').hidden=bh||!(rock?Math.abs(b.tOff||0)>0.5:'TeffNat' in b);
-  if(document.activeElement!==$('eTSet'))$('eTSet').value=T==null||bh?'':rock?Math.round(T-273.15):Math.round(T);
-  $('eTNote').textContent=bh?'Black holes only glow by Hawking radiation: far colder than space itself. Their temperature cannot be set.':
+  $('eTNow').textContent=T==null?'—':bh?(T<0.01?T.toExponential(1):sig(T))+' K'+(b.Tset?' (disk)':''):fmtTK(T);$('eTNow').style.color=T==null||(bh&&!b.Tset)?'':heatColor(rock?T:Math.min(1500,T/5));
+  $('eTLab').textContent=rock?'Set average (°C)':bh?'Set disk temperature (K)':'Set surface temperature (K)';const rg=$('eTRange');if(rock){rg.min=-270;rg.max=1500;rg.step=1}else if(bh){rg.min=1000;rg.max=10000000;rg.step=1000}else{rg.min=500;rg.max=60000;rg.step=100}if(document.activeElement!==rg)rg.value=T==null?0:rock?Math.round(T-273.15):Math.round(T);
+  $('eTSet').disabled=$('eTGo').disabled=false;$('eTNat').hidden=bh?!b.Tset:!(rock?Math.abs(b.tOff||0)>0.5:'TeffNat' in b);
+  if(document.activeElement!==$('eTSet'))$('eTSet').value=T==null||(bh&&!b.Tset)?'':rock?Math.round(T-273.15):Math.round(T);
+  $('eTNote').textContent=bh?`A black hole itself is colder than space (Hawking radiation: ${(6.17e-8/b.m).toExponential(1)} K). Setting a value heats the glowing disk of gas spiralling into it.`:
     rock?(T==null?'':Math.abs(b.tOff||0)>0.5?`Held ${Math.round(Math.abs(b.tOff))} K ${b.tOff>0?'warmer':'colder'} than it would naturally be (${fmtTK(naturalT(b))}). Water boils or freezes to match.`:'Mean surface temperature from its sunlight, air and greenhouse gases. Type a value to heat or cool it.'):
     'Surface temperature sets the colour: about 3000 K is red, 5800 K yellow-white (the Sun), 10000 K and up blue-white.'}
-$('eTGo').addEventListener('click',edited(b=>{const v=parseFloat($('eTSet').value);if(!Number.isFinite(v)||b.type==='blackhole')return;
-  if(b.type==='rock'){if(b.T==null)return;const K=Math.max(3,Math.min(5000,v+273.15));b.heat=0;b.tOff=b.tOff||0;for(let i=0;i<8;i++)b.tOff+=K-targetTemp(b,K).T;b.T=b.Tday=b.Tnight=K;b.climate=climateOf(b,K);
+$('eTGo').addEventListener('click',edited(b=>{const v=parseFloat($('eTSet').value);if(!Number.isFinite(v))return;
+  if(b.type==='blackhole'){b.Tset=Math.max(100,Math.min(1e9,v));toast(`${b.name||classify(b)}: disk now ${sig(b.Tset)} K`);chEv('settemp',{name:b.name,T:b.Tset,bh:1});TEMPSET++;fillTemp(b);return}
+  if(b.type==='rock'){if(b.T==null){b.T=288;for(let i=0;i<25;i++)b.T=targetTemp(b,b.T).T}const K=Math.max(3,Math.min(5000,v+273.15));b.heat=0;b.tOff=b.tOff||0;for(let i=0;i<8;i++)b.tOff+=K-targetTemp(b,K).T;b.T=b.Tday=b.Tnight=K;b.climate=climateOf(b,K);
     toast(`${b.name||classify(b)} now averages ${fmtTK(K)}`);chEv('settemp',{name:b.name,T:K})}
   else{const K=Math.max(500,Math.min(200000,v));if(!('TeffNat' in b))b.TeffNat=b.Teff||0;b.Teff=K;if(b.type==='star'||b.type==='dwarf')b.color=tempColor(K);
     toast(`${b.name||classify(b)} now has a ${Math.round(K)} K surface`);chEv('settemp',{name:b.name,T:K,star:1})}
   TEMPSET++;fillTemp(b)}));
 $('eTSet').addEventListener('keydown',e=>{if(e.key==='Enter')$('eTGo').click()});
-$('eTNat').addEventListener('click',edited(b=>{if(b.type==='rock'){b.tOff=0}else if('TeffNat' in b){b.Teff=b.TeffNat||undefined;delete b.TeffNat;if(b.type==='star'||b.type==='dwarf')b.color=tempColor(starTemp(b))}$('eTSet').blur();fillTemp(b)}));
+$('eTRange').addEventListener('input',()=>{$('eTSet').value=$('eTRange').value});$('eTRange').addEventListener('change',()=>{$('eTGo').click()});
+$('eTNat').addEventListener('click',edited(b=>{if(b.type==='blackhole'){delete b.Tset}else if(b.type==='rock'){b.tOff=0}else if('TeffNat' in b){b.Teff=b.TeffNat||undefined;delete b.TeffNat;if(b.type==='star'||b.type==='dwarf')b.color=tempColor(starTemp(b))}$('eTSet').blur();fillTemp(b)}));
 // ---- Collide with ----
 function fillColl(b){const sel=$('eCollT'),keep=b.homeT&&!b.homeT.dead?b.homeT:null;sel.textContent='';
   const opts=S.bodies.filter(q=>q!==b&&(q.name||q.type!=='rock')).map(q=>[q,Math.hypot(q.x-b.x,q.y-b.y,q.z-b.z)]).sort((x,y)=>x[1]-y[1]).slice(0,200);
@@ -3191,6 +3194,10 @@ const CHALS=[];const CC=(diff,o)=>CHALS.push({diff,...o});const CCN=(diff,o)=>CC
 // temperatures
 [['Mars',273,320,3],['Earth',350,400,3.4],['Venus',273,320,4],['Jupiter',150,200,4.5],['Earth',200,240,5],['Neptune',273,330,5.5],['Mercury',260,300,6],['Titan',273,300,6.5]].forEach(([n,t1,t2,d])=>CC(d,{t:`${n} at ${t1}–${t2} K`,g:`Make ${n}'s average temperature between ${t1} and ${t2} K (${Math.round(t1-273)} to ${Math.round(t2-273)} °C) and keep it there for 2 years.`,hint:'Move it closer to or farther from the Sun (drag it or Edit → Orbit), or change its atmosphere in Edit.',setup:scen('solar'),
   check:()=>{const b=BN(n);const T=b&&b.T;const ok=T!=null&&T>=t1&&T<=t2;const p=hold('t',ok,2);return[p>=1,p,T!=null?`Now ${Math.round(T)} K · ${holdTxt(p,2)}`:'—']},fail:()=>BN(n)?'':`${n} was destroyed`,stars:byTime(90,200)}));
+[['Mars',15,2.2],['Moon',-10,2.6]].forEach(([n,c,d])=>CC(d,{t:`Warm up ${n}`,g:`Use Edit → Average temperature to give ${n} an average of ${c} °C.`,hint:`Select ${n}, press Edit, and set Average temperature to ${c}.`,setup:scen('solar'),check:()=>{const b=BN(n),T=b&&b.T;const ok=T!=null&&Math.abs(T-273.15-c)<=3;return[ok,ok?1:0,T!=null?`Now ${Math.round(T-273.15)} °C`:'—']},fail:()=>BN(n)?'':`${n} was destroyed`,stars:byTime(30,80)}));
+CC(2.9,{t:'Snowball Earth',g:'Freeze Earth: set its average temperature to −40 °C or colder.',hint:'Select Earth, Edit → Average temperature.',setup:scen('solar'),check:()=>{const b=BN('Earth'),T=b&&b.T;const ok=T!=null&&T-273.15<=-40;return[ok,ok?1:0,T!=null?`Now ${Math.round(T-273.15)} °C`:'—']},fail:()=>BN('Earth')?'':'Earth was destroyed',stars:byTime(30,80)});
+CC(3.1,{t:'Blue Sun',g:'Make the Sun a blue-white star: a surface of 12000 K or hotter.',hint:'Select the Sun, Edit → Average temperature, and set it in kelvin.',setup:scen('solar'),check:()=>{const b=BN('Sun');const T=b&&starTemp(b);const ok=T>=12000;return[ok,ok?1:Math.min(0.9,(T||0)/12000),T?`Now ${Math.round(T)} K`:'—']},fail:()=>BN('Sun')?'':'The Sun was destroyed',stars:byTime(30,80)});
+CC(3.3,{t:'Hot comet',g:'Heat a comet to 500 °C with Edit → Average temperature.',hint:'Find Halley (search bar), press Edit and set its average temperature.',setup:scen('solar'),check:()=>{const ok=CH.events.some(e=>e.k==='settemp'&&/halley|comet/i.test(e.name||'')&&e.T>=773);return[ok,ok?1:0,'']},stars:byTime(40,100)});
 // comets
 [['Sun',3.5],['Jupiter',4.2],['Earth',5.2]].forEach(([n,d])=>CC(d,{t:`Comet into ${n}`,g:`Hit ${n} with a comet you create.`,hint:'Pick the Comet tool, then drag to throw it toward the target. The dashed line shows its path.',setup:scen('solar'),
   check:()=>{const ok=evHas(e=>e.k==='merge'&&e.comet&&(e.a===n||e.b===n));return[ok,ok?1:0,ok?'Direct hit!':'No hit yet']},fail:()=>BN(n)?'':`${n} was destroyed`,stars:byTime(45,120)}));
@@ -3341,7 +3348,7 @@ const TSTEPS=[
  ['Nebulas','Pick Nebula in the toolbar and click in space (or search for Orion Nebula and press Add). New stars form inside star-forming nebulas.',r=>NEBADD>r.n,r=>{r.n=NEBADD}],
  ['Travel','Press Travel in the top bar, type a distance (try 4.24 light-years) and press Go.',r=>TRAVELS>r.n,r=>{r.n=TRAVELS}],
  ['Collide with','Click a planet, open Edit, choose a target under Collide with and press Collide. Let time run to watch the crash.',r=>COLLS>r.n,r=>{r.n=COLLS}],
- ['Average temperature','In Edit, type a new value under Average temperature (try 20 °C on Mars) and press Set. It works on stars too.',r=>TEMPSET>r.n,r=>{r.n=TEMPSET}],
+ ['Average temperature','In Edit, drag the Average temperature slider or type a value and press Set (try 20 °C on Mars). It works on every object: planets, moons, comets, stars and even black holes.',r=>TEMPSET>r.n,r=>{r.n=TEMPSET}],
  ['Views','Try the toolbar views: turn on Zones (habitable zones), Heat (temperature map) or Sky (background stars).',r=>S.zones!==r.z||S.heat!==r.h||S.sky!==r.s,r=>{r.z=S.zones;r.h=S.heat;r.s=S.sky}],
 ];
 function startTutorial(){leaveHome();countPlay('tut');$('chDone').hidden=true;CH.loading=true;load(SCEN.find(x=>x.id==='solar'));CH.loading=false;TUT.on=true;TUT.i=0;TUT.finished=false;tutStep()}
