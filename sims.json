@@ -54,5 +54,13 @@
   "tag": "Draw the transit lines of a growing city and keep everyone moving",
   "url": "https://jacob711-oss.github.io/barycenter/interchange/",
   "color": "#ff5ab4"
+ },
+ {
+  "id": "gridlock",
+  "icon": "🚗",
+  "name": "Gridlock",
+  "tag": "Draw the roads of a growing town and keep the traffic flowing",
+  "url": "https://jacob711-oss.github.io/barycenter/gridlock/",
+  "color": "#ffd23a"
  }
 ]
