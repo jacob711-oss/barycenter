@@ -531,7 +531,7 @@ function volcanoUpkeep(){for(const v of VOL){if(v.ext)continue;let active=v.kind
   VOL=VOL.filter(v=>!(v.ext&&S.t-v.extT>60))}
 
 /* ---------- player actions ---------- */
-function brushCells(wx,wy,r,f){const cx=Math.floor(wx),cy=Math.floor(wy);for(let dy=-r;dy<=r;dy++)for(let dx=-r;dx<=r;dx++){const d=Math.hypot(dx,dy)/(r+0.5);if(d>1)continue;const y=cy+dy;if(y<0||y>=GH)continue;f(y*GW+mod(cx+dx,GW),1-d*d)}dirtyImg=true;dirtyClim=true}
+function brushCells(wx,wy,r,f){const cx=Math.floor(wx),cy=Math.floor(wy);for(let dy=-r;dy<=r;dy++)for(let dx=-r;dx<=r;dx++){const d=Math.hypot(dx,dy)/(r+0.5);if(d>1)continue;const y=cy+dy;if(y<0||y>=GH)continue;f(y*GW+mod(cx+dx,GW),1-d*d)}dirtyImg=true;dirtyClim=true;quickRedraw(wx,wy,r+2)}
 function meteor(wx,wy,R0){const R=R0||8;brushCells(wx,wy,Math.ceil(R*1.4),(i,f)=>{const d=Math.sqrt(1-f);if(d<0.7)h[i]=Math.min(h[i],SEA-200-2400*(1-d/0.7))+(-800);else h[i]+=900*(1-Math.abs(d-0.85)/0.15)});
   for(let k=0;k<260;k++){const a=Math.random()*Math.PI*2,s=rr(2,14);PARTS.push({x:wx,y:wy,vx:Math.cos(a)*s,vy:Math.sin(a)*s,life:rr(1,3.5),max:3,c:pick(['#ffd28a','#ff8a4a','#a89a90','#fff2d0']),s:rr(1.5,3.5)})}
   ENV.dust=Math.max(ENV.dust,R*0.9);METEORS++;chEv('meteor',{});QK.push({x:wx,y:wy,m:9,age:0});updateSea();dirtyClim=true}
@@ -621,6 +621,20 @@ function stepView(now){if(!viewWanted()){VIEW.job=null;return}if(now-(VIEW.lastT
       const fine=0.3*DETS(X*4.3+17,Y*4.3+5),dt=DETS(X,Y)+fine,dd=2*dt-DETS(X+1,Y)-DETS(X,Y+1)-2*fine*0.6;
       shadePix(wx-0.5,wy-0.5,dt,dd,d,(py*J.vw+px)*4,flat,natural,(dt+DETS(X*2.1+3,Y*2.1+9)*0.5)*0.85,(DETS(X+5.7,Y+40)+DETS(X*2.1+31,Y*2.1+2)*0.5)*0.85)}}
   if(J.row>=J.vh){VIEW.c.width=J.vw;VIEW.c.height=J.vh;VIEW.c.getContext('2d').putImageData(J.id,0,0);VIEW.ready={wx0:J.wx0,wy0:J.wy0,ww:J.ww,wh:J.wh,v:J.v};VIEW.job=null}}
+// instant feedback: repaint only the patch that was just edited, in both the map and the sharp close-up
+function quickRedraw(wx,wy,r){const v=S.view,flat=v==='age'||v==='temp'||v==='plates',natural=v==='normal';const y0=clamp(Math.floor(wy-r),0,GH-1),y1=clamp(Math.ceil(wy+r),0,GH-1);
+  for(let y=y0;y<=y1;y++)cellColors(y*GW,(y+1)*GW);
+  const py0=Math.max(0,y0*SC3),py1=Math.min(IH,(y1+1)*SC3);
+  for(const k of [0]){const xs=Math.floor(wx-r),xe=Math.ceil(wx+r);const px0=xs*SC3,pw=(xe-xs+1)*SC3,ph=py1-py0,tmp=new ImageData(pw,ph),d=tmp.data;
+    for(let py=py0;py<py1;py++)for(let q=0;q<pw;q++){const pxg=mod(px0+q,IW),pi=py*IW+pxg,dt=DET[pi],dd=(dt-DET[pi+1>=IW*IH?pi:pi+1]+dt-DET[pi+IW<IW*IH?pi+IW:pi]);shadePix((pxg+0.5)/SC3-0.5,(py+0.5)/SC3-0.5,dt,dd,d,((py-py0)*pw+q)*4,flat,natural,dt*0.8,DET[(pi+IW*40)%(IW*IH)]*0.8);const o=pi*4,o2=((py-py0)*pw+q)*4;ID.data[o]=d[o2];ID.data[o+1]=d[o2+1];ID.data[o+2]=d[o2+2];ID.data[o+3]=255}
+    const bx=mod(px0,IW);for(const off of [bx,bx-IW]){ig.putImageData(tmp,off,py0);pg.putImageData(tmp,off,py0)}}
+  FADE=0;
+  const R0=VIEW.ready;if(viewWanted()&&R0&&R0.v===S.view){const vw=VIEW.c.width,vh=VIEW.c.height,sxp=R0.ww/vw,syp=R0.wh/vh;
+    for(const k of [-1,0,1]){const cxw=wx+k*GW;let qx0=Math.floor((cxw-r-R0.wx0)/sxp),qx1=Math.ceil((cxw+r-R0.wx0)/sxp),qy0=Math.floor((wy-r-R0.wy0)/syp),qy1=Math.ceil((wy+r-R0.wy0)/syp);
+      qx0=clamp(qx0,0,vw);qx1=clamp(qx1,0,vw);qy0=clamp(qy0,0,vh);qy1=clamp(qy1,0,vh);if(qx1<=qx0||qy1<=qy0)continue;const tw=qx1-qx0,th=qy1-qy0,tmp=new ImageData(tw,th),d=tmp.data,f=SC3;
+      for(let py=qy0;py<qy1;py++){const wyy=R0.wy0+(py+0.5)*syp;for(let px=qx0;px<qx1;px++){const wxx=R0.wx0+(px+0.5)*sxp,X=wxx*f-0.5,Y=wyy*f-0.5,fine=0.3*DETS(X*4.3+17,Y*4.3+5),dt=DETS(X,Y)+fine,dd=2*dt-DETS(X+1,Y)-DETS(X,Y+1)-2*fine*0.6;
+        shadePix(wxx-0.5,wyy-0.5,dt,dd,d,((py-qy0)*tw+px-qx0)*4,flat,natural,(dt+DETS(X*2.1+3,Y*2.1+9)*0.5)*0.85,(DETS(X+5.7,Y+40)+DETS(X*2.1+31,Y*2.1+2)*0.5)*0.85)}}
+      VIEW.c.getContext('2d').putImageData(tmp,qx0,qy0)}}}
 let BPATH=null;function buildBPaths(){BPATH=[new Path2D(),new Path2D(),new Path2D()];const segs=[[],[],[]];
   for(let y=0;y<GH;y++)for(let x=0;x<GW;x++){const i=y*GW+x,t=bnd[i];if(!t)continue;const p0=pl[i],jr=y*GW+(x+1)%GW,jd=y<GH-1?i+GW:-1;if(pl[jr]!==p0)segs[t-1].push([x+1,y,x+1,y+1]);if(jd>=0&&pl[jd]!==p0)segs[t-1].push([x,y+1,x+1,y+1])}
   segs.forEach((L,k)=>{const adj=new Map(),key=(x,y)=>x+','+y,used=new Uint8Array(L.length);L.forEach((s0,n)=>{for(const [x,y] of [[s0[0],s0[1]],[s0[2],s0[3]]]){const kk=key(x,y);if(!adj.has(kk))adj.set(kk,[]);adj.get(kk).push(n)}});
@@ -684,8 +698,8 @@ const TB={raise:{brush:1},lower:{brush:1},continent:{brush:1},ocean:{brush:1},qu
 let TOOLD=null,HOVER=null;
 const pushCm=()=>TOOLD?clamp(Math.hypot(wdx(TOOLD.bx-TOOLD.ax),TOOLD.by-TOOLD.ay)*0.5,0,20):0;
 function applyBrush(t,wx,wy){const r=S.brush;
-  if(t==='raise'){brushCells(wx,wy,r,(i,f)=>{h[i]=Math.min(9000,h[i]+240*f);if(h[i]>SEA-300){if(cr[i]<.6)LANDMADE++;cr[i]=Math.max(cr[i],.6)}});RAISED++}
-  else if(t==='lower'){brushCells(wx,wy,r,(i,f)=>{h[i]=Math.max(-11000,h[i]-240*f);if(h[i]<SEA-1500)cr[i]=Math.min(cr[i],.4)});RAISED++}
+  if(t==='raise'){brushCells(wx,wy,r,(i,f)=>{h[i]=Math.min(9000,h[i]+(h[i]<SEA-300?700:350)*f);if(h[i]>SEA-300){if(cr[i]<.6)LANDMADE++;cr[i]=Math.max(cr[i],.6)}});RAISED++}
+  else if(t==='lower'){brushCells(wx,wy,r,(i,f)=>{h[i]=Math.max(-11000,h[i]-(h[i]>SEA+300?600:450)*f);if(h[i]<SEA-1500)cr[i]=Math.min(cr[i],.4)});RAISED++}
   else if(t==='continent'){brushCells(wx,wy,r,(i,f)=>{if(cr[i]<.6)LANDMADE++;cr[i]=1;h[i]=Math.max(h[i],SEA+150+250*f);age[i]=Math.max(age[i],50)});RAISED++}
   else if(t==='ocean'){brushCells(wx,wy,r,(i,f)=>{cr[i]=0;h[i]=Math.min(h[i],SEA-3000*f-500);age[i]=0});RAISED++}
   chEv('brush',{t})}
