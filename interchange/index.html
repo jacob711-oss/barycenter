@@ -359,7 +359,7 @@ function geom(L){// octilinear path: from each station go diagonally, then strai
 function pathCross(a,b){const dx=b.x-a.x,dy=b.y-a.y,ad=Math.min(Math.abs(dx),Math.abs(dy)),m=[a.x+Math.sign(dx)*ad,a.y+Math.sign(dy)*ad];return crossings(a.x,a.y,m[0],m[1])+crossings(m[0],m[1],b.x,b.y)}
 function bridgesUsed(){let n=0;for(const L of LINES){const seq=L.loop?L.st.concat([L.st[0]]):L.st;for(let i=1;i<seq.length;i++)n+=pathCross(ST[seq[i-1]],ST[seq[i]])}return n}
 function posAt(L,d){let acc=0;for(let i=1;i<L.pts.length;i++){const a=L.pts[i-1],b=L.pts[i],l=Math.hypot(b[0]-a[0],b[1]-a[1]);if(acc+l>=d||i===L.pts.length-1){const t=l?clamp((d-acc)/l,0,1):0;return[a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1])*t,Math.atan2(b[1]-a[1],b[0]-a[0])]}acc+=l}return[L.pts[0][0],L.pts[0][1],0]}
-function addTrain(L){if(G.trains<=0){toast('No trains left: you get one every week');return false}if(L.st.length<2)return false;G.trains--;L.trains.push({d:0,dir:1,pax:[],cars:0,wait:0.5,stop:0});TRADD++;chEv('train',{});return true}
+function addTrain(L){if(G.trains<=0){toast('No trains left: you get one every week');return false}if(L.st.length<2)return false;if(L.trains.length>=8){toast('That line has 8 trains already');return false}G.trains--;const n=L.trains.length,fr=(n*0.618)%1,target=L.len*fr;let d=L.stops.reduce((b,x)=>Math.abs(x-target)<Math.abs(b-target)?x:b,0);L.trains.push({d,dir:(n%2||L.loop)?1:-1,pax:[],cars:0,wait:0.3+n*0.4,stop:0});TRADD++;chEv('train',{});return true}
 function lineActive(L){return L.st.length>=2}
 function linkStations(a,b){// extend the chosen line or start it
   let L=LINES[CUR];if(!L){toast('Pick a line colour first');return false}
