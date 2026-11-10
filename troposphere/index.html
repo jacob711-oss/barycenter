@@ -545,10 +545,10 @@ const VIEW={c:document.createElement('canvas'),job:null,ready:null,key:''};
 function viewWanted(){return cam.z>=SC3*1.25}
 function startView(){const q=Math.min(DPR,Math.sqrt(800000/(W*H))),vw=Math.ceil(W*q),vh=Math.ceil(H*q),wx0=wxOf(0),wy0=Math.max(0,wyOf(0)),wy1=Math.min(GH,wyOf(H));if(wy1<=wy0)return;
   const ph=Math.max(1,Math.round((wy1-wy0)/(wyOf(H)-wyOf(0))*vh));VIEW.job={id:new ImageData(vw,ph),vw,vh:ph,wx0,wy0,ww:W/cam.z,wh:wy1-wy0,row:0,v:S.view}}
-function stepView(now){if(!viewWanted()){VIEW.job=null;return}const key=[Math.round(cam.x*4),Math.round(cam.y*4),Math.round(cam.z*20),S.view,lastImg].join();
-  if(key!==VIEW.key&&!VIEW.job&&now-(VIEW.moved||0)>140){VIEW.key=key;startView()}if(key!==VIEW.keySeen){VIEW.keySeen=key;VIEW.moved=now}
+function stepView(now){if(!viewWanted()){VIEW.job=null;return}if(now-(VIEW.lastT||0)>1500)VIEW.tk=lastImg;const key=[Math.round(cam.x*4),Math.round(cam.y*4),Math.round(cam.z*20),S.view,VIEW.tk].join();
+  if(key!==VIEW.key&&!VIEW.job&&now-(VIEW.moved||0)>140){VIEW.key=key;VIEW.lastT=now;startView()}if(key!==VIEW.keySeen){VIEW.keySeen=key;VIEW.moved=now}
   const J=VIEW.job;if(!J)return;const d=J.id.data,rainv=J.v==='rain',nat=J.v==='normal',t0=performance.now(),sx2=J.ww/J.vw,sy2=J.wh/J.vh,f=SC3;
-  while(J.row<J.vh&&performance.now()-t0<(S.paused?9:5)){const py=J.row++,wy=J.wy0+(py+0.5)*sy2;for(let px=0;px<J.vw;px++){const wx=J.wx0+(px+0.5)*sx2,X=wx*f-0.5,Y=wy*f-0.5,dt=DETS(X,Y)+0.3*DETS(X*4.3+17,Y*4.3+5);
+  while(J.row<J.vh&&performance.now()-t0<(S.paused?9:3)){const py=J.row++,wy=J.wy0+(py+0.5)*sy2;for(let px=0;px<J.vw;px++){const wx=J.wx0+(px+0.5)*sx2,X=wx*f-0.5,Y=wy*f-0.5,dt=DETS(X,Y)+0.3*DETS(X*4.3+17,Y*4.3+5);
       shadeT(wx-0.5+(dt+DETS(X*2.1+3,Y*2.1+9)*0.5)*0.6,wy-0.5+(DETS(X+5.7,Y+40)+DETS(X*2.1+31,Y*2.1+2)*0.5)*0.6,dt,d,(py*J.vw+px)*4,rainv,nat)}}
   if(J.row>=J.vh){VIEW.c.width=J.vw;VIEW.c.height=J.vh;VIEW.c.getContext('2d').putImageData(J.id,0,0);VIEW.ready={wx0:J.wx0,wy0:J.wy0,ww:J.ww,wh:J.wh,v:J.v};VIEW.job=null}}
 function legendFor(vw){if(vw==='temp')setLegend('Temperature','linear-gradient(90deg,#e6ebff,#9678e6,#5078e6,#50c8e6,#6ed278,#f0d75a,#f07832,#aa1428)',['−50 °C','12 °C','45 °C']);
@@ -562,7 +562,8 @@ function initPts(){PTS=[];for(let k=0;k<1500;k++)PTS.push({x:Math.random()*GW,y:
 function render(c,now){c.fillStyle='rgb(5,9,14)';c.fillRect(0,0,W,H);
   if(dirtyImg&&now-lastImg>(S.paused?60:dayCycle()?120:200))renderImage();
   const z=cam.z,x0=sx(0),y0=sy(0),ww=GW*z;c.imageSmoothingEnabled=true;c.imageSmoothingQuality='high';
-  const k0=Math.floor((-x0)/ww)-1,k1=Math.ceil((W-x0)/ww)+1;for(let k=k0;k<=k1;k++)c.drawImage(img,x0+k*ww,y0,ww,GH*z);
+  const COVD=(()=>{if(!viewWanted()||!VIEW.ready||VIEW.ready.v!==S.view)return false;const R0=VIEW.ready;for(const k of [-1,0,1]){const X=sx(R0.wx0+k*GW),Xe=sx(R0.wx0+R0.ww+k*GW);if(X<=0.5&&Xe>=W-0.5&&(R0.wy0<=0.01||sy(R0.wy0)<=0.5)&&(R0.wy0+R0.wh>=GH-0.01||sy(R0.wy0+R0.wh)>=H-0.5))return true}return false})();
+  const k0=Math.floor((-x0)/ww)-1,k1=Math.ceil((W-x0)/ww)+1;if(!COVD)for(let k=k0;k<=k1;k++)c.drawImage(img,x0+k*ww,y0,ww,GH*z);
   stepView(now);if(viewWanted()&&VIEW.ready&&VIEW.ready.v===S.view){const R0=VIEW.ready;for(const k of [-1,0,1]){const X=sx(R0.wx0+k*GW),Xe=sx(R0.wx0+R0.ww+k*GW);if(Xe<0||X>W)continue;c.drawImage(VIEW.c,X,sy(R0.wy0),Xe-X,sy(R0.wy0+R0.wh)-sy(R0.wy0))}}
   const wrapX=x=>{let X=sx(x);return X-Math.floor((X+ww/2)/ww)*ww};
   const each=(x,f)=>{const X=wrapX(x);for(let k=-1;k<=Math.ceil(W/ww)+1;k++){const XX=X+k*ww;if(XX>-80&&XX<W+80)f(XX)}};
