@@ -1,0 +1,731 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="Draw the transit lines of a growing city. Get every passenger where they want to go before a station overflows">
+<title>Interchange</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Oxanium:wght@500;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Simulator kit: shared with Barycenter and Biosphere */
+:root{
+  --voidRGB:6,7,16;--deepRGB:10,11,24;--accRGB:255,90,180;--lineRGB:200,170,230;--panel:rgba(12,12,28,.88);--ink:#f0ecf8;--ink2:#d8d0ea;--dim:#9a94b4;
+  --void:rgb(var(--voidRGB));
+  --line:rgba(var(--lineRGB),.16);
+  --line-strong:rgba(var(--lineRGB),.34);
+  --flare:#ffc35a;
+  --cool:rgb(var(--accRGB));
+  --danger:#ff6b5a;
+  --f-display:'Oxanium','Segoe UI',system-ui,sans-serif;
+  --f-body:'IBM Plex Sans',system-ui,-apple-system,sans-serif;
+  --f-mono:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+  --gut:max(16px, env(safe-area-inset-left, 0px));
+  --gutR:max(16px, env(safe-area-inset-right, 0px));
+  --top:calc(env(safe-area-inset-top, 0px) + 12px);
+  --bot:calc(env(safe-area-inset-bottom, 0px) + 12px);
+  color-scheme:dark;
+}
+[hidden]{display:none!important}
+html,body{height:100%;margin:0}
+body{background:var(--void);color:var(--ink);font-family:var(--f-body);overflow:hidden;-webkit-user-select:none;user-select:none}
+#world{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:none;cursor:grab}
+#world.place{cursor:crosshair}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+.k{font-family:var(--f-mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--dim)}
+.v{font-family:var(--f-mono);font-size:13px;font-variant-numeric:tabular-nums;color:var(--ink)}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+button:focus-visible,input:focus-visible{outline:2px solid var(--cool);outline-offset:2px}
+.btn{font-family:var(--f-mono);font-size:12px;padding:7px 11px;border:1px solid var(--line-strong);border-radius:7px;color:var(--ink);background:rgba(var(--accRGB),.06);white-space:nowrap}
+.btn:hover{background:rgba(var(--accRGB),.14)}
+.btn[aria-pressed="true"]{background:rgba(var(--accRGB),.22);border-color:var(--cool)}
+.btn.primary{background:rgba(255,195,90,.16);border-color:rgba(255,195,90,.6);color:#ffe6b8}
+.btn.danger{border-color:rgba(255,107,90,.5);color:#ffb1a6}
+.btn.ghost{border-color:transparent;color:var(--dim)}
+input[type=range]{accent-color:var(--cool);width:100%}
+
+/* top bar */
+.hud-top{position:fixed;top:var(--top);left:var(--gut);right:var(--gutR);display:flex;gap:10px;align-items:stretch;z-index:5;pointer-events:none}
+.hud-top>*{pointer-events:auto}
+.brand{padding:10px 14px;display:flex;flex-direction:column;justify-content:center}
+.brand h1{font-family:var(--f-display);font-weight:700;font-size:18px;letter-spacing:.1em;margin:0;text-transform:uppercase}.brand h1 b{color:var(--flare)}
+.brand .sub{font-size:11px;color:var(--dim)}
+.time{display:flex;gap:12px;align-items:center;padding:8px 12px}
+#pauseBtn{width:40px;height:40px;border-radius:9px;border:1px solid rgba(255,195,90,.55);background:rgba(255,195,90,.12);font-size:16px}
+.spds{display:flex;gap:3px}.spd{font-family:var(--f-mono);font-size:10px;padding:3px 5px;border-radius:5px;border:1px solid var(--line);color:var(--dim);white-space:nowrap}
+.spd:hover{color:var(--ink)}.spd[aria-pressed="true"]{color:var(--ink);border-color:rgba(255,195,90,.6);background:rgba(255,195,90,.14)}
+.tcol{display:flex;flex-direction:column;gap:4px}
+.right{margin-left:auto;display:flex;gap:10px;align-items:center;padding:8px 10px;flex-wrap:wrap;justify-content:flex-end}
+.stat{display:flex;flex-direction:column;gap:2px;min-width:54px}
+.findwrap{position:relative}
+.find{width:210px;font:inherit;font-size:13px;padding:8px 10px;border-radius:8px;border:1px solid var(--line-strong);background:rgba(0,0,0,.35);color:var(--ink)}
+.findlist{position:absolute;top:calc(100% + 4px);left:0;right:0;z-index:9;padding:4px;display:flex;flex-direction:column;gap:2px;max-height:300px;overflow:auto}
+.findlist button{text-align:left;padding:7px 9px;border-radius:6px;font-size:13px}.findlist button:hover,.findlist button.on{background:rgba(var(--accRGB),.14)}
+.findlist small{color:var(--dim);margin-left:6px}
+
+/* tool rail */
+.rail{position:fixed;left:var(--gut);top:calc(var(--top) + var(--hudH,64px) + 10px);bottom:var(--bot);width:86px;overflow-y:auto;overflow-x:hidden;z-index:4;padding:6px;display:flex;flex-direction:column;gap:3px;scrollbar-width:thin}
+.rail h3{font-family:var(--f-mono);font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--dim);margin:8px 2px 2px;font-weight:500}
+.tool{display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 2px;border-radius:7px;border:1px solid transparent;font-size:10.5px;color:var(--ink2);line-height:1.1;text-align:center}
+.tool .ico{font-size:19px;line-height:1}
+.tool:hover{background:rgba(var(--accRGB),.1)}.tool[aria-pressed="true"]{background:rgba(255,195,90,.15);border-color:rgba(255,195,90,.55);color:#fff}
+.placeopts{position:fixed;left:calc(var(--gut) + 96px);bottom:var(--bot);z-index:4;padding:8px 12px;display:flex;gap:14px;align-items:center;font-size:12px}
+.placeopts label{display:flex;gap:6px;align-items:center;color:var(--dim)}.placeopts input[type=range]{width:110px}
+.seg{display:flex;gap:3px}.seg button{font-family:var(--f-mono);font-size:11px;padding:3px 8px;border-radius:5px;border:1px solid var(--line);color:var(--dim)}.seg button[aria-pressed="true"]{color:var(--ink);border-color:var(--cool);background:rgba(var(--accRGB),.16)}
+
+/* dock */
+.dock{position:fixed;right:var(--gutR);top:calc(var(--top) + var(--hudH,64px) + 10px);bottom:var(--bot);width:330px;z-index:4;display:flex;flex-direction:column;overflow:hidden}
+.tabs{display:flex;border-bottom:1px solid var(--line)}.tab{flex:1;padding:10px 4px;font-family:var(--f-mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--dim);border-bottom:2px solid transparent}
+.tab[aria-selected="true"]{color:var(--ink);border-color:var(--flare)}
+.pane{padding:12px 14px;overflow:auto;flex:1;display:flex;flex-direction:column;gap:12px}
+.row{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.sl{display:flex;flex-direction:column;gap:4px}.sl .row span:last-child{font-family:var(--f-mono);font-size:12px}
+.evs{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.views{display:flex;gap:4px;flex-wrap:wrap}
+.splist{display:flex;flex-direction:column;gap:3px}
+.sprow{display:grid;grid-template-columns:14px 1fr auto;gap:8px;align-items:center;font-size:12.5px;padding:3px 4px;border-radius:5px}
+.sprow:hover{background:rgba(var(--accRGB),.08)}.sprow i{width:10px;height:10px;border-radius:50%;display:block}.sprow b{font-family:var(--f-mono);font-weight:500;font-size:12px}
+.sprow.zero{opacity:.4}
+#graph{width:100%;height:150px;display:block;border:1px solid var(--line);border-radius:8px;background:rgba(0,0,0,.25)}
+.gene{display:grid;grid-template-columns:86px 1fr 46px;gap:8px;align-items:center;font-size:12px}
+.gene .bar{height:6px;border-radius:3px;background:rgba(var(--accRGB),.12);overflow:hidden}.gene .bar span{display:block;height:100%;background:var(--cool)}
+.gene input{margin:0}
+.ititle{font-family:var(--f-display);font-weight:500;font-size:22px;margin:0}
+.isub{font-size:12.5px;color:var(--dim);margin-top:-8px}
+.kv{display:grid;grid-template-columns:1fr 1fr;gap:6px}.kv div{border:1px solid var(--line);border-radius:7px;padding:6px 8px}.kv .k{display:block}.kv .v{font-size:13px}
+.note{font-size:12px;color:var(--dim);line-height:1.5;margin:0}
+#iPic{width:100%;height:120px;border-radius:8px;background:rgb(var(--deepRGB));display:block}
+.toasts{position:fixed;left:50%;transform:translateX(-50%);top:calc(var(--top) + var(--hudH,64px) + 16px);z-index:8;display:flex;flex-direction:column;gap:6px;align-items:center;pointer-events:none}
+.toast{font-size:13px;padding:8px 14px;border-radius:99px;background:var(--panel);border:1px solid var(--line-strong);animation:tin .25s ease-out}
+@keyframes tin{from{opacity:0;transform:translateY(-6px)}}
+.hint{position:fixed;left:50%;transform:translateX(-50%);bottom:var(--bot);font-family:var(--f-mono);font-size:11.5px;color:var(--dim);background:var(--panel);border:1px solid var(--line);border-radius:99px;padding:7px 14px;white-space:nowrap;z-index:3;pointer-events:none}
+.zoomb{position:fixed;right:calc(var(--gutR) + 342px);bottom:var(--bot);z-index:4;display:flex;flex-direction:column;gap:4px;padding:4px}
+.zoomb button{width:32px;height:30px;border-radius:6px;border:1px solid var(--line);font-size:15px;color:var(--dim)}.zoomb button:hover{color:var(--ink)}
+
+/* scenarios */
+.scen{position:fixed;right:var(--gutR);top:calc(var(--top) + var(--hudH,64px) + 10px);width:min(520px,calc(100% - 32px));z-index:7;padding:14px;display:flex;flex-direction:column;gap:10px;max-height:calc(100% - 120px);overflow:auto}
+.scgrid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.scb{text-align:left;padding:10px 12px;border-radius:9px;border:1px solid var(--line);display:flex;flex-direction:column;gap:3px}.scb:hover{border-color:var(--cool)}
+.scb b{font-family:var(--f-display);font-weight:500;font-size:15px}.scb span{font-size:12px;color:var(--dim);line-height:1.35}
+
+/* home */
+.home{position:fixed;inset:0;z-index:20;pointer-events:none;background:linear-gradient(90deg,rgba(var(--voidRGB),.93) 0,rgba(var(--voidRGB),.78) 34%,rgba(var(--voidRGB),0) 62%)}
+.hcard{pointer-events:auto;position:absolute;left:var(--gut);top:calc(var(--top) + 16px);bottom:calc(var(--bot) + 16px);width:min(560px,calc(100% - 32px));overflow:auto;display:flex;flex-direction:column;gap:22px;padding:8px 4px}
+.htitle{font-family:var(--f-display);font-weight:700;font-size:clamp(40px,7vw,72px);letter-spacing:.08em;text-transform:uppercase;margin:0;line-height:1}.htitle b{color:var(--flare)}
+.htag{margin:10px 0 0;color:var(--dim);font-size:16px}
+.hacct{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+.chip{display:inline-flex;align-items:center;gap:6px;font-family:var(--f-mono);font-size:12px;padding:7px 12px;border-radius:99px;border:1px solid var(--line-strong);background:rgba(var(--deepRGB),.82);color:var(--ink);text-decoration:none}
+.chip:hover{border-color:var(--cool)}.chip b{color:var(--flare);font-weight:600}.chip.other{border-color:rgba(127,178,255,.5);color:#cfe0ff}
+.hview{display:flex;flex-direction:column;gap:12px}
+.hb{display:flex;flex-direction:column;align-items:flex-start;gap:4px;text-align:left;padding:18px 20px;border-radius:12px;border:1px solid var(--line-strong);background:rgba(var(--deepRGB),.84)}
+.hb:hover{border-color:var(--cool);background:rgba(var(--accRGB),.10)}.hb .ht{font-family:var(--f-display);font-weight:500;font-size:22px}.hb .hd{font-size:13px;color:var(--dim);line-height:1.4}
+.hb.primary{border-color:rgba(255,195,90,.6);background:rgba(40,30,12,.86)}.hb.primary:hover{background:rgba(60,44,14,.92)}
+.hfoot{margin:0;font-size:12px;color:var(--dim);line-height:1.5}
+.hbar{display:flex;align-items:center;gap:14px}.hbar h2{font-family:var(--f-display);font-weight:500;font-size:24px;margin:0;flex:1}.hstars{font-family:var(--f-mono);font-size:12px;color:var(--flare)}
+.hgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:6px}
+.ct{display:flex;flex-direction:column;align-items:flex-start;gap:3px;padding:8px 9px;border-radius:8px;border:1px solid var(--line);background:rgba(var(--deepRGB),.86);text-align:left;min-height:70px}
+.ct:hover:not(:disabled){border-color:var(--cool)}.ct:disabled{opacity:.45;cursor:not-allowed}.ct .cn{font-family:var(--f-mono);font-size:10px;color:var(--dim)}.ct .ctt{font-size:11.5px;line-height:1.25}
+.ct .cs{font-size:12px;color:var(--flare);letter-spacing:1px;margin-top:auto}.ct.next{border-color:rgba(255,195,90,.7);box-shadow:0 0 0 1px rgba(255,195,90,.3)}
+body.mHome .hud-top,body.mHome .rail,body.mHome .dock,body.mHome .placeopts,body.mHome .hint,body.mHome .zoomb,body.mHome .scen,body.mHome #chHud,body.mHome .toasts{display:none!important}
+body.mDemo .rail,body.mDemo .dock,body.mDemo .placeopts,body.mDemo .hint,body.mDemo .zoomb,body.mDemo .hud-top{display:none!important}
+.chhud{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(var(--bot) + 52px);width:min(600px,calc(100% - 480px));min-width:300px;padding:12px 14px;z-index:6;display:flex;flex-direction:column;gap:6px}
+.chtop{display:flex;justify-content:space-between}.chtitle{font-family:var(--f-display);font-weight:500;font-size:17px}.chgoal{font-size:13px;line-height:1.45;color:var(--ink2)}
+.chbarw{height:6px;border-radius:3px;background:rgba(var(--accRGB),.12);overflow:hidden}#chBar{display:block;height:100%;width:0;background:var(--flare);transition:width .25s}
+.chrow{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}.chprog{font-family:var(--f-mono);font-size:11.5px;color:var(--dim)}.chbtns{display:flex;gap:6px}
+.donebg{pointer-events:auto;display:grid;place-items:center;background:rgba(var(--voidRGB),.6)}
+.donecard{width:min(440px,calc(100% - 32px));padding:24px;text-align:center;display:flex;flex-direction:column;gap:10px}.donecard h2{font-family:var(--f-display);font-weight:500;margin:0}
+.dstars{font-size:34px;color:var(--flare);letter-spacing:4px}.dstars .off{color:rgba(255,255,255,.15)}
+.actions{display:flex;gap:8px;flex-wrap:wrap}
+.democap{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(var(--bot) + 10px);width:min(640px,calc(100% - 32px));padding:14px 18px;z-index:21;display:flex;flex-direction:column;gap:6px}
+.democap h2{font-family:var(--f-display);font-weight:500;font-size:22px;margin:0}.democap p{margin:0;font-size:14px;color:var(--ink2)}
+.ovl{position:fixed;inset:0;z-index:30;display:grid;place-items:center;background:rgba(var(--voidRGB),.6)}
+.obox{width:min(460px,calc(100% - 32px));max-height:min(80vh,640px);overflow:auto;padding:18px;display:flex;flex-direction:column;gap:12px}
+.obox h2{font-family:var(--f-display);font-weight:500;font-size:22px;margin:0;flex:1}
+.arow{display:flex;align-items:center;gap:8px;padding:9px 10px;border:1px solid var(--line);border-radius:8px}.arow.cur{border-color:rgba(255,195,90,.6);background:rgba(40,30,12,.5)}
+.arow .an{flex:1;min-width:0}.arow .as{font-family:var(--f-mono);font-size:11px;color:var(--dim)}
+.arow input,.aform input{font:inherit;font-size:13px;padding:7px 9px;border-radius:7px;border:1px solid var(--line-strong);background:rgba(0,0,0,.35);color:var(--ink);min-width:0}
+.arow input{width:80px}.aform{display:flex;gap:6px;flex-wrap:wrap}.aform input{flex:1 1 120px}
+.endbox{border:1px solid rgba(255,107,90,.45);background:rgba(60,16,12,.35);border-radius:8px;padding:8px 10px;display:flex;flex-direction:column;gap:4px}.endbox .k{color:#ffb1a6}.endrow{display:flex;justify-content:space-between;font-size:12.5px;text-align:left;padding:2px 0}.endrow b{font-family:var(--f-mono);font-weight:500;color:#ffb1a6}.endrow.ext{opacity:.6;text-decoration:line-through}
+.endbadge{position:fixed;right:calc(var(--gutR) + 342px);top:calc(var(--top) + var(--hudH,64px) + 12px);z-index:4;padding:7px 12px;border-color:rgba(255,107,90,.55);color:#ffc0b6;font-family:var(--f-mono);font-size:12px}
+@media (max-width:760px){.endbadge{right:var(--gutR);top:auto;bottom:calc(var(--bot) + 230px)}}
+body.mHome .endbadge,body.mDemo .endbadge{display:none!important}
+.dna{width:100%;height:28px;display:block;border-radius:6px;background:rgba(0,0,0,.25)}.fam{display:flex;gap:6px;flex-wrap:wrap;align-items:center}.gsel,.coatsel{font:inherit;font-size:12px;background:rgba(0,0,0,.35);color:var(--ink);border:1px solid var(--line-strong);border-radius:6px;padding:4px 6px}
+.legend{position:fixed;left:calc(var(--gut) + 96px);top:calc(var(--top) + var(--hudH,64px) + 12px);z-index:4;padding:8px 12px;width:220px;display:flex;flex-direction:column;gap:5px}.legend .lbar{height:10px;border-radius:5px}.legend .lticks{display:flex;justify-content:space-between;font-family:var(--f-mono);font-size:10.5px;color:var(--dim)}
+body.mHome .legend,body.mDemo .legend{display:none!important}@media (max-width:760px){.legend{left:var(--gut);top:auto;bottom:calc(var(--bot) + 190px)}}
+.pbig{font-family:var(--f-display);font-size:54px;line-height:1;color:var(--flare)}
+
+@media (max-width:1600px){.right .stat{display:none}.find{width:170px}}
+@media (max-width:1300px){.brand .sub{display:none}.find{width:140px}.brand{padding:10px}}
+@media (max-width:760px){
+  .hud-top{flex-wrap:wrap}.brand{display:none}.time{flex:1 1 100%}.right{flex:1 1 100%;justify-content:space-between}.findwrap{flex:1 1 100%;order:-1}.find{width:100%;box-sizing:border-box}
+  .rail{top:auto;left:var(--gut);right:var(--gutR);bottom:var(--bot);width:auto;height:64px;flex-direction:row;overflow-x:auto;overflow-y:hidden}
+  .rail h3{display:none}.tool{min-width:58px}
+  .placeopts{left:var(--gut);bottom:calc(var(--bot) + 72px)}
+  .dock{top:auto;bottom:calc(var(--bot) + 120px);left:var(--gut);right:var(--gutR);width:auto;height:42vh}
+  body:not(.dockOpen) .dock{display:none}
+  .zoomb{right:var(--gutR);bottom:calc(var(--bot) + 120px)}
+  .home{background:rgba(var(--voidRGB),.74)}
+  .chhud{width:auto;min-width:0;left:var(--gut);right:var(--gutR);transform:none;bottom:calc(var(--bot) + 124px);max-height:36vh;overflow:auto}
+  .hint{display:none}
+}
+#dockBtn{display:none}@media (max-width:760px){#dockBtn{display:inline-block}}
+.sprow{text-align:left;width:100%}@media (max-width:760px){#dateSub{display:none}}
+#hAcctBtn,#acctBtn,#hOut,#acct{display:none!important}
+.inv{display:grid;grid-template-columns:repeat(2,1fr);gap:6px}.inv div{border:1px solid var(--line);border-radius:8px;padding:7px 9px;font-size:13px}.inv b{font-family:var(--f-mono);float:right;color:var(--flare)}
+.lrow{display:grid;grid-template-columns:16px 1fr auto;gap:8px;align-items:center;padding:6px 8px;border:1px solid var(--line);border-radius:8px;font-size:12.5px}.lrow i{width:12px;height:12px;border-radius:50%;display:block}
+.lbtns{display:flex;gap:4px;flex-wrap:wrap;margin-top:4px}.lbtns .btn{padding:4px 8px;font-size:11px}
+.weekbox{position:fixed;inset:0;z-index:40;display:grid;place-items:center;background:rgba(6,7,16,.6)}.weekcard{width:min(460px,calc(100% - 32px));padding:22px;display:flex;flex-direction:column;gap:12px;text-align:center}
+.weekcard h2{font-family:var(--f-display);font-weight:500;margin:0;font-size:24px}.wopts{display:grid;grid-template-columns:1fr 1fr;gap:10px}.wopt{padding:16px 10px;border-radius:12px;border:1px solid var(--line-strong);display:flex;flex-direction:column;gap:6px;align-items:center}.wopt:hover{border-color:var(--cool);background:rgba(var(--accRGB),.1)}.wopt .ic{font-size:30px}.wopt b{font-family:var(--f-display);font-weight:500;font-size:16px}.wopt span{font-size:12px;color:var(--dim)}
+
+</style>
+</head>
+<body>
+<canvas id="world" aria-label="The city map"></canvas>
+
+<header class="hud-top">
+  <div class="brand panel"><h1>Inter<b>change</b></h1><span class="sub">A transit puzzle</span></div>
+  <div class="time panel">
+    <button id="pauseBtn" title="Pause or resume (Space)" aria-label="Pause">⏸</button>
+    <div class="tcol"><span class="k">Time rate</span><div class="spds" id="spds"></div><span class="v" id="rateTxt"></span></div>
+    <div class="tcol"><span class="k">Week</span><span class="v" id="dateTxt" style="white-space:nowrap"></span><span class="v" id="dateSub" style="font-size:11px;color:var(--dim)"></span></div>
+  </div>
+  <div class="right panel">
+    <div id="stats" style="display:contents"></div>
+    <div class="findwrap"><input id="find" class="find" placeholder="Find a station, line or upgrade…" aria-label="Find a station, line or upgrade…" autocomplete="off" spellcheck="false"><div id="findList" class="findlist panel" hidden></div></div>
+    <button id="homeBtn" class="btn" title="Back to the home page">⌂ Home</button>
+    <button id="acctBtn" class="btn" title="Account: save your progress on this device">👤</button>
+    <button id="scenBtn" class="btn">Cities</button>
+    <button id="dockBtn" class="btn">Panel</button>
+  </div>
+</header>
+
+<nav class="rail panel" id="rail" aria-label="Tools"></nav>
+<div class="placeopts panel" id="placeopts" hidden>
+  <label>Brush <input type="range" id="brush" min="1" max="12" value="4"><span id="brushV" class="v">4</span></label>
+  <span id="toolNote" class="note"></span>
+</div>
+
+<aside class="dock panel" id="dock">
+  <div class="tabs" role="tablist"><button class="tab" role="tab" data-tab="world" aria-selected="true">Network</button><button class="tab" role="tab" data-tab="stats" aria-selected="false">City</button><button class="tab" role="tab" data-tab="insp" aria-selected="false">Inspect</button></div>
+  <div class="pane" id="pane-world">
+    <span class="k">Your stock</span>
+    <div class="inv" id="inv"></div>
+    <span class="k">Lines · pick a colour, then drag between stations</span>
+    <div id="lineList" class="hview" style="gap:6px"></div>
+    <div class="row"><span class="k">Relaxed mode (no game over)</span><button class="btn" id="relaxBtn" aria-pressed="false">Off</button></div>
+    <span class="k">Events · press again to stop</span>
+    <div class="evs">
+      <button class="btn" data-ev="rush">🚶 Rush hour</button><button class="btn" data-ev="match">🏟 Big match</button>
+      <button class="btn" data-ev="boom">🏗 Building boom</button><button class="btn" data-ev="storm">🌧 Storm</button>
+      <button class="btn" data-ev="normal">↺ Stop all events</button>
+    </div>
+    <span class="k">Views</span>
+    <div class="views"><button class="btn" data-view="normal" aria-pressed="true">Neon</button><button class="btn" data-view="crowd" aria-pressed="false">Crowding</button><button class="btn" data-view="day" aria-pressed="false">Daytime</button></div>
+    <p class="note">Passengers show the kind of place they want: 🏠 home, 🏢 office, 🛍 shops and so on. They ride and change lines to reach the nearest one. If a station gets too crowded for too long, the city gives up on your network.</p>
+  </div>
+  <div class="pane" id="pane-stats" hidden>
+    <div class="kv" id="cStats"></div>
+    <span class="k">Passengers delivered</span>
+    <canvas id="graph"></canvas>
+    <span class="k">Busiest stations</span>
+    <div class="splist" id="sList"></div>
+  </div>
+  <div class="pane" id="pane-insp" hidden>
+    <div id="inspEmpty"><p class="note">Click a station or a line to inspect it.</p></div>
+    <div id="inspBody" class="hview" hidden></div>
+  </div>
+
+</aside>
+<div class="zoomb panel"><button id="zIn" title="Zoom in">+</button><button id="zOut" title="Zoom out">−</button><button id="zFit" title="Show everything">⤢</button></div>
+<div id="legend" class="legend panel" hidden><span class="k"></span><div class="lbar"></div><div class="lticks"><span></span><span></span><span></span></div></div>
+<div class="hint" id="hint">Drag from a station to another to draw a line · drag from a line&#x27;s end to extend it · right-drag to look around</div>
+<div class="toasts" id="toasts" aria-live="polite"></div>
+
+<div class="scen panel" id="scen" hidden>
+  <div class="row"><span class="k">Choose a city</span><button class="btn ghost" id="scenClose">×</button></div>
+  <div class="scgrid" id="scgrid"></div>
+</div>
+
+<div id="home" class="home" role="dialog" aria-label="Home">
+  <div class="hcard">
+    <div class="hhead"><h1 class="htitle">Inter<b>change</b></h1><p class="htag">Draw the transit lines of a growing city. Get every passenger where they want to go before a station overflows</p>
+      <div class="hacct"><button class="chip" id="hAcctBtn">👤 <span id="hAcctName">Guest</span></button><button class="chip" id="hPlays" title="Total plays by everyone">▶ <b id="hPlaysN">0</b> <span id="hPlaysL">plays</span></button><style>.sims{position:relative;display:inline-block;z-index:70}.hhead{position:relative;z-index:20}.sims>summary{list-style:none;cursor:pointer}.sims>summary::-webkit-details-marker{display:none}
+.sims[open]>summary{background:rgba(255,255,255,.08)}.simsP{position:absolute;left:0;top:calc(100% + 6px);z-index:60;width:min(320px,86vw);padding:8px;border-radius:12px;background:#0c101c;border:1px solid rgba(255,255,255,.14);box-shadow:0 12px 40px rgba(0,0,0,.55);display:grid;gap:6px;text-align:left}
+.simsP a{display:grid;grid-template-columns:auto 1fr;gap:2px 10px;align-items:center;padding:9px 10px;border-radius:9px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.03);color:#e3e8f4;text-decoration:none;font:inherit}
+.simsP a:hover,.simsP a:focus-visible{background:rgba(255,255,255,.08);border-color:var(--sc,#7fe0a8)}.simsP .si{grid-row:span 2;font-size:24px}.simsP b{color:var(--sc,#fff);font-size:14px}.simsP small{color:#8b95ae;font-size:11.5px;line-height:1.3}.simsP .sn{color:#8b95ae;font-size:11px;padding:2px 4px}</style><details class="sims" id="hSims"><summary class="chip" title="Our other simulators">🧪 Try our other simulators ▾</summary><div class="simsP" id="hSimsP"></div></details><script>(()=>{const ME="interchange",LIST=[{"id": "barycenter", "icon": "🪐", "name": "Barycenter", "tag": "Gravity, planets, stars and black holes", "url": "https://jacob711-oss.github.io/barycenter/", "color": "#e8b04a"}, {"id": "biosphere", "icon": "🌿", "name": "Biosphere", "tag": "A living world of animals, plants and people", "url": "https://jacob711-oss.github.io/barycenter/life/", "color": "#7fe0a8"}, {"id": "lithosphere", "icon": "🌋", "name": "Lithosphere", "tag": "Drift continents, raise mountains and set off volcanoes", "url": "https://jacob711-oss.github.io/barycenter/lithosphere/", "color": "#ff8a5c"}, {"id": "troposphere", "icon": "🌀", "name": "Troposphere", "tag": "Steer winds, brew hurricanes and change the climate", "url": "https://jacob711-oss.github.io/barycenter/troposphere/", "color": "#60d6e6"}, {"id": "catalyst", "icon": "⚛️", "name": "Catalyst", "tag": "Mix atoms, spark reactions and build molecules", "url": "https://jacob711-oss.github.io/barycenter/catalyst/", "color": "#c48bff"}, {"id": "abyssal", "icon": "🐋", "name": "Abyssal", "tag": "Dive into a living ocean, from coral reefs to the deep sea", "url": "https://jacob711-oss.github.io/barycenter/abyssal/", "color": "#4fa3ff"}, {"id": "interchange", "icon": "🚉", "name": "Interchange", "tag": "Draw the transit lines of a growing city and keep everyone moving", "url": "https://jacob711-oss.github.io/barycenter/interchange/", "color": "#ff5ab4"}],P=document.getElementById('hSimsP'),D=document.getElementById('hSims');
+const draw=l=>{P.textContent='';for(const s of l){if(s.id===ME||!s.url)continue;const a=document.createElement('a');a.href=s.url;a.target='_blank';a.rel='noopener';a.style.setProperty('--sc',s.color||'#7fe0a8');
+a.innerHTML='<span class="si"></span><b></b><small></small>';a.children[0].textContent=s.icon||'🧪';a.children[1].textContent=s.name;a.children[2].textContent=s.tag||'';P.appendChild(a)}
+const n=document.createElement('div');n.className='sn';n.textContent='More simulators coming soon.';P.appendChild(n)};draw(LIST);
+try{fetch('https://jacob711-oss.github.io/barycenter/sims.json',{cache:'no-cache'}).then(r=>r.ok?r.json():null).then(l=>{if(Array.isArray(l)&&l.length)draw(l.filter(s=>s&&typeof s.name==='string'&&/^https:\/\//.test(s.url||'')))}).catch(()=>{})}catch(e){}
+document.addEventListener('pointerdown',e=>{if(D.open&&!D.contains(e.target))D.open=false});document.addEventListener('keydown',e=>{if(e.key==='Escape')D.open=false})})()</script></div></div>
+    <div id="hMain" class="hview">
+      <button class="hb" id="hChal"><span class="ht">Challenges</span><span class="hd" id="hChalSub">Goals from easy to fiendish</span></button>
+      <button class="hb" id="hDemo"><span class="ht">Demo &amp; tutorial</span><span class="hd">Watch the highlights, or learn the controls step by step</span></button>
+      <button class="hb primary" id="hFree"><span class="ht">Free play</span><span class="hd">Endless city: build your network as the city grows. Turn on relaxed mode to play without a game over</span></button>
+      <p class="hfoot">Every week you get a new train and choose an upgrade. Passengers want a kind of place, not a station: they change lines to get there.</p>
+    </div>
+    <div id="hChalView" class="hview" hidden>
+      <div class="hbar"><button class="btn ghost hback">← Back</button><h2>Challenges</h2><span id="hStars" class="hstars"></span></div>
+      <p class="hfoot">Finish a challenge to unlock the next. Faster solutions earn more stars.</p>
+      <div id="hGrid" class="hgrid"></div>
+    </div>
+    <div id="hDemoView" class="hview" hidden>
+      <div class="hbar"><button class="btn ghost hback">← Back</button><h2>Demo &amp; tutorial</h2></div>
+      <button class="hb" id="hWatch"><span class="ht">Watch the demo</span><span class="hd">A tour of busy networks in four neon cities</span></button>
+      <button class="hb primary" id="hTut"><span class="ht">Start the tutorial</span><span class="hd">Learn every control step by step; each step completes when you do it</span></button>
+    </div>
+  </div>
+</div>
+<div id="chHud" class="chhud panel" hidden aria-live="polite">
+  <div class="chtop"><span id="chNum" class="k"></span><span id="chTime" class="k"></span></div>
+  <div id="chTitle" class="chtitle"></div>
+  <div id="chGoal" class="chgoal"></div>
+  <div class="chbarw"><span id="chBar"></span></div>
+  <div class="chrow"><span id="chProg" class="chprog"></span><div class="chbtns"><button id="chHint" class="btn">Hint</button><button id="chRestart" class="btn">Restart</button><button id="chExit" class="btn ghost">Exit</button></div></div>
+</div>
+<div id="demoCap" class="democap panel" hidden><span class="k" id="demoStep"></span><h2 id="demoTitle"></h2><p id="demoText"></p><div class="actions"><button class="btn" id="demoNext">Next ›</button><button class="btn ghost" id="demoExit">Exit demo</button></div></div>
+<div id="acct" class="ovl" hidden role="dialog" aria-label="Accounts">
+  <div class="obox panel">
+    <div class="hbar"><h2>Accounts</h2><button class="btn" id="acctClose" aria-label="Close">×</button></div>
+    <p class="hfoot">Your stars, plays and time are saved in this browser on this device. Accounts are shared by all our simulators when they are opened from the same site.</p>
+    <div id="acctList" class="hview" style="gap:6px"></div>
+    <form id="acctForm" class="aform"><input id="acctNew" maxlength="20" placeholder="Your name" autocomplete="off"><input id="acctPin" maxlength="4" inputmode="numeric" placeholder="PIN (optional)" autocomplete="off"><button class="btn primary" type="submit">Create account</button></form>
+    <p class="hfoot" id="acctMsg" aria-live="polite"></p>
+  </div>
+</div>
+<div id="chDone" class="home donebg" hidden role="dialog" aria-label="Challenge result">
+  <div class="donecard panel">
+    <div id="dStars" class="dstars"></div><h2 id="dTitle"></h2><p id="dText" class="hfoot" style="font-size:13px"></p>
+    <div class="actions" style="justify-content:center"><button id="dNext" class="btn primary">Next challenge</button><button id="dRetry" class="btn">Try again</button><button id="dList" class="btn ghost">All challenges</button></div>
+  </div>
+</div>
+
+<script>
+const SIMLIST=[{"id": "barycenter", "icon": "🪐", "name": "Barycenter", "tag": "Gravity, planets, stars and black holes", "url": "https://jacob711-oss.github.io/barycenter/", "color": "#e8b04a"}, {"id": "biosphere", "icon": "🌿", "name": "Biosphere", "tag": "A living world of animals, plants and people", "url": "https://jacob711-oss.github.io/barycenter/life/", "color": "#7fe0a8"}, {"id": "lithosphere", "icon": "🌋", "name": "Lithosphere", "tag": "Drift continents, raise mountains and set off volcanoes", "url": "https://jacob711-oss.github.io/barycenter/lithosphere/", "color": "#ff8a5c"}, {"id": "troposphere", "icon": "🌀", "name": "Troposphere", "tag": "Steer winds, brew hurricanes and change the climate", "url": "https://jacob711-oss.github.io/barycenter/troposphere/", "color": "#60d6e6"}, {"id": "catalyst", "icon": "⚛️", "name": "Catalyst", "tag": "Mix atoms, spark reactions and build molecules", "url": "https://jacob711-oss.github.io/barycenter/catalyst/", "color": "#c48bff"}, {"id": "abyssal", "icon": "🐋", "name": "Abyssal", "tag": "Dive into a living ocean, from coral reefs to the deep sea", "url": "https://jacob711-oss.github.io/barycenter/abyssal/", "color": "#4fa3ff"}, {"id": "interchange", "icon": "🚉", "name": "Interchange", "tag": "Draw the transit lines of a growing city and keep everyone moving", "url": "https://jacob711-oss.github.io/barycenter/interchange/", "color": "#ff5ab4"}],LB_GAME="interchange";
+/* ===== simulator kit: core helpers shared by every simulator ===== */
+const $=id=>document.getElementById(id);
+const clamp=(v,a,b)=>v<a?a:v>b?b:v,lerp=(a,b,t)=>a+(b-a)*t,rr=(a,b)=>a+Math.random()*(b-a),ri=(a,b)=>Math.floor(rr(a,b+1)),pick=a=>a[Math.floor(Math.random()*a.length)];
+const mod=(a,n)=>((a%n)+n)%n;
+let W=innerWidth,H=innerHeight,DPR=Math.min(2,devicePixelRatio||1);
+const S={t:0,speed:1,speedI:0,paused:false,sel:null,view:'normal',tool:'select',brush:4,follow:false};
+const cam={x:0,y:0,z:4,ox:0};
+const CNT={moved:0,zoomed:0,scen:0,find:0,tool:0,view:0};const bump=k=>{CNT[k]=(CNT[k]||0)+1};
+function toast(msg,ms=3200){const el=document.createElement('div');el.className='toast panel';el.textContent=msg;const box=$('toasts');box.appendChild(el);while(box.children.length>4)box.firstChild.remove();setTimeout(()=>el.remove(),ms)}
+const fmtN=(v,d=0)=>Number(v).toLocaleString(undefined,{maximumFractionDigits:d,minimumFractionDigits:d});
+/* challenges */
+const CH={active:null,idx:-1,events:[],hold:{},t0:0,real0:0,done:false,failed:'',loading:false,ref:{}};
+function chEv(k,d){if(CH.active&&!CH.done&&!CH.loading)CH.events.push({k,...(d||{}),t:S.t})}
+const evN=k=>CH.events.filter(e=>e.k===k).length;
+const evHas=f=>CH.events.some(f);
+// hold a condition for an amount of simulated time (in the simulator's own time units)
+function hold(key,cond,dur){if(!cond){CH.hold[key]=null;return 0}if(CH.hold[key]==null)CH.hold[key]=S.t;return Math.min(1,(S.t-CH.hold[key])/dur)}
+const realSecs=()=>(performance.now()-CH.real0)/1000;
+const byTime=(t3,t2)=>()=>{const s=realSecs();return s<=t3?3:s<=t2?2:1};
+const CHALS=[];const CC=(diff,o)=>CHALS.push({diff,...o});
+const TSTEPS=[];const DEMO=[];
+const since=()=>S.t-CH.t0;
+
+/* ================= Interchange: a transit puzzle ================= */
+// The city is 120 x 80 units. Time is in seconds of game time; a week lasts 60 seconds.
+const WW=120,WH=80,WEEK=60;
+const TYPES={home:{ic:'🏠',n:'Homes',col:'#7fd18a',w:40},office:{ic:'🏢',n:'Offices',col:'#6aa8ff',w:24},shop:{ic:'🛍️',n:'Shops',col:'#ffc35a',w:16},school:{ic:'🏫',n:'School',col:'#ff8a5c',w:8},
+  hospital:{ic:'🏥',n:'Hospital',col:'#ff6b7a',w:6},stadium:{ic:'🏟️',n:'Stadium',col:'#c48bff',w:3},airport:{ic:'✈️',n:'Airport',col:'#60d6e6',w:3}};
+const TK=Object.keys(TYPES);
+const LCOL=['#ff5a8a','#4aa8ff','#ffc23a','#3ad08a','#b07aff','#ff8a3a','#3adbe0'];
+let ST=[],LINES=[],WATER=[],PARTS=[],HIST=[],NEXT={};
+const G={lines:3,trains:3,cars:0,bridges:2,hubs:0,week:1,delivered:0,over:false,relaxed:false,spawnT:0,weekT:0,choosing:false,seed:1,rush:false,match:false,boom:false,storm:false};
+let CUR=0,DRAG=null,HOVER=null,LBL=true,EVN=0,EVSTOP=0,UPG=0,DRAWN=0,EXT=0,TRADD=0,CARADD=0,HUBADD=0,REMOVED=0;
+let RS=1;function R(){RS|=0;RS=RS+0x6D2B79F5|0;let t=Math.imul(RS^RS>>>15,1|RS);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}
+/* ---------- water: rivers and coasts are polygons ---------- */
+function inPoly(x,y,P){let c=false;for(let i=0,j=P.length-1;i<P.length;j=i++){const [xi,yi]=P[i],[xj,yj]=P[j];if(((yi>y)!==(yj>y))&&(x<(xj-xi)*(y-yi)/(yj-yi)+xi))c=!c}return c}
+const isWater=(x,y)=>WATER.some(P=>inPoly(x,y,P));
+function river(pts,w){const L=[],Rr=[];for(let i=0;i<pts.length;i++){const a=pts[Math.max(0,i-1)],b=pts[Math.min(pts.length-1,i+1)],dx=b[0]-a[0],dy=b[1]-a[1],l=Math.hypot(dx,dy)||1,nx=-dy/l*w/2,ny=dx/l*w/2;L.push([pts[i][0]+nx,pts[i][1]+ny]);Rr.unshift([pts[i][0]-nx,pts[i][1]-ny])}return L.concat(Rr)}
+function crossings(ax,ay,bx,by){let n=0,inW=isWater(ax,ay);const st=Math.ceil(Math.hypot(bx-ax,by-ay)*2);for(let k=1;k<=st;k++){const w=isWater(ax+(bx-ax)*k/st,ay+(by-ay)*k/st);if(w&&!inW)n++;inW=w}return n}
+/* ---------- stations ---------- */
+function spot(){for(let k=0;k<300;k++){const x=6+R()*(WW-12),y=6+R()*(WH-12);if(isWater(x,y))continue;if(ST.some(s=>Math.hypot(s.x-x,s.y-y)<7.5))continue;const cx=WW/2,cy=WH/2,d=Math.hypot(x-cx,y-cy);if(R()<d/(WW*0.7)*(ST.length<8?1.6:0.6))continue;return[x,y]}return null}
+function pickType(){const present=new Set(ST.map(s=>s.type));let pool=TK.filter(t=>t==='home'||t==='office'||t==='shop'||G.week>=(t==='school'?2:t==='hospital'?3:t==='stadium'?4:5));
+  if(!present.has('home'))return'home';if(!present.has('office'))return'office';const unique=['stadium','airport'];pool=pool.filter(t=>!(unique.includes(t)&&ST.some(s=>s.type===t)));let tot=0;for(const t of pool)tot+=TYPES[t].w;let r=R()*tot;for(const t of pool){r-=TYPES[t].w;if(r<=0)return t}return'home'}
+function addStation(type,x,y){if(x==null){const p=spot();if(!p)return null;[x,y]=p}const s={id:ST.length,type:type||pickType(),x,y,pax:[],cap:6,over:0,hub:false,spawn:R()*4+2,born:S.t,served:0};ST.push(s);FX(s.x,s.y,TYPES[s.type].col);routes();return s}
+/* ---------- lines and trains ---------- */
+const newLine=k=>({id:k,col:LCOL[k],st:[],trains:[],loop:false,pts:[],len:0,stops:[]});
+function geom(L){// octilinear path: from each station go diagonally, then straight
+  const pts=[],stops=[];let len=0;const seq=L.loop?L.st.concat([L.st[0]]):L.st;
+  for(let i=0;i<seq.length;i++){const s=ST[seq[i]];if(i===0){pts.push([s.x,s.y]);stops.push(0);continue}const p=pts[pts.length-1],dx=s.x-p[0],dy=s.y-p[1],ad=Math.min(Math.abs(dx),Math.abs(dy));
+    const m=[p[0]+Math.sign(dx)*ad,p[1]+Math.sign(dy)*ad];if(Math.hypot(m[0]-p[0],m[1]-p[1])>0.01&&Math.hypot(m[0]-s.x,m[1]-s.y)>0.01){len+=Math.hypot(m[0]-p[0],m[1]-p[1]);pts.push(m)}len+=Math.hypot(s.x-pts[pts.length-1][0],s.y-pts[pts.length-1][1]);pts.push([s.x,s.y]);stops.push(len)}
+  L.pts=pts;L.len=len;L.stops=stops}
+function pathCross(a,b){const dx=b.x-a.x,dy=b.y-a.y,ad=Math.min(Math.abs(dx),Math.abs(dy)),m=[a.x+Math.sign(dx)*ad,a.y+Math.sign(dy)*ad];return crossings(a.x,a.y,m[0],m[1])+crossings(m[0],m[1],b.x,b.y)}
+function bridgesUsed(){let n=0;for(const L of LINES){const seq=L.loop?L.st.concat([L.st[0]]):L.st;for(let i=1;i<seq.length;i++)n+=pathCross(ST[seq[i-1]],ST[seq[i]])}return n}
+function posAt(L,d){let acc=0;for(let i=1;i<L.pts.length;i++){const a=L.pts[i-1],b=L.pts[i],l=Math.hypot(b[0]-a[0],b[1]-a[1]);if(acc+l>=d||i===L.pts.length-1){const t=l?clamp((d-acc)/l,0,1):0;return[a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1])*t,Math.atan2(b[1]-a[1],b[0]-a[0])]}acc+=l}return[L.pts[0][0],L.pts[0][1],0]}
+function addTrain(L){if(G.trains<=0){toast('No trains left: you get one every week');return false}if(L.st.length<2)return false;G.trains--;L.trains.push({d:0,dir:1,pax:[],cars:0,wait:0.5,stop:0});TRADD++;chEv('train',{});return true}
+function lineActive(L){return L.st.length>=2}
+function linkStations(a,b){// extend the chosen line or start it
+  let L=LINES[CUR];if(!L){toast('Pick a line colour first');return false}
+  if(L.st.length===0){if(pathCross(a,b)>G.bridges-bridgesUsed()){toast('🌉 Not enough bridges to cross the water');return false}L.st=[a.id,b.id];geom(L);if(!L.trains.length&&!addTrain(L)){}DRAWN++;chEv('line',{n:2});routes();return true}
+  if(L.loop){toast('This line is a loop. Pick another colour for a new line');return false}
+  const first=L.st[0],last=L.st[L.st.length-1];let atEnd=a.id===last?1:a.id===first?-1:0;if(!atEnd){toast('Drag from the end of the line to extend it');return false}
+  if(b.id===(atEnd>0?first:last)&&L.st.length>=3){if(pathCross(a,b)>G.bridges-bridgesUsed()){toast('🌉 Not enough bridges');return false}L.loop=true;geom(L);for(const t of L.trains)t.dir=1;routes();EXT++;chEv('loop',{});toast('⭕ Loop closed');return true}
+  if(L.st.includes(b.id)){toast('That station is already on this line');return false}
+  if(pathCross(a,b)>G.bridges-bridgesUsed()){toast('🌉 Not enough bridges to cross the water');return false}
+  if(atEnd>0)L.st.push(b.id);else{L.st.unshift(b.id);for(const t of L.trains)t.d+=0}geom(L);if(atEnd<0)for(const t of L.trains){t.d=clamp(t.d+(L.stops[1]||0),0,L.len)}EXT++;chEv('extend',{});routes();return true}
+function removeLine(L){G.trains+=L.trains.length;G.cars+=L.trains.reduce((s,t)=>s+t.cars,0);for(const t of L.trains)for(const p of t.pax){const s=ST[L.st[0]];if(s)s.pax.push(p)}L.st=[];L.trains=[];L.loop=false;geom(L);routes();REMOVED++;chEv('remove',{})}
+function trimLine(L,end){if(L.st.length<=2){removeLine(L);return}if(L.loop){L.loop=false}else if(end>0)L.st.pop();else L.st.shift();geom(L);for(const t of L.trains)t.d=clamp(t.d,0,L.len);routes();REMOVED++}
+/* ---------- routing: from every station, the next station on the quickest way to each kind of place ---------- */
+function routes(){NEXT={};const adj=ST.map(()=>[]);for(const L of LINES){if(!lineActive(L))continue;const seq=L.loop?L.st.concat([L.st[0]]):L.st;for(let i=1;i<seq.length;i++){adj[seq[i-1]].push([seq[i],L.id]);adj[seq[i]].push([seq[i-1],L.id])}}
+  for(const t of TK){const dist=new Array(ST.length).fill(1e9),nx=new Array(ST.length).fill(-1),q=[];for(const s of ST)if(s.type===t){dist[s.id]=0;q.push(s.id)}
+    for(let h=0;h<q.length;h++){const u=q[h];for(const [v] of adj[u])if(dist[v]>dist[u]+1){dist[v]=dist[u]+1;nx[v]=u;q.push(v)}}NEXT[t]=nx}}
+/* ---------- the game ---------- */
+function spawnPax(s,dt){const rate=(0.12+G.week*0.018)*(G.rush?2:1)*(s.type==='home'?1.3:1);s.spawn-=dt*rate;if(s.spawn>0)return;s.spawn=1.5+R()*3;
+  let pool=TK.filter(t=>t!==s.type&&ST.some(o=>o.type===t));if(!pool.length)return;if(G.match&&ST.some(o=>o.type==='stadium')&&s.type!=='stadium'&&R()<0.6)pool=['stadium'];
+  const w=pool.map(t=>TYPES[t].w+(t==='home'?20:0));let tot=w.reduce((a,b)=>a+b,0),r=R()*tot,k=0;for(;k<pool.length;k++){r-=w[k];if(r<=0)break}s.pax.push({to:pool[Math.min(k,pool.length-1)],age:0})}
+function trainStep(L,t,dt){if(!lineActive(L))return;const sp=(G.storm?5:8)*dt;
+  if(t.wait>0){t.wait-=dt;return}
+  const stops=L.stops,next=t.dir>0?stops.find(d=>d>t.d+1e-6):[...stops].reverse().find(d=>d<t.d-1e-6);
+  if(next==null){if(L.loop){t.d=0;t.stop=0;return}t.dir*=-1;return}
+  const dist=Math.abs(next-t.d);if(dist<=sp){t.d=next;const si=stops.indexOf(next),sid=(L.loop&&si===stops.length-1)?L.st[0]:L.st[si];t.stop=si;exchange(L,t,ST[sid]);t.wait=0.6+(ST[sid].hub?0:0.3);
+    if(!L.loop&&(si===0||si===stops.length-1))t.dir=si===0?1:-1;else if(L.loop&&si===stops.length-1){t.d=0}}else t.d+=Math.sign(next-t.d)*sp}
+function nextStopOf(L,t,s){const seq=L.loop?L.st.concat([L.st[0]]):L.st;const i=seq.indexOf(s.id,L.loop&&t.d>=L.len-1e-6?seq.length-1:0);let j=i+(L.loop?1:t.dir);if(L.loop&&j>=seq.length)j=1;if(j<0||j>=seq.length){j=i-(t.dir)}return seq[j]}
+function exchange(L,t,s){const cap=6*(1+t.cars);const nxt=nextStopOf(L,t,s);
+  // drop off: arrived, or need to change here
+  const keep=[];for(const p of t.pax){if(s.type===p.to){G.delivered++;s.served++;chEv('deliver',{to:p.to});FX(s.x,s.y,TYPES[p.to].col,true)}else if(NEXT[p.to]&&NEXT[p.to][s.id]!==nxt&&NEXT[p.to][s.id]!==-1){s.pax.push(p)}else keep.push(p)}t.pax=keep;
+  // board passengers whose route continues on this train
+  const stay=[];for(const p of s.pax){const nh=NEXT[p.to]?NEXT[p.to][s.id]:-1;if(nh===nxt&&t.pax.length<cap){t.pax.push(p)}else stay.push(p)}s.pax=stay}
+function weekUp(){G.week++;G.trains++;UPG++;const all=[['line','🛤️','New line','Another line colour to draw with'],['car','🚃','Carriage','Add 6 seats to a train'],['bridge','🌉','2 bridges','Cross more rivers'],['hub','🔄','Interchange','A station that holds 3× as many people and boards faster'],['train','🚆','Extra train','Another train for any line']].filter(o=>!(o[0]==='line'&&G.lines>=LCOL.length));
+  const opts=[];while(opts.length<2){const o=pick(all);if(!opts.includes(o))opts.push(o)}showWeek(opts)}
+function grant(k){if(k==='line'){G.lines=Math.min(LCOL.length,G.lines+1);LINES.length<G.lines&&LINES.push(newLine(LINES.length))}else if(k==='car')G.cars++;else if(k==='bridge')G.bridges+=2;else if(k==='hub')G.hubs++;else if(k==='train')G.trains++;chEv('upgrade',{k});syncPanel()}
+function showWeek(opts){if(CH.loading||!$('home').hidden||document.body.classList.contains('mDemo')){grant(opts[0][0]);return}G.choosing=true;const box=document.createElement('div');box.className='weekbox';box.innerHTML=`<div class="weekcard panel"><span class="k">Week ${G.week}</span><h2>A new train arrives 🚆</h2><p class="hfoot">Pick one more upgrade:</p><div class="wopts"></div></div>`;
+  for(const [k,ic,n,d] of opts){const b=document.createElement('button');b.className='wopt';b.innerHTML=`<span class="ic">${ic}</span><b>${n}</b><span>${d}</span>`;b.onclick=()=>{grant(k);box.remove();G.choosing=false;toast(`${ic} ${n}`)};box.querySelector('.wopts').appendChild(b)}document.body.appendChild(box)}
+function gameOver(s){G.over=true;chEv('gameover',{});if(CH.loading)return;const box=document.createElement('div');box.className='weekbox';box.innerHTML=`<div class="weekcard panel"><span class="k">Week ${G.week}</span><h2>The city gave up 😩</h2><p class="hfoot">The ${TYPES[s.type].n.toLowerCase()} station was crowded for too long. You delivered <b>${fmtN(G.delivered)}</b> passengers.</p><div class="actions" style="justify-content:center"><button class="btn primary" id="goRelax">Keep playing (relaxed)</button><button class="btn" id="goAgain">Start again</button></div></div>`;document.body.appendChild(box);
+  box.querySelector('#goRelax').onclick=()=>{G.over=false;G.relaxed=true;for(const q of ST)q.over=0;box.remove();syncPanel()};box.querySelector('#goAgain').onclick=()=>{box.remove();loadScen(S.scen)};flyToW(s.x,s.y,Math.max(cam.z,10))}
+/* ---------- cities ---------- */
+function clearCity(){ST=[];LINES=[];WATER=[];PARTS=[];HIST=[];NEXT={};Object.assign(G,{lines:3,trains:3,cars:0,bridges:2,hubs:0,week:1,delivered:0,over:false,spawnT:0,weekT:0,choosing:false,rush:false,match:false,boom:false,storm:false});for(let k=0;k<G.lines;k++)LINES.push(newLine(k));CUR=0;document.querySelectorAll('.weekbox').forEach(b=>b.remove())}
+const SCENS={
+  harbour:()=>{RS=11;WATER.push(river([[60,-5],[58,20],[64,40],[56,60],[60,90]],5))},
+  twin:()=>{RS=23;WATER.push(river([[-5,30],[30,28],[60,36],[90,30],[125,34]],4.5),river([[80,-5],[78,20],[86,40],[82,85]],4))},
+  island:()=>{RS=37;WATER.push([[0,0],[120,0],[120,8],[0,8]],[[0,72],[120,72],[120,80],[0,80]],[[0,0],[8,0],[8,80],[0,80]],[[112,0],[120,0],[120,80],[112,80]],river([[40,8],[46,30],[42,50]],3.5))},
+  delta:()=>{RS=41;WATER.push(river([[-5,20],[40,30],[70,24],[125,30]],4),river([[40,30],[50,50],[45,85]],3.5),river([[70,24],[90,50],[110,85]],3.5))},
+  plain:()=>{RS=53},
+};
+const SCENLIST=[{id:'harbour',name:'Harbourton',desc:'A river splits the city in two. Bridges are precious.'},{id:'twin',name:'Twin Rivers',desc:'Two rivers cross the city. Plan your bridges well.'},{id:'island',name:'Isla Nova',desc:'An island city with a creek down the middle.'},{id:'delta',name:'Deltaport',desc:'A river delta splits the city into four parts.'},{id:'plain',name:'Prairie City',desc:'Flat open land. No bridges needed: a gentle start.'}];
+/* ---------- UI ---------- */
+function FX(x,y,col,small){PARTS.push({x,y,col,age:0,small:!!small})}
+function syncPanel(){const inv=$('inv');if(!inv)return;const used=bridgesUsed();inv.innerHTML=`<div>🛤️ Lines <b>${LINES.filter(lineActive).length} / ${G.lines}</b></div><div>🚆 Spare trains <b>${G.trains}</b></div><div>🚃 Spare carriages <b>${G.cars}</b></div><div>🌉 Bridges left <b>${G.bridges-used}</b></div><div>🔄 Interchanges <b>${G.hubs}</b></div><div>⭐ Delivered <b>${fmtN(G.delivered)}</b></div>`;
+  const LL=$('lineList');LL.textContent='';LINES.forEach((L,k)=>{const r=document.createElement('div');r.className='lrow';r.style.borderColor=k===CUR?L.col:'';r.innerHTML=`<i style="background:${L.col}"></i><div><div>${L.st.length?`${L.st.length} stations${L.loop?' · loop':''} · ${L.trains.length} train${L.trains.length===1?'':'s'}`:'Not built yet'}</div><div class="lbtns"></div></div><button class="btn"${k===CUR?' aria-pressed="true"':''}>${k===CUR?'Drawing':'Draw'}</button>`;
+    r.children[2].onclick=()=>{CUR=k;setTool('draw');syncPanel()};const bt=r.children[1].children[1];if(L.st.length>=2){for(const [lab,fn] of [['+ Train',()=>{addTrain(L)}],['+ Carriage',()=>{const t=L.trains.find(t=>t.cars<3);if(!G.cars){toast('No spare carriages');return}if(!t){toast('Add a train first');return}t.cars++;G.cars--;CARADD++;chEv('car',{})}],['− Train',()=>{if(L.trains.length>1){const t=L.trains.pop();G.trains++;G.cars+=t.cars;for(const p of t.pax)ST[L.st[0]].pax.push(p)}}],['Remove line',()=>removeLine(L)]]){const b=document.createElement('button');b.className='btn';b.textContent=lab;b.onclick=()=>{fn();syncPanel()};bt.appendChild(b)}}LL.appendChild(r)});
+  $('relaxBtn').setAttribute('aria-pressed',G.relaxed);$('relaxBtn').textContent=G.relaxed?'On':'Off';
+  const lab={rush:'🚶 Rush hour',match:'🏟 Big match',boom:'🏗 Building boom',storm:'🌧 Storm'};document.querySelectorAll('[data-ev]').forEach(b=>{const L=lab[b.dataset.ev];if(!L)return;b.setAttribute('aria-pressed',G[b.dataset.ev]);b.textContent=G[b.dataset.ev]?'■ Stop '+L.slice(2).toLowerCase():L})}
+$('relaxBtn').onclick=()=>{G.relaxed=!G.relaxed;chEv('relax',{});syncPanel()};
+document.querySelectorAll('[data-ev]').forEach(b=>b.onclick=()=>{const ev=b.dataset.ev;EVN++;chEv('event',{ev});if(ev==='normal'){if(G.rush||G.match||G.boom||G.storm)EVSTOP++;G.rush=G.match=G.boom=G.storm=false;toast('All events stopped')}else{G[ev]=!G[ev];if(!G[ev]){EVSTOP++;chEv('stop',{ev})}else toast({rush:'🚶 Rush hour: twice as many passengers',match:'🏟 Big match: everyone is heading for the stadium',boom:'🏗 Building boom: new stations open fast',storm:'🌧 Storm: trains slow down'}[ev])}syncPanel()});
+/* ---------- drawing ---------- */
+function rr2(c,x,y,w,h,r){c.beginPath();c.moveTo(x+r,y);c.arcTo(x+w,y,x+w,y+h,r);c.arcTo(x+w,y+h,x,y+h,r);c.arcTo(x,y+h,x,y,r);c.arcTo(x,y,x+w,y,r);c.closePath()}
+function render(c,now){const day=S.view==='day',z=cam.z;c.fillStyle=day?'#e8e4da':'#070814';c.fillRect(0,0,W,H);
+  c.fillStyle=day?'#f2efe8':'#0d0f20';c.fillRect(sx(0),sy(0),WW*z,WH*z);
+  // faint street grid
+  c.strokeStyle=day?'rgba(0,0,0,.05)':'rgba(140,150,220,.06)';c.lineWidth=1;c.beginPath();for(let x=0;x<=WW;x+=4){c.moveTo(sx(x),sy(0));c.lineTo(sx(x),sy(WH))}for(let y=0;y<=WH;y+=4){c.moveTo(sx(0),sy(y));c.lineTo(sx(WW),sy(y))}c.stroke();
+  for(const P of WATER){c.fillStyle=day?'#a8cfe6':'#0f2a4a';c.strokeStyle=day?'#8ab8d8':'rgba(80,170,255,.35)';c.lineWidth=2;c.beginPath();P.forEach(([x,y],i)=>i?c.lineTo(sx(x),sy(y)):c.moveTo(sx(x),sy(y)));c.closePath();c.fill();c.stroke()}
+  // lines
+  const lw=Math.max(4,z*0.9);c.lineCap='round';c.lineJoin='round';
+  LINES.forEach((L,k)=>{if(L.pts.length<2)return;const off=0;c.strokeStyle=L.col;if(!day){c.shadowColor=L.col;c.shadowBlur=lw*1.6}c.lineWidth=lw;c.beginPath();L.pts.forEach(([x,y],i)=>i?c.lineTo(sx(x),sy(y)):c.moveTo(sx(x),sy(y)));c.stroke();c.shadowBlur=0;
+    // bridges
+    const seq=L.loop?L.st.concat([L.st[0]]):L.st;for(let i=1;i<L.pts.length;i++){const a=L.pts[i-1],b=L.pts[i];const st=Math.ceil(Math.hypot(b[0]-a[0],b[1]-a[1])*2);for(let q=0;q<=st;q++){const x=a[0]+(b[0]-a[0])*q/st,y=a[1]+(b[1]-a[1])*q/st;if(isWater(x,y)){c.fillStyle=day?'#555':'#d8d8e8';c.fillRect(sx(x)-lw*0.7,sy(y)-lw*0.7,lw*1.4,lw*1.4)}}}
+    if(!L.loop&&L.st.length){for(const e of [0,L.st.length-1]){const s=ST[L.st[e]],o=ST[L.st[e?e-1:1]];if(!o)continue;const dx=s.x-o.x,dy=s.y-o.y,l=Math.hypot(dx,dy)||1;c.strokeStyle=L.col;c.lineWidth=lw;c.beginPath();c.moveTo(sx(s.x),sy(s.y));c.lineTo(sx(s.x+dx/l*2.2),sy(s.y+dy/l*2.2));c.moveTo(sx(s.x+dx/l*2.2-dy/l*1),sy(s.y+dy/l*2.2+dx/l*1));c.lineTo(sx(s.x+dx/l*2.2+dy/l*1),sy(s.y+dy/l*2.2-dx/l*1));c.stroke()}}});
+  // drag preview
+  if(DRAG&&DRAG.from){const L=LINES[CUR];c.strokeStyle=L?L.col:'#fff';c.globalAlpha=0.6;c.lineWidth=lw;c.setLineDash([lw,lw]);c.beginPath();c.moveTo(sx(DRAG.from.x),sy(DRAG.from.y));c.lineTo(sx(DRAG.x),sy(DRAG.y));c.stroke();c.setLineDash([]);c.globalAlpha=1}
+  // trains
+  for(const L of LINES)for(const t of L.trains){if(!lineActive(L))continue;const [x,y,a]=posAt(L,t.d),X=sx(x),Y=sy(y),len=Math.max(14,z*2.6)*(1+t.cars*0.5),wd=Math.max(8,z*1.3);c.save();c.translate(X,Y);c.rotate(a);c.fillStyle=day?'#222':'#f4f0ff';if(!day){c.shadowColor=L.col;c.shadowBlur=10}rr2(c,-len/2,-wd/2,len,wd,wd/2);c.fill();c.shadowBlur=0;c.strokeStyle=L.col;c.lineWidth=2;c.stroke();
+    const cap=6*(1+t.cars);t.pax.forEach((p,i)=>{const col=TYPES[p.to].col;c.fillStyle=col;const px=-len/2+wd*0.45+(i%Math.ceil(cap/2))*(len-wd*0.9)/Math.max(1,Math.ceil(cap/2)-1||1),py=i<Math.ceil(cap/2)?-wd*0.18:wd*0.18;c.beginPath();c.arc(Math.min(len/2-wd*0.4,px),py,Math.max(1.6,wd*0.14),0,7);c.fill()});c.restore()}
+  // stations
+  const R0=Math.max(9,z*1.7);for(const s of ST){const X=sx(s.x),Y=sy(s.y),T=TYPES[s.type],crowd=s.pax.length/s.cap;
+    if(s.over>0){c.strokeStyle=`rgba(255,${120-100*s.over},80,.95)`;c.lineWidth=4;c.beginPath();c.arc(X,Y,R0*1.5,-Math.PI/2,-Math.PI/2+Math.PI*2*s.over);c.stroke()}
+    if(S.view==='crowd'){c.fillStyle=`rgba(255,${200-180*Math.min(1,crowd)},80,.35)`;c.beginPath();c.arc(X,Y,R0*(1.2+crowd),0,7);c.fill()}
+    c.fillStyle=day?'#fff':'#141632';c.strokeStyle=T.col;c.lineWidth=s.hub?5:3;if(!day){c.shadowColor=T.col;c.shadowBlur=12}rr2(c,X-R0,Y-R0,R0*2,R0*2,s.hub?R0:R0*0.45);c.fill();c.stroke();c.shadowBlur=0;
+    c.font=`${Math.round(R0*1.15)}px sans-serif`;c.textAlign='center';c.textBaseline='middle';c.fillText(T.ic,X,Y+1);c.textBaseline='alphabetic';
+    // waiting passengers
+    const ps=Math.max(3,R0*0.32);s.pax.slice(0,24).forEach((p,i)=>{const col=i%6,row=Math.floor(i/6);c.fillStyle=TYPES[p.to].col;c.beginPath();c.arc(X+R0*1.35+col*ps*2.3,Y-R0*0.6+row*ps*2.3,ps,0,7);c.fill()});if(s.pax.length>24){c.fillStyle=day?'#000':'#fff';c.font='600 11px "IBM Plex Mono",monospace';c.textAlign='left';c.fillText('+'+(s.pax.length-24),X+R0*1.3,Y+R0*1.6)}
+    if(S.sel&&S.sel.s===s){c.strokeStyle='#ffc35a';c.lineWidth=2;c.beginPath();c.arc(X,Y,R0*1.9,0,7);c.stroke()}}
+  for(const p of PARTS){const al=1-p.age;c.strokeStyle=p.col;c.globalAlpha=Math.max(0,al);c.lineWidth=2;c.beginPath();c.arc(sx(p.x),sy(p.y),(p.small?R0*1.2:R0*1.4)+p.age*R0*(p.small?1:3),0,7);c.stroke()}c.globalAlpha=1;
+  if(G.choosing||G.over){}}
+/* ---------- tools ---------- */
+const nearStation=(x,y,r)=>{let b=null,bd=r*r;for(const s of ST){const d=(s.x-x)**2+(s.y-y)**2;if(d<bd){bd=d;b=s}}return b};
+function nearLine(x,y){let best=null,bd=4;for(const L of LINES){for(let i=1;i<L.pts.length;i++){const [ax,ay]=L.pts[i-1],[bx,by]=L.pts[i],dx=bx-ax,dy=by-ay,t=clamp(((x-ax)*dx+(y-ay)*dy)/(dx*dx+dy*dy||1),0,1),d=(ax+dx*t-x)**2+(ay+dy*t-y)**2;if(d<bd){bd=d;best=L}}}return best}
+const SIM={id:'interchange',name:'Interchange',world:{w:WW,h:WH,wrapX:false,maxZ:30,followZ:12},home:'plain',freeScen:'harbour',tutScen:'plain',defSpeed:1,homeSpeed:1,inspectTab:'insp',
+  speeds:[['½×',0.5],['1×',1],['2×',2],['4×',4]],fmtRate:v=>`${v}× speed`,
+  dateTxt:()=>`Week ${G.week}`,dateSub:()=>`${fmtN(G.delivered)} passengers delivered`,stepSize:()=>0.05,
+  tools:[['',[['select','👆','Inspect']]],['Build',[['draw','✏️','Draw line','Drag from a station to another station. Drag from the end of a line to make it longer, or back to its first station to make a loop.'],['train','🚆','Add train','Click a line to put another train on it.'],['car','🚃','Carriage','Click a line to add a carriage to one of its trains (6 more seats).'],['hub','🔄','Interchange','Click a station to make it an interchange: room for 18 people and faster boarding.'],['erase','✂️','Shorten','Click near the end of a line to remove its last stop.']]]],
+  scens:SCENLIST,
+  load(id){clearCity();(SCENS[id]||SCENS.harbour)();for(let k=0;k<3;k++)addStation(['home','office','shop'][k]);this.t0=0;HIST=[];syncPanel()},
+  after(){if(!$('home').hidden)return;setTool('draw')},
+  step(dt){if(G.over||G.choosing)return;G.spawnT+=dt;G.weekT+=dt;const every=Math.max(4,13-G.week*0.6)*(G.boom?0.35:1);if(G.spawnT>=every&&ST.length<48){G.spawnT=0;addStation()}
+    for(const s of ST){spawnPax(s,dt);for(const p of s.pax)p.age+=dt;const cap=s.hub?18:6;s.cap=cap;if(s.pax.length>cap)s.over+=dt/(G.relaxed?1e9:40);else s.over=Math.max(0,s.over-dt/20);if(s.over>=1&&!G.relaxed&&!G.over){gameOver(s);return}}
+    for(const L of LINES)for(const t of L.trains)trainStep(L,t,dt);
+    if(G.weekT>=WEEK){G.weekT=0;weekUp()}},
+  frame(dt){for(const p of PARTS)p.age+=dt*1.4;PARTS=PARTS.filter(p=>p.age<1)},
+  render,
+  stats:()=>[['Delivered',fmtN(G.delivered)],['Stations',ST.length],['Trains',LINES.reduce((s,L)=>s+L.trains.length,0)],['Week',G.week]],
+  hud(){const last=HIST[HIST.length-1];if(!last||S.t-last.t>=2)HIST.push({t:S.t,d:G.delivered});if(HIST.length>300)HIST.shift();syncPanel();renderStats();renderInspect()},
+  pick(wx,wy){const s=nearStation(wx,wy,2.5);if(s)return{s};const L=nearLine(wx,wy);if(L)return{L};return null},
+  pointer(type,wx,wy){const t=S.tool;HOVER=[wx,wy];
+    if(t==='draw'){if(type==='down'){const s=nearStation(wx,wy,3);DRAG=s?{from:s,x:wx,y:wy}:null}else if(type==='drag'&&DRAG){DRAG.x=wx;DRAG.y=wy;const s=nearStation(wx,wy,2.6);if(s&&s!==DRAG.from){if(linkStations(DRAG.from,s)){DRAG.from=s;syncPanel()}else DRAG=null}}else if(type==='up')DRAG=null;return}
+    if(type!=='down')return;
+    if(t==='train'){const L=nearLine(wx,wy);if(L){addTrain(L);syncPanel()}else toast('Click on a line');return}
+    if(t==='car'){const L=nearLine(wx,wy);if(!L){toast('Click on a line');return}if(!G.cars){toast('No spare carriages');return}const tr=L.trains.find(q=>q.cars<3);if(!tr){toast('Add a train to this line first');return}tr.cars++;G.cars--;CARADD++;chEv('car',{});syncPanel();return}
+    if(t==='hub'){const s=nearStation(wx,wy,3);if(!s){toast('Click a station');return}if(s.hub){toast('Already an interchange');return}if(!G.hubs){toast('No interchanges left: pick one as a weekly upgrade');return}s.hub=true;G.hubs--;HUBADD++;chEv('hub',{});toast('🔄 Interchange built');syncPanel();return}
+    if(t==='erase'){const L=nearLine(wx,wy);if(!L){toast('Click near a line end');return}const a=ST[L.st[0]],b=ST[L.st[L.st.length-1]];trimLine(L,Math.hypot(b.x-wx,b.y-wy)<Math.hypot(a.x-wx,a.y-wy)?1:-1);syncPanel()}},
+  hover(wx,wy){HOVER=[wx,wy]},
+  find(q){const out=[],add=(label,sub,go)=>out.push({label,sub,go});for(const t of TK)if(TYPES[t].n.toLowerCase().includes(q)||t.includes(q)){const s=ST.find(x=>x.type===t);if(s)add(`${TYPES[t].ic} ${TYPES[t].n} station`,`${s.pax.length} waiting`,()=>{S.sel={s};flyToW(s.x,s.y,10);showTab('insp')})}
+    if('busiest crowded'.includes(q))add('Most crowded station','',()=>{const s=[...ST].sort((a,b)=>b.pax.length-a.pax.length)[0];if(s){S.sel={s};flyToW(s.x,s.y,10);showTab('insp')}});
+    for(const [,items] of SIM.tools)for(const [id,ico,name] of items)if(id!=='select'&&name.toLowerCase().includes(q))add(`${ico} ${name}`,'tool',()=>setTool(id));
+    for(const s of SCENLIST)if(s.name.toLowerCase().includes(q))add('City: '+s.name,s.desc,()=>{loadScen(s.id);toast(s.name)});return out},
+  tabShown(id){if(id==='stats')renderStats(true)},selChanged(){renderInspect()},
+};
+function kv(rows){return rows.map(([k,v])=>`<div><span class="k">${k}</span><span class="v">${v}</span></div>`).join('')}
+function renderStats(force){if($('pane-stats').hidden&&!force)return;const wait=ST.reduce((s,x)=>s+x.pax.length,0),riding=LINES.reduce((s,L)=>s+L.trains.reduce((a,t)=>a+t.pax.length,0),0);
+  $('cStats').innerHTML=kv([['Delivered',fmtN(G.delivered)],['Week',G.week],['Stations',ST.length],['Waiting now',wait],['On trains now',riding],['Bridges used',`${bridgesUsed()} of ${G.bridges}`]]);
+  const g=$('graph'),gc=g.getContext('2d'),w=g.width=g.clientWidth*DPR,hh=g.height=g.clientHeight*DPR;gc.clearRect(0,0,w,hh);if(HIST.length>1){const t0=HIST[0].t,t1=HIST[HIST.length-1].t,m=Math.max(1,HIST[HIST.length-1].d);gc.strokeStyle='#ff5ab4';gc.lineWidth=2*DPR;gc.beginPath();HIST.forEach((p,i)=>{const x=8+(w-16)*(p.t-t0)/Math.max(1e-6,t1-t0),y=hh-6-(hh-12)*p.d/m;i?gc.lineTo(x,y):gc.moveTo(x,y)});gc.stroke()}
+  const L=$('sList');L.textContent='';for(const s of [...ST].sort((a,b)=>b.pax.length-a.pax.length).slice(0,8)){const r=document.createElement('button');r.className='sprow';r.innerHTML='<i></i><span></span><b></b>';r.children[0].style.background=TYPES[s.type].col;r.children[1].textContent=`${TYPES[s.type].ic} ${TYPES[s.type].n}${s.hub?' · interchange':''}`;r.children[2].textContent=`${s.pax.length}/${s.cap}`;r.onclick=()=>{S.sel={s};flyToW(s.x,s.y,10);showTab('insp')};L.appendChild(r)}}
+function renderInspect(){const b=S.sel;$('inspEmpty').hidden=!!b;$('inspBody').hidden=!b;if(!b)return;const body=$('inspBody');
+  if(b.s){const s=b.s,T=TYPES[s.type],lines=LINES.filter(L=>L.st.includes(s.id));const want={};for(const p of s.pax)want[p.to]=(want[p.to]||0)+1;
+    body.innerHTML=`<h2 class="ititle">${T.ic} ${T.n}</h2><div class="isub">${s.hub?'Interchange · ':''}${lines.length?`on ${lines.length} line${lines.length>1?'s':''}`:'not connected yet'}</div><div class="kv">${kv([['Waiting',`${s.pax.length} of ${s.cap}`],['Crowding',s.over>0?Math.round(s.over*100)+'% to giving up':'fine'],['Passengers arrived here',s.served],['Open since',`week ${Math.floor((s.born||0)/WEEK)+1}`]])}</div><p class="note">${Object.keys(want).length?'Heading for: '+Object.entries(want).map(([t,n])=>`${TYPES[t].ic} ${n}`).join('  '):'Nobody waiting.'}</p>`;return}
+  if(b.L){const L=b.L;body.innerHTML=`<h2 class="ititle" style="color:${L.col}">Line ${L.id+1}</h2><div class="isub">${L.st.length} stations${L.loop?' · loop':''}</div><div class="kv">${kv([['Trains',L.trains.length],['Carriages',L.trains.reduce((s,t)=>s+t.cars,0)],['On board',L.trains.reduce((s,t)=>s+t.pax.length,0)],['Length',Math.round(L.len)+' blocks']])}</div>`}}
+
+/* ================= Interchange: auto-built networks for the home screen and demo, challenges, tutorial ================= */
+function autoNet(nSt){while(ST.length<nSt)if(!addStation())break;G.bridges=99;G.trains+=6;
+  // greedy lines: each line threads through nearby stations, making sure every kind of place is on the network
+  const left=new Set(ST.map(s=>s.id));let k=0;while(left.size>1&&k<G.lines){const L=LINES[k];let cur=ST[[...left][0]];const seq=[cur.id];left.delete(cur.id);
+    while(seq.length<7){let best=null,bd=1e9;for(const id of left){const s=ST[id],d=Math.hypot(s.x-cur.x,s.y-cur.y);if(d<bd){bd=d;best=s}}if(!best)break;seq.push(best.id);left.delete(best.id);cur=best}
+    if(k>0){const prev=LINES[k-1].st;seq.unshift(prev[Math.floor(prev.length/2)])}L.st=seq;geom(L);addTrain(L);addTrain(L);k++}routes();G.bridges=Math.max(G.bridges,bridgesUsed()+2)}
+{const l0=SIM.load;SIM.load=function(id){l0.call(this,id);if(!$('home').hidden||document.body.classList.contains('mDemo')){for(let q=0;q<9;q++)addStation();autoNet(12);G.relaxed=true}}}
+const wk=()=>G.week,del=()=>G.delivered,activeLines=()=>LINES.filter(lineActive).length;
+const deliverCh=(t,d,n,sc,hint)=>CC(d,{t,g:`Deliver ${fmtN(n)} passengers in ${SCENLIST.find(s=>s.id===sc).name}.`,hint:hint||'Connect every kind of place. Add trains to busy lines and carriages when trains fill up.',scen:sc,setup:()=>{G.relaxed=false},check:()=>[del()>=n,del()/n,`${fmtN(del())} of ${fmtN(n)} delivered`],fail:()=>G.over?'A station overflowed':'',stars:byTime(n*0.6+40,n*1.4+100)});
+CC(1,{t:'First line',g:'Draw a line that links all three stations.',hint:'Pick ✏️ Draw line, then drag from one station to another, and on to the third.',scen:'plain',check:()=>{const ok=LINES.some(L=>L.st.length>=3);return[ok,Math.max(...LINES.map(L=>L.st.length))/3,'']},stars:byTime(15,40)});
+CC(1.1,{t:'All aboard',g:'Deliver 10 passengers.',hint:'Draw a line through your stations: the train starts running at once.',scen:'plain',setup:()=>{G.relaxed=false},check:()=>[del()>=10,del()/10,`${del()} of 10`],stars:byTime(30,70)});
+CC(1.2,{t:'Over the river',g:'Use a bridge to link both sides of the river.',hint:'Draw a line from a station on one bank to a station on the other. Each crossing uses a bridge.',scen:'harbour',setup:()=>{while(ST.length<6)addStation()},check:()=>{const ok=bridgesUsed()>0;return[ok,ok?1:0,'']},stars:byTime(20,50)});
+CC(1.3,{t:'Full circle',g:'Make a loop line.',hint:'Draw a line through 3 or more stations, then drag from its last station back to its first.',scen:'plain',setup:()=>{while(ST.length<5)addStation()},check:()=>{const ok=LINES.some(L=>L.loop);return[ok,ok?1:0,'']},stars:byTime(25,60)});
+CC(1.4,{t:'Rush hour',g:'Get through a rush hour: deliver 60 passengers without a station giving up.',hint:'Add extra trains to the busiest lines (🚆 Add train).',scen:'plain',setup:()=>{G.relaxed=false;G.rush=true;while(ST.length<6)addStation()},check:()=>[del()>=60,del()/60,`${del()} of 60`],fail:()=>G.over?'A station overflowed':'',stars:byTime(60,140)});
+CC(1.5,{t:'Three lines',g:'Run 3 lines at the same time.',hint:'Click a line colour in the Network tab, then draw with it.',scen:'harbour',setup:()=>{while(ST.length<9)addStation()},check:()=>{const n=activeLines();return[n>=3,n/3,`${n} of 3 lines`]},stars:byTime(40,90)});
+deliverCh('Harbourton commuter',2,200,'harbour');deliverCh('Prairie express',1.8,250,'plain');deliverCh('Twin Rivers',2.6,300,'twin','Bridges are few: put both rivers’ crossings on the same busy line.');deliverCh('Isla Nova',3,400,'island');deliverCh('Deltaport',3.4,500,'delta','Four parts of the city: one line that crosses every channel helps a lot.');
+deliverCh('Harbourton legend',4.2,1200,'harbour');deliverCh('Delta master',4.6,1500,'delta');
+CC(2.4,{t:'Survive 5 weeks',g:'Keep the network running until week 6 in Harbourton.',hint:'Each week you get a new train and an upgrade. Watch for red rings: a station is getting too crowded.',scen:'harbour',setup:()=>{G.relaxed=false},check:()=>[wk()>=6,(wk()-1)/5,`Week ${wk()}`],fail:()=>G.over?'A station overflowed':'',stars:byTime(330,480)});
+CC(3.6,{t:'Survive 10 weeks',g:'Keep Twin Rivers running until week 11.',hint:'Interchanges hold three times as many people. Put them where lines meet.',scen:'twin',setup:()=>{G.relaxed=false},check:()=>[wk()>=11,(wk()-1)/10,`Week ${wk()}`],fail:()=>G.over?'A station overflowed':'',stars:byTime(640,900)});
+CC(2.8,{t:'Big match',g:'The stadium is open and everyone is going: deliver 80 fans to the stadium.',hint:'Give the stadium a line of its own, with lots of trains.',scen:'plain',setup:()=>{G.relaxed=false;addStation('stadium');G.match=true},check:()=>{const n=CH.events.filter(e=>e.k==='deliver'&&e.to==='stadium').length;return[n>=80,n/80,`${n} of 80 fans`]},fail:()=>G.over?'A station overflowed':'',stars:byTime(90,200)});
+CC(3.0,{t:'Minimalist',g:'Deliver 300 passengers using only 2 lines.',hint:'Long lines that pass every kind of place.',scen:'plain',setup:()=>{G.relaxed=false},check:()=>{const ok=activeLines()<=2;return[del()>=300&&ok,ok?del()/300:0,ok?`${del()} of 300`:'Use no more than 2 lines']},fail:()=>G.over?'A station overflowed':'',stars:byTime(200,420)});
+CC(3.2,{t:'Interchange',g:'Build an interchange where three lines meet.',hint:'Draw three lines through the same station, then use 🔄 Interchange on it (you may need to pick it as a weekly upgrade).',scen:'plain',setup:()=>{G.hubs=1;while(ST.length<8)addStation()},check:()=>{const ok=ST.some(s=>s.hub&&LINES.filter(L=>L.st.includes(s.id)).length>=3);return[ok,ok?1:0,'']},stars:byTime(60,150)});
+CC(3.8,{t:'Packed trains',g:'Have a train with 3 carriages.',hint:'Pick carriages as weekly upgrades, then add them to the same line with 🚃 Carriage.',scen:'harbour',setup:()=>{G.relaxed=false},check:()=>{const m=Math.max(0,...LINES.flatMap(L=>L.trains.map(t=>t.cars)));return[m>=3,m/3,`Most carriages on one train: ${m}`]},fail:()=>G.over?'A station overflowed':'',stars:byTime(300,600)});
+CC(2.2,{t:'Fly away',g:'Connect the airport and deliver 20 travellers to it.',hint:'The airport opens on its own around week 5. Here it is open already.',scen:'plain',setup:()=>{addStation('airport');G.relaxed=false},check:()=>{const n=CH.events.filter(e=>e.k==='deliver'&&e.to==='airport').length;return[n>=20,n/20,`${n} of 20`]},fail:()=>G.over?'A station overflowed':'',stars:byTime(90,200)});
+TSTEPS.push(
+ ['Look around','Right-drag (or two fingers) to move around the city. Scroll to zoom.',r=>CNT.moved+CNT.zoomed*50>r.m+150,r=>{r.m=CNT.moved+CNT.zoomed*50}],
+ ['Draw a line','With ✏️ Draw line, drag from one station to another.',r=>DRAWN>r.n,r=>{r.n=DRAWN}],
+ ['Extend it','Drag from the end of your line to another station.',r=>EXT>r.n,r=>{r.n=EXT}],
+ ['Passengers','The coloured dots are passengers. Their colour shows the kind of place they want (🏠 green, 🏢 blue, 🛍 yellow…). Deliver 5.',r=>G.delivered>=r.d+5,r=>{r.d=G.delivered}],
+ ['Another line','In the Network tab, press Draw on a second colour and draw a new line.',()=>activeLines()>=2],
+ ['More trains','Pick 🚆 Add train and click a line (or + Train in the Network tab).',r=>TRADD>r.n,r=>{r.n=TRADD}],
+ ['Speed up','Press 2× next to the pause button.',()=>!S.paused&&S.speed>=2],
+ ['A new week','Wait for the week to end and pick an upgrade.',r=>UPG>r.n,r=>{r.n=UPG}],
+ ['Shorten a line','Pick ✂️ Shorten and click near the end of a line to remove its last stop.',r=>REMOVED>r.n,r=>{r.n=REMOVED}],
+ ['Crowding','Switch to the Crowding view to see which stations are filling up.',()=>S.view==='crowd'],
+ ['Other cities','Press Cities in the top bar and pick another city.',r=>CNT.scen>r.n,r=>{r.n=CNT.scen}],
+);
+DEMO.push(
+ ['plain','Prairie City','Trains glide along neon lines, picking up passengers and carrying them to the places they want.',()=>{setSpeed(2)}],
+ ['harbour','Harbourton','Bridges carry the lines over the river. Passengers change lines to reach their destination.',()=>{setSpeed(2)}],
+ ['twin','Twin Rivers','Two rivers, many bridges, a busy network.',()=>{setSpeed(3);setView('crowd')}],
+ ['delta','Deltaport','At night the city glows. Switch to Daytime in the Network tab for a paper-map look.',()=>{setSpeed(2);setView('day')}],
+);
+
+/* ===== simulator kit: UI, home, accounts, challenges, tutorial, demo, main loop ===== */
+const cv=$('world'),ctx=cv.getContext('2d');
+function resize(){W=innerWidth;H=innerHeight;DPR=Math.min(2,devicePixelRatio||1);cv.width=Math.round(W*DPR);cv.height=Math.round(H*DPR);measureHud();if(SIM.resize)SIM.resize()}
+function measureHud(){const h=document.querySelector('.hud-top');if(h)document.documentElement.style.setProperty('--hudH',Math.round(h.getBoundingClientRect().height)+'px')}
+const sx=wx=>(wx-cam.x)*cam.z+W/2+cam.ox,sy=wy=>(wy-cam.y)*cam.z+H/2;
+const wxOf=px=>(px-W/2-cam.ox)/cam.z+cam.x,wyOf=py=>(py-H/2)/cam.z+cam.y;
+function fitWorld(){const w=SIM.world.w,h=SIM.world.h,m=innerWidth<760?1:0.82;cam.z=SIM.world.wrapX?Math.max(W/w,H/h):Math.min(W/w,(H-90)/h)*m;cam.x=w/2;cam.y=h/2;clampCam()}
+function minZoom(){const w=SIM.world.w,h=SIM.world.h;return SIM.world.wrapX?H/h:Math.min(W/w,H/h)*0.5}
+function clampCam(){const h=SIM.world.h,w=SIM.world.w;cam.z=clamp(cam.z,minZoom(),SIM.world.maxZ||40);if(SIM.world.wrapX){const hy=H/2/cam.z;cam.y=clamp(cam.y,Math.min(h/2,hy),Math.max(h/2,h-hy))}else cam.y=clamp(cam.y,0,h);if(SIM.world.wrapX)cam.x=mod(cam.x,w);else cam.x=clamp(cam.x,0,w)}
+function zoomAt(f,px,py){const wx=wxOf(px),wy=wyOf(py);cam.z*=f;clampCam();cam.x+=wx-wxOf(px);cam.y+=wy-wyOf(py);clampCam();bump('zoomed')}
+function flyToW(x,y,z){S.follow=false;cam.x=x;cam.y=y;if(z)cam.z=Math.max(cam.z,z);clampCam()}
+
+/* speeds */
+function buildSpeeds(){const b=$('spds');b.textContent='';SIM.speeds.forEach(([l,v],i)=>{const e=document.createElement('button');e.className='spd';e.textContent=l;e.onclick=()=>{setSpeed(i);setPaused(false)};b.appendChild(e)})}
+function setSpeed(i){i=clamp(i,0,SIM.speeds.length-1);S.speedI=i;S.speed=SIM.speeds[i][1];[...$('spds').children].forEach((e,k)=>e.setAttribute('aria-pressed',k===i));updateRate()}
+function setPaused(p){S.paused=p;$('pauseBtn').textContent=p?'▶':'⏸';$('pauseBtn').setAttribute('aria-label',p?'Resume':'Pause');updateRate()}
+function updateRate(){$('rateTxt').textContent=S.paused?'Paused':SIM.fmtRate(S.speed)+(S.achieved<S.speed*0.8&&!S.paused?` (running ${SIM.fmtRate(Math.max(S.achieved,S.speed*0.01))})`:'')}
+$('pauseBtn').onclick=()=>setPaused(!S.paused);
+
+/* tools */
+function buildRail(){const r=$('rail');r.textContent='';for(const [g,items] of SIM.tools){if(g){const h=document.createElement('h3');h.textContent=g;r.appendChild(h)}
+  for(const [id,ico,name] of items){const b=document.createElement('button');b.className='tool';b.dataset.tool=id;b.innerHTML='<span class="ico"></span><span></span>';b.children[0].textContent=ico;b.children[1].textContent=name;b.onclick=()=>setTool(id);r.appendChild(b)}}}
+function toolInfo(id){for(const [,items] of SIM.tools)for(const t of items)if(t[0]===id)return t;return null}
+function setTool(id){S.tool=id;document.querySelectorAll('.tool').forEach(b=>b.setAttribute('aria-pressed',b.dataset.tool===id));const t=toolInfo(id);
+  $('placeopts').hidden=id==='select'||!t;$('toolNote').textContent=t&&t[3]||'';$('brush').parentElement.hidden=!(t&&t[4]);cv.classList.toggle('place',id!=='select');if(id!=='select')bump('tool');if(SIM.toolChanged)SIM.toolChanged(id)}
+$('brush').oninput=e=>{S.brush=+e.target.value;$('brushV').textContent=S.brush};
+
+/* dock tabs */
+function showTab(id){document.querySelectorAll('.tab').forEach(t=>t.setAttribute('aria-selected',t.dataset.tab===id));document.querySelectorAll('#dock .pane').forEach(p=>p.hidden=p.id!=='pane-'+id);bump('tab_'+id);if(SIM.tabShown)SIM.tabShown(id)}
+document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>showTab(t.dataset.tab));
+$('dockBtn').onclick=()=>document.body.classList.toggle('dockOpen');
+function setView(v){S.view=v;document.querySelectorAll('[data-view]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.view===v));bump('view');if(SIM.viewChanged)SIM.viewChanged(v)}
+document.querySelectorAll('[data-view]').forEach(b=>b.onclick=()=>setView(b.dataset.view));
+function setLegend(title,grad,ticks){const L=$('legend');if(!title){L.hidden=true;return}L.hidden=false;L.children[0].textContent=title;L.children[1].style.background=grad;[...L.children[2].children].forEach((s,i)=>s.textContent=ticks[i]||'')}
+
+/* scenarios */
+function buildScen(){const g=$('scgrid');g.textContent='';for(const s of SIM.scens){const b=document.createElement('button');b.className='scb';b.innerHTML='<b></b><span></span>';b.children[0].textContent=s.name;b.children[1].textContent=s.desc;b.onclick=()=>{$('scen').hidden=true;loadScen(s.id);bump('scen');toast(s.name)};g.appendChild(b)}}
+function loadScen(id){S.t=0;S.sel=null;S.follow=false;SIM.load(id);S.scen=id;fitWorld();if(SIM.after)SIM.after()}
+$('scenBtn').onclick=()=>$('scen').hidden=!$('scen').hidden;$('scenClose').onclick=()=>$('scen').hidden=true;
+
+/* find */
+let findItems=[],findI=0;
+function renderFind(){const L=$('findList'),q=$('find').value.trim();findItems=q?SIM.find(q.toLowerCase()).slice(0,10):[];findI=0;L.hidden=!findItems.length;L.textContent='';
+  findItems.forEach((it,i)=>{const b=document.createElement('button');b.className=i===findI?'on':'';b.innerHTML='<span></span><small></small>';b.children[0].textContent=it.label;b.children[1].textContent=it.sub||'';b.onmousedown=e=>{e.preventDefault();doFind(i)};L.appendChild(b)})}
+function doFind(i){const it=findItems[i];if(!it)return;$('find').value='';$('findList').hidden=true;$('find').blur();it.go();bump('find')}
+$('find').oninput=renderFind;$('find').onblur=()=>setTimeout(()=>$('findList').hidden=true,120);
+$('find').onkeydown=e=>{if(e.key==='Enter'){doFind(findI)}else if(e.key==='ArrowDown'||e.key==='ArrowUp'){findI=clamp(findI+(e.key==='ArrowDown'?1:-1),0,findItems.length-1);[...$('findList').children].forEach((b,k)=>b.className=k===findI?'on':'');e.preventDefault()}else if(e.key==='Escape'){$('find').blur()}};
+
+/* pointer input */
+const ptrs=new Map();let drag=null,pinch=null;
+cv.addEventListener('contextmenu',e=>e.preventDefault());
+cv.addEventListener('pointerdown',e=>{cv.setPointerCapture(e.pointerId);ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY});
+  if(ptrs.size===2){const [a,b]=[...ptrs.values()];pinch={d:Math.hypot(a.x-b.x,a.y-b.y),z:cam.z};if(drag&&drag.tool)SIM.pointer('up',wxOf(e.clientX),wyOf(e.clientY),e);drag=null;return}
+  const pan=S.tool==='select'||e.button===1||e.button===2;
+  drag={x0:e.clientX,y0:e.clientY,lx:e.clientX,ly:e.clientY,moved:0,pan,tool:!pan};
+  if(!pan)SIM.pointer('down',wxOf(e.clientX),wyOf(e.clientY),e)});
+cv.addEventListener('pointermove',e=>{const p=ptrs.get(e.pointerId);if(p){p.x=e.clientX;p.y=e.clientY}
+  if(pinch&&ptrs.size===2){const [a,b]=[...ptrs.values()];const d=Math.hypot(a.x-b.x,a.y-b.y);const f=pinch.z*d/pinch.d/cam.z;zoomAt(f,(a.x+b.x)/2,(a.y+b.y)/2);return}
+  if(!drag){if(SIM.hover)SIM.hover(wxOf(e.clientX),wyOf(e.clientY));return}
+  const dx=e.clientX-drag.lx,dy=e.clientY-drag.ly;drag.lx=e.clientX;drag.ly=e.clientY;drag.moved+=Math.abs(dx)+Math.abs(dy);
+  if(drag.pan){S.follow=false;cam.x-=dx/cam.z;cam.y-=dy/cam.z;clampCam();CNT.moved+=Math.abs(dx)+Math.abs(dy)}else SIM.pointer('drag',wxOf(e.clientX),wyOf(e.clientY),e)});
+function endPtr(e){ptrs.delete(e.pointerId);if(ptrs.size<2)pinch=null;if(!drag)return;const d=drag;drag=null;
+  if(d.tool)SIM.pointer('up',wxOf(e.clientX),wyOf(e.clientY),e);else if(d.moved<6&&e.button!==2){S.follow=false;S.sel=SIM.pick(wxOf(e.clientX),wyOf(e.clientY))||null;if(S.sel&&SIM.inspectTab){showTab(SIM.inspectTab);document.body.classList.add('dockOpen')}if(SIM.selChanged)SIM.selChanged();deselBtn()}}
+cv.addEventListener('pointerup',endPtr);cv.addEventListener('pointercancel',endPtr);
+cv.addEventListener('dblclick',e=>{if(S.sel&&S.tool==='select'&&SIM.canFollow){S.follow=true;cam.z=Math.max(cam.z,SIM.world.followZ||cam.z)}});
+cv.addEventListener('wheel',e=>{e.preventDefault();zoomAt(Math.exp(-e.deltaY*0.0015),e.clientX,e.clientY)},{passive:false});
+$('zIn').onclick=()=>zoomAt(1.4,W/2+cam.ox,H/2);$('zOut').onclick=()=>zoomAt(1/1.4,W/2+cam.ox,H/2);$('zFit').onclick=()=>{fitWorld();bump('zoomed')};
+const keys=new Set();
+addEventListener('keydown',e=>{if(e.target.tagName==='INPUT'||e.target.tagName==='SELECT'||e.target.tagName==='TEXTAREA')return;const k=e.key.toLowerCase();
+  if(k===' '){e.preventDefault();setPaused(!S.paused)}else if(k==='escape'){if(S.tool!=='select')setTool('select');else{S.sel=null;S.follow=false;if(SIM.selChanged)SIM.selChanged()}}
+  else if(k==='+'||k==='=')zoomAt(1.25,W/2+cam.ox,H/2);else if(k==='-')zoomAt(0.8,W/2+cam.ox,H/2);else keys.add(k)});
+addEventListener('keyup',e=>keys.delete(e.key.toLowerCase()));
+function camKeys(dt){let dx=0,dy=0;if(keys.has('a')||keys.has('arrowleft'))dx--;if(keys.has('d')||keys.has('arrowright'))dx++;if(keys.has('w')||keys.has('arrowup'))dy--;if(keys.has('s')||keys.has('arrowdown'))dy++;
+  if(dx||dy){S.follow=false;const sp=600*dt/cam.z;cam.x+=dx*sp;cam.y+=dy*sp;clampCam();CNT.moved+=600*dt}}
+
+/* accounts (shared by every simulator on the site) */
+const lsGet=k=>{try{return JSON.parse(localStorage.getItem(k)||'null')}catch(e){return null}};
+const lsSet=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}};
+const ACC_KEY='barycenter.accounts',PROG_KEY=SIM.id+'.progress';
+let ACC=lsGet(ACC_KEY);if(!ACC||!Array.isArray(ACC.list))ACC={list:[],cur:'guest',devicePlays:0};if(ACC.cur!=='guest'&&!ACC.list.some(a=>a.id===ACC.cur))ACC.cur='guest';
+let ACCN=0;
+const progKey=id=>id==='guest'?PROG_KEY:PROG_KEY+'.'+id;
+const blankProg=()=>({stars:{},plays:0,secs:0});
+let PROG=blankProg();
+function loadProg(){const v=lsGet(progKey(ACC.cur));PROG=Object.assign(blankProg(),v&&typeof v.stars==='object'?v:{})}
+function saveProg(){lsSet(progKey(ACC.cur),PROG)}
+function saveAcc(){const cur=lsGet(ACC_KEY);if(cur&&Array.isArray(cur.list)){for(const a of ACC.list){const o=cur.list.find(x=>x.id===a.id);if(o)Object.keys(o).forEach(k=>{if(!(k in a))a[k]=o[k]})}for(const o of cur.list)if(!ACC.list.some(a=>a.id===o.id))ACC.list.push(o);if(cur.devicePlays>ACC.devicePlays)ACC.devicePlays=cur.devicePlays}lsSet(ACC_KEY,ACC)}
+const curAcc=()=>ACC.list.find(a=>a.id===ACC.cur);
+const accName=()=>(curAcc()||{name:'Guest'}).name;
+const pinHash=p=>{let h=5381;for(const c of 'bary:'+p)h=((h*33)^c.charCodeAt(0))>>>0;return h.toString(36)};
+const GCOUNT='https://abacus.jasoncameron.dev',GPATH='barycenter-sandbox/'+SIM.id+'-plays';let GLOBAL=null;
+function gCount(op){try{const ctl=new AbortController();setTimeout(()=>ctl.abort(),6000);fetch(`${GCOUNT}/${op}/${GPATH}`,{signal:ctl.signal,cache:'no-store'}).then(r=>r.ok?r.json():null).then(j=>{if(j&&Number.isFinite(+j.value)){GLOBAL=Math.max(GLOBAL||0,+j.value);updateAcctUI()}}).catch(()=>{})}catch(e){}}
+function countPlay(){PROG.plays++;ACC.devicePlays=(ACC.devicePlays||0)+1;saveProg();saveAcc();if(GLOBAL!=null)GLOBAL++;updateAcctUI();gCount('hit')}
+function updateAcctUI(){$('hAcctName').textContent=curAcc()?accName():'Guest · make an account';$('hPlaysN').textContent=(GLOBAL!=null?GLOBAL:PROG.plays).toLocaleString();$('hPlaysL').textContent=GLOBAL!=null?'plays by everyone':'plays';$('acctBtn').title=`Account: ${accName()} (saved on this device)`}
+function switchAcc(id,quiet){if(id===ACC.cur)return;saveProg();ACC.cur=id;saveAcc();loadProg();ACCN++;updateAcctUI();if(!$('home').hidden)homeView($('hChalView').hidden?'hMain':'hChalView');if(!quiet)toast(`Signed in as ${accName()}`);renderAcct()}
+let acctPend=null;
+function renderAcct(msg){const L=$('acctList');L.textContent='';$('acctMsg').textContent=msg||'';
+  for(const a of [{id:'guest',name:'Guest',guest:1},...ACC.list]){const pr=a.id===ACC.cur?PROG:(lsGet(progKey(a.id))||{stars:{},plays:0}),cur=a.id===ACC.cur,r=document.createElement('div');r.className='arow'+(cur?' cur':'');
+    const nm=document.createElement('div');nm.className='an';nm.innerHTML='<div></div><div class="as"></div>';nm.children[0].textContent=(a.pin?'🔒 ':'')+a.name+(cur?' (signed in)':'');nm.children[1].textContent=`★ ${Object.values(pr.stars||{}).reduce((x,y)=>x+y,0)} in ${SIM.name} · ${pr.plays||0} plays`;r.appendChild(nm);
+    if(!cur){if(acctPend===a.id){const inp=document.createElement('input');inp.placeholder='PIN';inp.maxLength=4;const go=document.createElement('button');go.className='btn primary';go.textContent='OK';const t=()=>{if(pinHash(inp.value)===a.pin){acctPend=null;switchAcc(a.id)}else renderAcct('Wrong PIN')};go.onclick=t;inp.onkeydown=e=>{if(e.key==='Enter')t()};r.append(inp,go);setTimeout(()=>inp.focus(),0)}
+      else{const b=document.createElement('button');b.className='btn';b.textContent=a.guest?'Use guest':'Sign in';b.onclick=()=>{if(a.pin){acctPend=a.id;renderAcct()}else switchAcc(a.id)};r.appendChild(b)}}
+    else if(!a.guest){const so=document.createElement('button');so.className='btn';so.textContent='Sign out';so.onclick=()=>switchAcc('guest');r.appendChild(so)}
+    L.appendChild(r)}}
+function openAcct(){acctPend=null;$('acct').hidden=false;renderAcct()}
+$('acctForm').addEventListener('submit',e=>{e.preventDefault();const name=$('acctNew').value.trim().replace(/\s+/g,' ').slice(0,20),pin=$('acctPin').value.trim();
+  if(!name)return renderAcct('Type a name first');if(/^guest$/i.test(name)||ACC.list.some(a=>a.name.toLowerCase()===name.toLowerCase()))return renderAcct('That name is taken on this device');if(pin&&!/^\d{4}$/.test(pin))return renderAcct('A PIN is 4 digits (or leave it empty)');
+  const fromGuest=ACC.cur==='guest'&&(PROG.plays||Object.keys(PROG.stars).length);const a={id:'a'+Date.now().toString(36)+Math.floor(Math.random()*1e4).toString(36),name,created:Date.now()};if(pin)a.pin=pinHash(pin);
+  if(fromGuest){lsSet(progKey(a.id),PROG);lsSet(PROG_KEY,blankProg())}ACC.list.push(a);saveAcc();$('acctNew').value='';$('acctPin').value='';switchAcc(a.id,true);toast(`Account ${name} created`);renderAcct(fromGuest?'Your guest progress moved into this account.':'')});
+$('hAcctBtn').onclick=openAcct;$('acctBtn').onclick=openAcct;$('acctClose').onclick=()=>$('acct').hidden=true;$('acct').addEventListener('click',e=>{if(e.target.id==='acct')$('acct').hidden=true});
+$('hPlays').onclick=()=>{gCount('get');toast(GLOBAL!=null?`${GLOBAL.toLocaleString()} plays by everyone · ${PROG.plays} by you`:`${PROG.plays} plays by you on this device`)};
+
+/* challenges */
+CHALS.sort((a,b)=>a.diff-b.diff);loadProg();
+const NCH=CHALS.length;
+const starsOf=i=>(CHALS[i]&&PROG.stars[CHALS[i].t])||0;
+const unlocked=i=>{if(i===0||starsOf(i-1)||starsOf(i))return true;for(let j=i+1;j<NCH;j++)if(starsOf(j))return true;return false};
+function totalStars(){let n=0;for(let i=0;i<NCH;i++)n+=starsOf(i);return n}
+const doneCount=()=>CHALS.filter((c,i)=>starsOf(i)>0).length;
+function setMode(m){document.body.classList.toggle('mHome',m==='home');document.body.classList.toggle('mDemo',m==='demo')}
+function homeView(v){for(const id of ['hMain','hChalView','hDemoView'])$(id).hidden=id!==v;if(v==='hChalView')renderGrid();const d=doneCount();$('hChalSub').textContent=d?`${d} of ${NCH} complete · ${totalStars()} of ${NCH*3} stars`:`${NCH} goals, from easy to fiendish`;updateAcctUI()}
+function showHome(){stopDemo(true);if(CH.active)endChallenge();if(TUT.on)endTutorial();$('chDone').hidden=true;$('scen').hidden=true;
+  CH.loading=true;loadScen(SIM.home);CH.loading=false;setSpeed(SIM.homeSpeed??SIM.defSpeed);setPaused(false);setTool('select');setView('normal');
+  cam.ox=innerWidth>900?innerWidth*0.2:0;setMode('home');$('home').hidden=false;homeView('hMain')}
+function leaveHome(){cam.ox=0;$('home').hidden=true;setMode('');fitWorld()}
+$('homeBtn').onclick=showHome;document.querySelectorAll('.hback').forEach(b=>b.onclick=()=>homeView('hMain'));
+$('hChal').onclick=()=>homeView('hChalView');$('hDemo').onclick=()=>homeView('hDemoView');
+function startFree(){leaveHome();loadScen(SIM.freeScen||SIM.home);setSpeed(SIM.defSpeed);countPlay()}
+$('hFree').onclick=startFree;
+function renderGrid(){const g=$('hGrid');g.textContent='';let next=-1;
+  CHALS.forEach((c,i)=>{const st=starsOf(i),un=unlocked(i);if(un&&!st&&next<0)next=i;const b=document.createElement('button');b.className='ct'+(i===next?' next':'');b.disabled=!un;b.title=un?`${c.t}: ${c.g}`:'Finish the previous challenge to unlock';
+    b.innerHTML='<span class="cn"></span><span class="ctt"></span><span class="cs"></span>';b.children[0].textContent=`#${i+1}`;b.children[1].textContent=un?c.t:'Locked';b.children[2].textContent=un?(st?'★'.repeat(st)+'☆'.repeat(3-st):'☆☆☆'):'🔒';b.onclick=()=>startChallenge(i);g.appendChild(b)});
+  $('hStars').textContent=`★ ${totalStars()} / ${NCH*3}`;if(next>=0)setTimeout(()=>{const el=g.children[next];if(el)el.scrollIntoView({block:'nearest'})},30)}
+function startChallenge(i){const c=CHALS[i];if(!c||!unlocked(i))return;leaveHome();countPlay();$('chDone').hidden=true;
+  CH.active=c;CH.idx=i;CH.events=[];CH.hold={};CH.ref={};CH.done=false;CH.failed='';CH.loading=true;try{loadScen(c.scen||SIM.home);setSpeed(c.speed??SIM.defSpeed);if(c.setup)c.setup()}finally{CH.loading=false}
+  CH.t0=S.t;CH.real0=performance.now();setPaused(false);setTool('select');
+  $('chHud').hidden=false;$('chNum').textContent=`Challenge ${i+1} of ${NCH}`;$('chTitle').textContent=c.t;$('chGoal').textContent=c.g;$('chProg').textContent='';$('chBar').style.width='0%';$('chHint').hidden=!c.hint;$('chRestart').textContent='Restart'}
+function endChallenge(){CH.active=null;$('chHud').hidden=true}
+function chTick(){if(TUT.on)tutTick();if(!CH.active||CH.done)return;const c=CH.active;let r;try{r=c.check()}catch(e){console.warn(e);r=[false,0,'']}
+  const [done,p,txt]=r;$('chProg').textContent=txt||'';$('chBar').style.width=Math.round(clamp(p||0,0,1)*100)+'%';const t=realSecs();$('chTime').textContent=`${Math.floor(t/60)}:${String(Math.floor(t%60)).padStart(2,'0')}`;
+  if(done){CH.done=true;const st=clamp((c.stars||byTime(60,150))(),1,3),prev=starsOf(CH.idx);if(st>prev)PROG.stars[c.t]=st;saveProg();
+    $('dStars').innerHTML='★'.repeat(st)+'<span class="off">'+'★'.repeat(3-st)+'</span>';$('dTitle').textContent=`Challenge ${CH.idx+1} complete!`;$('dText').textContent=`${c.t} · ${Math.floor(t/60)}:${String(Math.floor(t%60)).padStart(2,'0')}${st<3?' · Faster solutions earn more stars.':' · Perfect!'}${prev>st?` Your best is still ${prev} ★.`:''}`;
+    $('dNext').hidden=CH.idx>=NCH-1;$('dNext').textContent='Next challenge';$('dRetry').hidden=false;$('dList').textContent='All challenges';$('chDone').hidden=false;$('chHud').hidden=true;return}
+  const f=c.fail&&c.fail();if(f){CH.done=true;$('dStars').innerHTML='<span class="off">★★★</span>';$('dTitle').textContent='Not this time';$('dText').textContent=f+'. Try again?';$('dNext').hidden=true;$('dRetry').hidden=false;$('dList').textContent='All challenges';$('chDone').hidden=false;$('chHud').hidden=true}}
+$('chRestart').addEventListener('click',()=>{if(TUT.on){TUT.i++;tutStep();return}startChallenge(CH.idx)});
+$('chExit').addEventListener('click',()=>{if(TUT.on){endTutorial();showHome();homeView('hDemoView');return}endChallenge();showHome();homeView('hChalView')});
+$('chHint').onclick=()=>{if(CH.active)toast('Hint: '+CH.active.hint,6000)};
+$('dNext').onclick=()=>{if(TUT.finished){TUT.finished=false;showHome();homeView('hChalView');return}startChallenge(CH.idx+1)};
+$('dRetry').onclick=()=>{if(TUT.finished){TUT.finished=false;startTutorial();return}startChallenge(CH.idx)};
+$('dList').onclick=()=>{if(TUT.finished){TUT.finished=false;$('chDone').hidden=true;startFree();return}endChallenge();showHome();homeView('hChalView')};
+
+/* tutorial */
+const TUT={on:false,i:0,ref:{},finished:false};
+function startTutorial(){leaveHome();countPlay();$('chDone').hidden=true;CH.loading=true;loadScen(SIM.tutScen||SIM.home);CH.loading=false;setSpeed(SIM.defSpeed);setPaused(false);TUT.on=true;TUT.i=0;TUT.finished=false;tutStep()}
+function tutStep(){const st=TSTEPS[TUT.i];if(!st){TUT.on=false;TUT.finished=true;$('chHud').hidden=true;$('dStars').innerHTML='★★★';$('dTitle').textContent='Tutorial complete!';$('dText').textContent='You know all the controls. Try the challenges, or build anything in free play.';$('dNext').hidden=false;$('dNext').textContent='Challenges';$('dRetry').hidden=false;$('dList').textContent='Free play';$('chDone').hidden=false;$('chRestart').textContent='Restart';return}
+  TUT.ref={};if(st[3])st[3](TUT.ref);$('chHud').hidden=false;$('chNum').textContent=`Tutorial · step ${TUT.i+1} of ${TSTEPS.length}`;$('chTitle').textContent=st[0];$('chGoal').textContent=st[1];$('chProg').textContent='';$('chTime').textContent='';$('chBar').style.width=Math.round(TUT.i/TSTEPS.length*100)+'%';$('chHint').hidden=true;$('chRestart').textContent='Skip step'}
+function tutTick(){const st=TSTEPS[TUT.i];let ok=false;try{ok=st&&st[2](TUT.ref)}catch(e){}if(ok){TUT.i++;toast('✓ '+st[0]);tutStep()}}
+function endTutorial(){TUT.on=false;$('chHud').hidden=true;$('chRestart').textContent='Restart'}
+$('hTut').onclick=startTutorial;
+
+/* demo */
+let demoI=-1,demoTimer=0;
+function startDemo(){leaveHome();countPlay();setMode('demo');$('demoCap').hidden=false;demoI=-1;nextDemo()}
+function nextDemo(){clearTimeout(demoTimer);demoI=(demoI+1)%DEMO.length;const [id,t,x,f]=DEMO[demoI];CH.loading=true;loadScen(id);CH.loading=false;setView('normal');setPaused(false);if(f)f();
+  $('demoStep').textContent=`Demo · ${demoI+1} of ${DEMO.length}`;$('demoTitle').textContent=t;$('demoText').textContent=x;demoTimer=setTimeout(nextDemo,12000)}
+function stopDemo(quiet){clearTimeout(demoTimer);if(demoI<0&&quiet)return;demoI=-1;$('demoCap').hidden=true;setMode('');if(!quiet)showHome()}
+$('hWatch').onclick=startDemo;$('demoExit').onclick=()=>stopDemo();$('demoNext').onclick=nextDemo;
+
+/* main loop */
+let last=performance.now(),uiT=0,achAcc=0,achT=0,renderMs=4,stepMs=1;S.achieved=1;
+function frame(now){const dtR=Math.min(0.1,(now-last)/1000);last=now;camKeys(dtR);
+  try{
+    if(!S.paused){const want=S.speed*dtR,step=SIM.stepSize(S.speed),t0=performance.now(),budget=clamp((SIM.budget||12.5)-renderMs,2,9);let done=0;
+      while(done<want-1e-12){const el=performance.now()-t0;if(el+stepMs*0.9>budget&&done>0)break;const s0=performance.now(),d=Math.min(step,want-done);SIM.step(d);S.t+=d;done+=d;stepMs=stepMs*0.8+(performance.now()-s0)*0.2}
+      achAcc+=done}
+    achT+=dtR;if(achT>=0.5){S.achieved=achAcc/achT;achAcc=0;achT=0}
+    if(SIM.frame)SIM.frame(dtR);
+    if(S.follow&&S.sel&&SIM.selPos){const p=SIM.selPos(S.sel);if(p){cam.x=lerp(cam.x,p[0],Math.min(1,dtR*6));cam.y=lerp(cam.y,p[1],Math.min(1,dtR*6));clampCam()}}
+    const r0=performance.now();ctx.setTransform(DPR,0,0,DPR,0,0);SIM.render(ctx,now);renderMs=renderMs*0.85+(performance.now()-r0)*0.15;
+    uiT+=dtR;if(uiT>0.25){uiT=0;updateHud()}
+  }catch(err){console.error('['+SIM.name+']',err)}
+  requestAnimationFrame(frame)}
+function deselect(){S.sel=null;S.follow=false;if(SIM.selChanged)SIM.selChanged()}
+function deselBtn(){const p=$('pane-insp');if(!p)return;let b=$('kitDesel');if(!b){b=document.createElement('button');b.id='kitDesel';b.className='btn';b.textContent='✕ Stop inspecting';b.onclick=deselect;p.insertBefore(b,p.firstChild)}b.hidden=!S.sel}
+function updateHud(){deselBtn();measureHud();const st=SIM.stats(),box=$('stats');if(box.children.length!==st.length){box.textContent='';for(const [k] of st){const d=document.createElement('div');d.className='stat';d.innerHTML='<span class="k"></span><span class="v"></span>';d.children[0].textContent=k;box.appendChild(d)}}
+  st.forEach(([k,v],i)=>{box.children[i].children[1].textContent=v});$('dateTxt').textContent=SIM.dateTxt();$('dateSub').textContent=SIM.dateSub?SIM.dateSub():'';updateRate();SIM.hud();chTick();
+  if(document.visibilityState==='visible'&&$('home').hidden)PROG.secs=(PROG.secs||0)+0.25}
+addEventListener('resize',resize);addEventListener('pagehide',saveProg);
+resize();buildRail();buildSpeeds();buildScen();if(SIM.init)SIM.init();setSpeed(SIM.defSpeed);setTool('select');updateAcctUI();gCount('get');showHome();requestAnimationFrame(frame);
+
+/* ===== account helpers shared by every simulator: a sign-out button on the home page while signed in ===== */
+{const h=$('hAcctBtn');if(h&&!$('hOut')){const b=document.createElement('button');b.className='chip';b.id='hOut';b.textContent='↩ Sign out';b.title='Sign out (back to guest)';b.onclick=()=>switchAcc('guest');h.after(b)}
+  setInterval(()=>{const b=$('hOut');if(b)b.hidden=!curAcc()},500)}
+
+</script>
+</body>
+</html>
