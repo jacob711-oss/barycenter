@@ -1,0 +1,691 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="No ant knows the plan. Each one just follows scent trails, and together they find food, build highways and wage war">
+<title>Hivemind</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Oxanium:wght@500;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Simulator kit: shared with Barycenter and Biosphere */
+:root{
+  --voidRGB:12,9,5;--deepRGB:20,14,8;--accRGB:255,154,61;--lineRGB:230,190,140;--panel:rgba(22,15,9,.88);--ink:#f6efe4;--ink2:#e6d8c4;--dim:#ab9a82;
+  --void:rgb(var(--voidRGB));
+  --line:rgba(var(--lineRGB),.16);
+  --line-strong:rgba(var(--lineRGB),.34);
+  --flare:#ffc35a;
+  --cool:rgb(var(--accRGB));
+  --danger:#ff6b5a;
+  --f-display:'Oxanium','Segoe UI',system-ui,sans-serif;
+  --f-body:'IBM Plex Sans',system-ui,-apple-system,sans-serif;
+  --f-mono:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+  --gut:max(16px, env(safe-area-inset-left, 0px));
+  --gutR:max(16px, env(safe-area-inset-right, 0px));
+  --top:calc(env(safe-area-inset-top, 0px) + 12px);
+  --bot:calc(env(safe-area-inset-bottom, 0px) + 12px);
+  color-scheme:dark;
+}
+[hidden]{display:none!important}
+html,body{height:100%;margin:0}
+body{background:var(--void);color:var(--ink);font-family:var(--f-body);overflow:hidden;-webkit-user-select:none;user-select:none}
+#world{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:none;cursor:grab}
+#world.place{cursor:crosshair}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+.k{font-family:var(--f-mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--dim)}
+.v{font-family:var(--f-mono);font-size:13px;font-variant-numeric:tabular-nums;color:var(--ink)}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+button:focus-visible,input:focus-visible{outline:2px solid var(--cool);outline-offset:2px}
+.btn{font-family:var(--f-mono);font-size:12px;padding:7px 11px;border:1px solid var(--line-strong);border-radius:7px;color:var(--ink);background:rgba(var(--accRGB),.06);white-space:nowrap}
+.btn:hover{background:rgba(var(--accRGB),.14)}
+.btn[aria-pressed="true"]{background:rgba(var(--accRGB),.22);border-color:var(--cool)}
+.btn.primary{background:rgba(255,195,90,.16);border-color:rgba(255,195,90,.6);color:#ffe6b8}
+.btn.danger{border-color:rgba(255,107,90,.5);color:#ffb1a6}
+.btn.ghost{border-color:transparent;color:var(--dim)}
+input[type=range]{accent-color:var(--cool);width:100%}
+
+/* top bar */
+.hud-top{position:fixed;top:var(--top);left:var(--gut);right:var(--gutR);display:flex;gap:10px;align-items:stretch;z-index:5;pointer-events:none}
+.hud-top>*{pointer-events:auto}
+.brand{padding:10px 14px;display:flex;flex-direction:column;justify-content:center}
+.brand h1{font-family:var(--f-display);font-weight:700;font-size:18px;letter-spacing:.1em;margin:0;text-transform:uppercase}.brand h1 b{color:var(--flare)}
+.brand .sub{font-size:11px;color:var(--dim)}
+.time{display:flex;gap:12px;align-items:center;padding:8px 12px}
+#pauseBtn{width:40px;height:40px;border-radius:9px;border:1px solid rgba(255,195,90,.55);background:rgba(255,195,90,.12);font-size:16px}
+.spds{display:flex;gap:3px}.spd{font-family:var(--f-mono);font-size:10px;padding:3px 5px;border-radius:5px;border:1px solid var(--line);color:var(--dim);white-space:nowrap}
+.spd:hover{color:var(--ink)}.spd[aria-pressed="true"]{color:var(--ink);border-color:rgba(255,195,90,.6);background:rgba(255,195,90,.14)}
+.tcol{display:flex;flex-direction:column;gap:4px}
+.right{margin-left:auto;display:flex;gap:10px;align-items:center;padding:8px 10px;flex-wrap:wrap;justify-content:flex-end}
+.stat{display:flex;flex-direction:column;gap:2px;min-width:54px}
+.findwrap{position:relative}
+.find{width:210px;font:inherit;font-size:13px;padding:8px 10px;border-radius:8px;border:1px solid var(--line-strong);background:rgba(0,0,0,.35);color:var(--ink)}
+.findlist{position:absolute;top:calc(100% + 4px);left:0;right:0;z-index:9;padding:4px;display:flex;flex-direction:column;gap:2px;max-height:300px;overflow:auto}
+.findlist button{text-align:left;padding:7px 9px;border-radius:6px;font-size:13px}.findlist button:hover,.findlist button.on{background:rgba(var(--accRGB),.14)}
+.findlist small{color:var(--dim);margin-left:6px}
+
+/* tool rail */
+.rail{position:fixed;left:var(--gut);top:calc(var(--top) + var(--hudH,64px) + 10px);bottom:var(--bot);width:86px;overflow-y:auto;overflow-x:hidden;z-index:4;padding:6px;display:flex;flex-direction:column;gap:3px;scrollbar-width:thin}
+.rail h3{font-family:var(--f-mono);font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--dim);margin:8px 2px 2px;font-weight:500}
+.tool{display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 2px;border-radius:7px;border:1px solid transparent;font-size:10.5px;color:var(--ink2);line-height:1.1;text-align:center}
+.tool .ico{font-size:19px;line-height:1}
+.tool:hover{background:rgba(var(--accRGB),.1)}.tool[aria-pressed="true"]{background:rgba(255,195,90,.15);border-color:rgba(255,195,90,.55);color:#fff}
+.placeopts{position:fixed;left:calc(var(--gut) + 96px);bottom:var(--bot);z-index:4;padding:8px 12px;display:flex;gap:14px;align-items:center;font-size:12px}
+.placeopts label{display:flex;gap:6px;align-items:center;color:var(--dim)}.placeopts input[type=range]{width:110px}
+.seg{display:flex;gap:3px}.seg button{font-family:var(--f-mono);font-size:11px;padding:3px 8px;border-radius:5px;border:1px solid var(--line);color:var(--dim)}.seg button[aria-pressed="true"]{color:var(--ink);border-color:var(--cool);background:rgba(var(--accRGB),.16)}
+
+/* dock */
+.dock{position:fixed;right:var(--gutR);top:calc(var(--top) + var(--hudH,64px) + 10px);bottom:var(--bot);width:330px;z-index:4;display:flex;flex-direction:column;overflow:hidden}
+.tabs{display:flex;border-bottom:1px solid var(--line)}.tab{flex:1;padding:10px 4px;font-family:var(--f-mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--dim);border-bottom:2px solid transparent}
+.tab[aria-selected="true"]{color:var(--ink);border-color:var(--flare)}
+.pane{padding:12px 14px;overflow:auto;flex:1;display:flex;flex-direction:column;gap:12px}
+.row{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.sl{display:flex;flex-direction:column;gap:4px}.sl .row span:last-child{font-family:var(--f-mono);font-size:12px}
+.evs{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.views{display:flex;gap:4px;flex-wrap:wrap}
+.splist{display:flex;flex-direction:column;gap:3px}
+.sprow{display:grid;grid-template-columns:14px 1fr auto;gap:8px;align-items:center;font-size:12.5px;padding:3px 4px;border-radius:5px}
+.sprow:hover{background:rgba(var(--accRGB),.08)}.sprow i{width:10px;height:10px;border-radius:50%;display:block}.sprow b{font-family:var(--f-mono);font-weight:500;font-size:12px}
+.sprow.zero{opacity:.4}
+#graph{width:100%;height:150px;display:block;border:1px solid var(--line);border-radius:8px;background:rgba(0,0,0,.25)}
+.gene{display:grid;grid-template-columns:86px 1fr 46px;gap:8px;align-items:center;font-size:12px}
+.gene .bar{height:6px;border-radius:3px;background:rgba(var(--accRGB),.12);overflow:hidden}.gene .bar span{display:block;height:100%;background:var(--cool)}
+.gene input{margin:0}
+.ititle{font-family:var(--f-display);font-weight:500;font-size:22px;margin:0}
+.isub{font-size:12.5px;color:var(--dim);margin-top:-8px}
+.kv{display:grid;grid-template-columns:1fr 1fr;gap:6px}.kv div{border:1px solid var(--line);border-radius:7px;padding:6px 8px}.kv .k{display:block}.kv .v{font-size:13px}
+.note{font-size:12px;color:var(--dim);line-height:1.5;margin:0}
+#iPic{width:100%;height:120px;border-radius:8px;background:rgb(var(--deepRGB));display:block}
+.toasts{position:fixed;left:50%;transform:translateX(-50%);top:calc(var(--top) + var(--hudH,64px) + 16px);z-index:8;display:flex;flex-direction:column;gap:6px;align-items:center;pointer-events:none}
+.toast{font-size:13px;padding:8px 14px;border-radius:99px;background:var(--panel);border:1px solid var(--line-strong);animation:tin .25s ease-out}
+@keyframes tin{from{opacity:0;transform:translateY(-6px)}}
+.hint{position:fixed;left:50%;transform:translateX(-50%);bottom:var(--bot);font-family:var(--f-mono);font-size:11.5px;color:var(--dim);background:var(--panel);border:1px solid var(--line);border-radius:99px;padding:7px 14px;white-space:nowrap;z-index:3;pointer-events:none}
+.zoomb{position:fixed;right:calc(var(--gutR) + 342px);bottom:var(--bot);z-index:4;display:flex;flex-direction:column;gap:4px;padding:4px}
+.zoomb button{width:32px;height:30px;border-radius:6px;border:1px solid var(--line);font-size:15px;color:var(--dim)}.zoomb button:hover{color:var(--ink)}
+
+/* scenarios */
+.scen{position:fixed;right:var(--gutR);top:calc(var(--top) + var(--hudH,64px) + 10px);width:min(520px,calc(100% - 32px));z-index:7;padding:14px;display:flex;flex-direction:column;gap:10px;max-height:calc(100% - 120px);overflow:auto}
+.scgrid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.scb{text-align:left;padding:10px 12px;border-radius:9px;border:1px solid var(--line);display:flex;flex-direction:column;gap:3px}.scb:hover{border-color:var(--cool)}
+.scb b{font-family:var(--f-display);font-weight:500;font-size:15px}.scb span{font-size:12px;color:var(--dim);line-height:1.35}
+
+/* home */
+.home{position:fixed;inset:0;z-index:20;pointer-events:none;background:linear-gradient(90deg,rgba(var(--voidRGB),.93) 0,rgba(var(--voidRGB),.78) 34%,rgba(var(--voidRGB),0) 62%)}
+.hcard{pointer-events:auto;position:absolute;left:var(--gut);top:calc(var(--top) + 16px);bottom:calc(var(--bot) + 16px);width:min(560px,calc(100% - 32px));overflow:auto;display:flex;flex-direction:column;gap:22px;padding:8px 4px}
+.htitle{font-family:var(--f-display);font-weight:700;font-size:clamp(40px,7vw,72px);letter-spacing:.08em;text-transform:uppercase;margin:0;line-height:1}.htitle b{color:var(--flare)}
+.htag{margin:10px 0 0;color:var(--dim);font-size:16px}
+.hacct{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+.chip{display:inline-flex;align-items:center;gap:6px;font-family:var(--f-mono);font-size:12px;padding:7px 12px;border-radius:99px;border:1px solid var(--line-strong);background:rgba(var(--deepRGB),.82);color:var(--ink);text-decoration:none}
+.chip:hover{border-color:var(--cool)}.chip b{color:var(--flare);font-weight:600}.chip.other{border-color:rgba(127,178,255,.5);color:#cfe0ff}
+.hview{display:flex;flex-direction:column;gap:12px}
+.hb{display:flex;flex-direction:column;align-items:flex-start;gap:4px;text-align:left;padding:18px 20px;border-radius:12px;border:1px solid var(--line-strong);background:rgba(var(--deepRGB),.84)}
+.hb:hover{border-color:var(--cool);background:rgba(var(--accRGB),.10)}.hb .ht{font-family:var(--f-display);font-weight:500;font-size:22px}.hb .hd{font-size:13px;color:var(--dim);line-height:1.4}
+.hb.primary{border-color:rgba(255,195,90,.6);background:rgba(40,30,12,.86)}.hb.primary:hover{background:rgba(60,44,14,.92)}
+.hfoot{margin:0;font-size:12px;color:var(--dim);line-height:1.5}
+.hbar{display:flex;align-items:center;gap:14px}.hbar h2{font-family:var(--f-display);font-weight:500;font-size:24px;margin:0;flex:1}.hstars{font-family:var(--f-mono);font-size:12px;color:var(--flare)}
+.hgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:6px}
+.ct{display:flex;flex-direction:column;align-items:flex-start;gap:3px;padding:8px 9px;border-radius:8px;border:1px solid var(--line);background:rgba(var(--deepRGB),.86);text-align:left;min-height:70px}
+.ct:hover:not(:disabled){border-color:var(--cool)}.ct:disabled{opacity:.45;cursor:not-allowed}.ct .cn{font-family:var(--f-mono);font-size:10px;color:var(--dim)}.ct .ctt{font-size:11.5px;line-height:1.25}
+.ct .cs{font-size:12px;color:var(--flare);letter-spacing:1px;margin-top:auto}.ct.next{border-color:rgba(255,195,90,.7);box-shadow:0 0 0 1px rgba(255,195,90,.3)}
+body.mHome .hud-top,body.mHome .rail,body.mHome .dock,body.mHome .placeopts,body.mHome .hint,body.mHome .zoomb,body.mHome .scen,body.mHome #chHud,body.mHome .toasts{display:none!important}
+body.mDemo .rail,body.mDemo .dock,body.mDemo .placeopts,body.mDemo .hint,body.mDemo .zoomb,body.mDemo .hud-top{display:none!important}
+.chhud{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(var(--bot) + 52px);width:min(600px,calc(100% - 480px));min-width:300px;padding:12px 14px;z-index:6;display:flex;flex-direction:column;gap:6px}
+.chtop{display:flex;justify-content:space-between}.chtitle{font-family:var(--f-display);font-weight:500;font-size:17px}.chgoal{font-size:13px;line-height:1.45;color:var(--ink2)}
+.chbarw{height:6px;border-radius:3px;background:rgba(var(--accRGB),.12);overflow:hidden}#chBar{display:block;height:100%;width:0;background:var(--flare);transition:width .25s}
+.chrow{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}.chprog{font-family:var(--f-mono);font-size:11.5px;color:var(--dim)}.chbtns{display:flex;gap:6px}
+.donebg{pointer-events:auto;display:grid;place-items:center;background:rgba(var(--voidRGB),.6)}
+.donecard{width:min(440px,calc(100% - 32px));padding:24px;text-align:center;display:flex;flex-direction:column;gap:10px}.donecard h2{font-family:var(--f-display);font-weight:500;margin:0}
+.dstars{font-size:34px;color:var(--flare);letter-spacing:4px}.dstars .off{color:rgba(255,255,255,.15)}
+.actions{display:flex;gap:8px;flex-wrap:wrap}
+.democap{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(var(--bot) + 10px);width:min(640px,calc(100% - 32px));padding:14px 18px;z-index:21;display:flex;flex-direction:column;gap:6px}
+.democap h2{font-family:var(--f-display);font-weight:500;font-size:22px;margin:0}.democap p{margin:0;font-size:14px;color:var(--ink2)}
+.ovl{position:fixed;inset:0;z-index:30;display:grid;place-items:center;background:rgba(var(--voidRGB),.6)}
+.obox{width:min(460px,calc(100% - 32px));max-height:min(80vh,640px);overflow:auto;padding:18px;display:flex;flex-direction:column;gap:12px}
+.obox h2{font-family:var(--f-display);font-weight:500;font-size:22px;margin:0;flex:1}
+.arow{display:flex;align-items:center;gap:8px;padding:9px 10px;border:1px solid var(--line);border-radius:8px}.arow.cur{border-color:rgba(255,195,90,.6);background:rgba(40,30,12,.5)}
+.arow .an{flex:1;min-width:0}.arow .as{font-family:var(--f-mono);font-size:11px;color:var(--dim)}
+.arow input,.aform input{font:inherit;font-size:13px;padding:7px 9px;border-radius:7px;border:1px solid var(--line-strong);background:rgba(0,0,0,.35);color:var(--ink);min-width:0}
+.arow input{width:80px}.aform{display:flex;gap:6px;flex-wrap:wrap}.aform input{flex:1 1 120px}
+.endbox{border:1px solid rgba(255,107,90,.45);background:rgba(60,16,12,.35);border-radius:8px;padding:8px 10px;display:flex;flex-direction:column;gap:4px}.endbox .k{color:#ffb1a6}.endrow{display:flex;justify-content:space-between;font-size:12.5px;text-align:left;padding:2px 0}.endrow b{font-family:var(--f-mono);font-weight:500;color:#ffb1a6}.endrow.ext{opacity:.6;text-decoration:line-through}
+.endbadge{position:fixed;right:calc(var(--gutR) + 342px);top:calc(var(--top) + var(--hudH,64px) + 12px);z-index:4;padding:7px 12px;border-color:rgba(255,107,90,.55);color:#ffc0b6;font-family:var(--f-mono);font-size:12px}
+@media (max-width:760px){.endbadge{right:var(--gutR);top:auto;bottom:calc(var(--bot) + 230px)}}
+body.mHome .endbadge,body.mDemo .endbadge{display:none!important}
+.dna{width:100%;height:28px;display:block;border-radius:6px;background:rgba(0,0,0,.25)}.fam{display:flex;gap:6px;flex-wrap:wrap;align-items:center}.gsel,.coatsel{font:inherit;font-size:12px;background:rgba(0,0,0,.35);color:var(--ink);border:1px solid var(--line-strong);border-radius:6px;padding:4px 6px}
+.legend{position:fixed;left:calc(var(--gut) + 96px);top:calc(var(--top) + var(--hudH,64px) + 12px);z-index:4;padding:8px 12px;width:220px;display:flex;flex-direction:column;gap:5px}.legend .lbar{height:10px;border-radius:5px}.legend .lticks{display:flex;justify-content:space-between;font-family:var(--f-mono);font-size:10.5px;color:var(--dim)}
+body.mHome .legend,body.mDemo .legend{display:none!important}@media (max-width:760px){.legend{left:var(--gut);top:auto;bottom:calc(var(--bot) + 190px)}}
+.pbig{font-family:var(--f-display);font-size:54px;line-height:1;color:var(--flare)}
+
+@media (max-width:1600px){.right .stat{display:none}.find{width:170px}}
+@media (max-width:1300px){.brand .sub{display:none}.find{width:140px}.brand{padding:10px}}
+@media (max-width:760px){
+  .hud-top{flex-wrap:wrap}.brand{display:none}.time{flex:1 1 100%}.right{flex:1 1 100%;justify-content:space-between}.findwrap{flex:1 1 100%;order:-1}.find{width:100%;box-sizing:border-box}
+  .rail{top:auto;left:var(--gut);right:var(--gutR);bottom:var(--bot);width:auto;height:64px;flex-direction:row;overflow-x:auto;overflow-y:hidden}
+  .rail h3{display:none}.tool{min-width:58px}
+  .placeopts{left:var(--gut);bottom:calc(var(--bot) + 72px)}
+  .dock{top:auto;bottom:calc(var(--bot) + 120px);left:var(--gut);right:var(--gutR);width:auto;height:42vh}
+  body:not(.dockOpen) .dock{display:none}
+  .zoomb{right:var(--gutR);bottom:calc(var(--bot) + 120px)}
+  .home{background:rgba(var(--voidRGB),.74)}
+  .chhud{width:auto;min-width:0;left:var(--gut);right:var(--gutR);transform:none;bottom:calc(var(--bot) + 124px);max-height:36vh;overflow:auto}
+  .hint{display:none}
+}
+#dockBtn{display:none}@media (max-width:760px){#dockBtn{display:inline-block}}
+.sprow{text-align:left;width:100%}@media (max-width:760px){#dateSub{display:none}}
+#hAcctBtn,#acctBtn,#hOut,#acct{display:none!important}
+body.dockHidden .dock,body.dockHidden .zoomb{display:none!important}@media (min-width:761px){body.dockHidden #dockBtn{display:inline-block!important}}
+/* phones: compact top bar, big touch targets, nothing covering the panel */
+@media (max-width:760px){
+  .hud-top{gap:6px}
+  .time{padding:6px 8px;gap:8px}#rateTxt{display:none}
+  .time .tcol:last-child .k{display:none}.time .tcol:last-child #dateTxt{font-size:12px;white-space:normal!important;max-width:110px}
+  #pauseBtn{width:44px;height:44px}
+  .spds{flex-wrap:wrap}.spd{padding:7px 8px;font-size:11px;min-width:34px}
+  .right{padding:6px;gap:6px;flex-wrap:nowrap}.findwrap{flex:1 1 120px!important;order:0!important;min-width:0}.find{width:100%!important;font-size:16px!important;padding:8px}
+  .right .btn{padding:8px 9px;font-size:12px}
+  .zoomb{display:none!important}
+  body.dockOpen .legend,body.dockOpen #endBadge{display:none!important}
+  .legend{width:auto;left:var(--gut)!important;right:var(--gutR);top:auto!important;bottom:calc(var(--bot) + 80px)!important}
+  .dock{height:46vh!important;bottom:calc(var(--bot) + 80px)!important}
+  .tab{padding:12px 4px}
+  .tool{min-width:64px;padding:8px 2px}
+  .placeopts{bottom:calc(var(--bot) + 80px)!important;left:var(--gut)!important;right:var(--gutR);flex-wrap:wrap}
+  .chhud{bottom:calc(var(--bot) + 82px)!important}
+  .btn{min-height:34px}
+  input[type=range]{height:28px}
+}
+.inv{display:grid;grid-template-columns:repeat(2,1fr);gap:6px}.inv div{border:1px solid var(--line);border-radius:8px;padding:7px 9px;font-size:13px}.inv b{font-family:var(--f-mono);float:right;color:var(--flare)}
+
+</style>
+</head>
+<body>
+<canvas id="world" aria-label="The ant world"></canvas>
+
+<header class="hud-top">
+  <div class="brand panel"><h1>Hive<b>mind</b></h1><span class="sub">An ant colony sandbox</span></div>
+  <div class="time panel">
+    <button id="pauseBtn" title="Pause or resume (Space)" aria-label="Pause">⏸</button>
+    <div class="tcol"><span class="k">Time rate</span><div class="spds" id="spds"></div><span class="v" id="rateTxt"></span></div>
+    <div class="tcol"><span class="k">Day</span><span class="v" id="dateTxt" style="white-space:nowrap"></span><span class="v" id="dateSub" style="font-size:11px;color:var(--dim)"></span></div>
+  </div>
+  <div class="right panel">
+    <div id="stats" style="display:contents"></div>
+    <div class="findwrap"><input id="find" class="find" placeholder="Find a colony, ant or tool…" aria-label="Find a colony, ant or tool…" autocomplete="off" spellcheck="false"><div id="findList" class="findlist panel" hidden></div></div>
+    <button id="homeBtn" class="btn" title="Back to the home page">⌂ Home</button>
+    <button id="acctBtn" class="btn" title="Account: save your progress on this device">👤</button>
+    <button id="scenBtn" class="btn">Worlds</button>
+    <button id="dockBtn" class="btn">Panel</button>
+  </div>
+</header>
+
+<nav class="rail panel" id="rail" aria-label="Tools"></nav>
+<div class="placeopts panel" id="placeopts" hidden>
+  <label>Brush <input type="range" id="brush" min="1" max="12" value="4"><span id="brushV" class="v">4</span></label>
+  <span id="toolNote" class="note"></span>
+</div>
+
+<aside class="dock panel" id="dock">
+  <div class="tabs" role="tablist"><button class="tab" role="tab" data-tab="world" aria-selected="true">Colony</button><button class="tab" role="tab" data-tab="stats" aria-selected="false">Numbers</button><button class="tab" role="tab" data-tab="insp" aria-selected="false">Inspect</button><button class="tab" id="dockClose" title="Close this panel" aria-label="Close panel" style="flex:0 0 40px">✕</button></div>
+  <div class="pane" id="pane-world">
+    <div class="inv" id="inv"></div>
+    <div class="sl"><div class="row"><span class="k">Scent strength</span><span id="scV"></span></div><input type="range" id="scS" min="20" max="300" step="5" value="100"></div>
+    <div class="sl"><div class="row"><span class="k">Scent fades in</span><span id="evV"></span></div><input type="range" id="evS" min="5" max="120" step="1" value="30"></div>
+    <div class="sl"><div class="row"><span class="k">Ant speed</span><span id="spV"></span></div><input type="range" id="spS" min="30" max="250" step="5" value="100"></div>
+    <span class="k">Events · press again to stop</span>
+    <div class="evs">
+      <button class="btn" data-ev="rain">🌧 Rain</button><button class="btn" data-ev="feast">🍯 Feast</button>
+      <button class="btn" data-ev="winter">❄ Winter</button><button class="btn" data-ev="normal">↺ Stop all events</button>
+    </div>
+    <span class="k">Views</span>
+    <div class="views"><button class="btn" data-view="normal" aria-pressed="true">Ground</button><button class="btn" data-view="trails" aria-pressed="false">Scent trails</button><button class="btn" data-view="night" aria-pressed="false">Night</button></div>
+    <p class="note">Ants are almost blind. A searching ant leaves "home" scent behind it; an ant carrying food leaves "food" scent. Searchers follow food scent, carriers follow home scent, and busy routes turn into highways.</p>
+  </div>
+  <div class="pane" id="pane-stats" hidden>
+    <div class="kv" id="cStats"></div>
+    <span class="k">Ants over time</span>
+    <canvas id="graph"></canvas>
+    <div class="splist" id="nList"></div>
+  </div>
+  <div class="pane" id="pane-insp" hidden>
+    <div id="inspEmpty"><p class="note">Click an ant or a nest to inspect it.</p></div>
+    <div id="inspBody" class="hview" hidden></div>
+  </div>
+
+</aside>
+<div class="zoomb panel"><button id="zIn" title="Zoom in">+</button><button id="zOut" title="Zoom out">−</button><button id="zFit" title="Show everything">⤢</button></div>
+<div id="legend" class="legend panel" hidden><span class="k"></span><div class="lbar"></div><div class="lticks"><span></span><span></span><span></span></div></div>
+<div class="hint" id="hint">Drag to paint · right-drag to look around</div>
+<div class="toasts" id="toasts" aria-live="polite"></div>
+
+<div class="scen panel" id="scen" hidden>
+  <div class="row"><span class="k">Choose a world</span><button class="btn ghost" id="scenClose">×</button></div>
+  <div class="scgrid" id="scgrid"></div>
+</div>
+
+<div id="home" class="home" role="dialog" aria-label="Home">
+  <div class="hcard">
+    <div class="hhead"><h1 class="htitle">Hive<b>mind</b></h1><p class="htag">No ant knows the plan. Each one just follows scent trails, and together they find food, build highways and wage war</p>
+      <div class="hacct"><button class="chip" id="hAcctBtn">👤 <span id="hAcctName">Guest</span></button><button class="chip" id="hPlays" title="Total plays by everyone">▶ <b id="hPlaysN">0</b> <span id="hPlaysL">plays</span></button><style>.sims{position:relative;display:inline-block;z-index:70}.hhead{position:relative;z-index:20}.sims>summary{list-style:none;cursor:pointer}.sims>summary::-webkit-details-marker{display:none}
+.sims[open]>summary{background:rgba(255,255,255,.08)}.simsP{position:absolute;left:0;top:calc(100% + 6px);z-index:60;width:min(320px,86vw);padding:8px;border-radius:12px;background:#0c101c;border:1px solid rgba(255,255,255,.14);box-shadow:0 12px 40px rgba(0,0,0,.55);display:grid;gap:6px;text-align:left}
+.simsP a{display:grid;grid-template-columns:auto 1fr;gap:2px 10px;align-items:center;padding:9px 10px;border-radius:9px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.03);color:#e3e8f4;text-decoration:none;font:inherit}
+.simsP a:hover,.simsP a:focus-visible{background:rgba(255,255,255,.08);border-color:var(--sc,#7fe0a8)}.simsP .si{grid-row:span 2;font-size:24px}.simsP b{color:var(--sc,#fff);font-size:14px}.simsP small{color:#8b95ae;font-size:11.5px;line-height:1.3}.simsP .sn{color:#8b95ae;font-size:11px;padding:2px 4px}</style><details class="sims" id="hSims"><summary class="chip" title="Our other simulators">🧪 Try our other simulators ▾</summary><div class="simsP" id="hSimsP"></div></details><script>(()=>{const ME="hivemind",LIST=[{"id": "barycenter", "icon": "🪐", "name": "Barycenter", "tag": "Gravity, planets, stars and black holes", "url": "https://jacob711-oss.github.io/barycenter/", "color": "#e8b04a"}, {"id": "biosphere", "icon": "🌿", "name": "Biosphere", "tag": "A living world of animals, plants and people", "url": "https://jacob711-oss.github.io/barycenter/life/", "color": "#7fe0a8"}, {"id": "lithosphere", "icon": "🌋", "name": "Lithosphere", "tag": "Drift continents, raise mountains and set off volcanoes", "url": "https://jacob711-oss.github.io/barycenter/lithosphere/", "color": "#ff8a5c"}, {"id": "troposphere", "icon": "🌀", "name": "Troposphere", "tag": "Steer winds, brew hurricanes and change the climate", "url": "https://jacob711-oss.github.io/barycenter/troposphere/", "color": "#60d6e6"}, {"id": "catalyst", "icon": "⚛️", "name": "Catalyst", "tag": "Mix atoms, spark reactions and build molecules", "url": "https://jacob711-oss.github.io/barycenter/catalyst/", "color": "#c48bff"}, {"id": "abyssal", "icon": "🐋", "name": "Abyssal", "tag": "Dive into a living ocean, from coral reefs to the deep sea", "url": "https://jacob711-oss.github.io/barycenter/abyssal/", "color": "#4fa3ff"}, {"id": "interchange", "icon": "🚉", "name": "Interchange", "tag": "Draw the transit lines of a growing city and keep everyone moving", "url": "https://jacob711-oss.github.io/barycenter/interchange/", "color": "#ff5ab4"}, {"id": "gridlock", "icon": "🚗", "name": "Gridlock", "tag": "Draw the roads of a growing town and keep the traffic flowing", "url": "https://jacob711-oss.github.io/barycenter/gridlock/", "color": "#ffd23a"}, {"id": "hivemind", "icon": "🐜", "name": "Hivemind", "tag": "Ant colonies that find food by following each other's scent trails", "url": "https://jacob711-oss.github.io/barycenter/hivemind/", "color": "#ff9a3d"}, {"id": "flux", "icon": "⚡", "name": "Flux", "tag": "Place charges and magnets, and watch the fields bend particles through space", "url": "https://jacob711-oss.github.io/barycenter/flux/", "color": "#5ae0ff"}],P=document.getElementById('hSimsP'),D=document.getElementById('hSims');
+const draw=l=>{P.textContent='';for(const s of l){if(s.id===ME||!s.url)continue;const a=document.createElement('a');a.href=s.url;a.target='_blank';a.rel='noopener';a.style.setProperty('--sc',s.color||'#7fe0a8');
+a.innerHTML='<span class="si"></span><b></b><small></small>';a.children[0].textContent=s.icon||'🧪';a.children[1].textContent=s.name;a.children[2].textContent=s.tag||'';P.appendChild(a)}
+const n=document.createElement('div');n.className='sn';n.textContent='More simulators coming soon.';P.appendChild(n)};draw(LIST);
+try{fetch('https://jacob711-oss.github.io/barycenter/sims.json',{cache:'no-cache'}).then(r=>r.ok?r.json():null).then(l=>{if(Array.isArray(l)&&l.length)draw(l.filter(s=>s&&typeof s.name==='string'&&/^https:\/\//.test(s.url||'')))}).catch(()=>{})}catch(e){}
+document.addEventListener('pointerdown',e=>{if(D.open&&!D.contains(e.target))D.open=false});document.addEventListener('keydown',e=>{if(e.key==='Escape')D.open=false})})()</script></div></div>
+    <div id="hMain" class="hview">
+      <button class="hb" id="hChal"><span class="ht">Challenges</span><span class="hd" id="hChalSub">Goals from easy to fiendish</span></button>
+      <button class="hb" id="hDemo"><span class="ht">Demo &amp; tutorial</span><span class="hd">Watch the highlights, or learn the controls step by step</span></button>
+      <button class="hb primary" id="hFree"><span class="ht">Free play</span><span class="hd">Build any world: food, walls, rival nests and weather, with no goals</span></button>
+      <p class="hfoot">Searching ants leave a trail that leads home. Ants carrying food leave a trail that leads to food. Others follow the strongest smell.</p>
+    </div>
+    <div id="hChalView" class="hview" hidden>
+      <div class="hbar"><button class="btn ghost hback">← Back</button><h2>Challenges</h2><span id="hStars" class="hstars"></span></div>
+      <p class="hfoot">Finish a challenge to unlock the next. Faster solutions earn more stars.</p>
+      <div id="hGrid" class="hgrid"></div>
+    </div>
+    <div id="hDemoView" class="hview" hidden>
+      <div class="hbar"><button class="btn ghost hback">← Back</button><h2>Demo &amp; tutorial</h2></div>
+      <button class="hb" id="hWatch"><span class="ht">Watch the demo</span><span class="hd">A tour of busy colonies: trails, mazes, rival nests and rainstorms</span></button>
+      <button class="hb primary" id="hTut"><span class="ht">Start the tutorial</span><span class="hd">Learn every control step by step; each step completes when you do it</span></button>
+    </div>
+  </div>
+</div>
+<div id="chHud" class="chhud panel" hidden aria-live="polite">
+  <div class="chtop"><span id="chNum" class="k"></span><span id="chTime" class="k"></span></div>
+  <div id="chTitle" class="chtitle"></div>
+  <div id="chGoal" class="chgoal"></div>
+  <div class="chbarw"><span id="chBar"></span></div>
+  <div class="chrow"><span id="chProg" class="chprog"></span><div class="chbtns"><button id="chHint" class="btn">Hint</button><button id="chRestart" class="btn">Restart</button><button id="chExit" class="btn ghost">Exit</button></div></div>
+</div>
+<div id="demoCap" class="democap panel" hidden><span class="k" id="demoStep"></span><h2 id="demoTitle"></h2><p id="demoText"></p><div class="actions"><button class="btn" id="demoNext">Next ›</button><button class="btn ghost" id="demoExit">Exit demo</button></div></div>
+<div id="acct" class="ovl" hidden role="dialog" aria-label="Accounts">
+  <div class="obox panel">
+    <div class="hbar"><h2>Accounts</h2><button class="btn" id="acctClose" aria-label="Close">×</button></div>
+    <p class="hfoot">Your stars, plays and time are saved in this browser on this device. Accounts are shared by all our simulators when they are opened from the same site.</p>
+    <div id="acctList" class="hview" style="gap:6px"></div>
+    <form id="acctForm" class="aform"><input id="acctNew" maxlength="20" placeholder="Your name" autocomplete="off"><input id="acctPin" maxlength="4" inputmode="numeric" placeholder="PIN (optional)" autocomplete="off"><button class="btn primary" type="submit">Create account</button></form>
+    <p class="hfoot" id="acctMsg" aria-live="polite"></p>
+  </div>
+</div>
+<div id="chDone" class="home donebg" hidden role="dialog" aria-label="Challenge result">
+  <div class="donecard panel">
+    <div id="dStars" class="dstars"></div><h2 id="dTitle"></h2><p id="dText" class="hfoot" style="font-size:13px"></p>
+    <div class="actions" style="justify-content:center"><button id="dNext" class="btn primary">Next challenge</button><button id="dRetry" class="btn">Try again</button><button id="dList" class="btn ghost">All challenges</button></div>
+  </div>
+</div>
+
+<script>
+const SIMLIST=[{"id": "barycenter", "icon": "🪐", "name": "Barycenter", "tag": "Gravity, planets, stars and black holes", "url": "https://jacob711-oss.github.io/barycenter/", "color": "#e8b04a"}, {"id": "biosphere", "icon": "🌿", "name": "Biosphere", "tag": "A living world of animals, plants and people", "url": "https://jacob711-oss.github.io/barycenter/life/", "color": "#7fe0a8"}, {"id": "lithosphere", "icon": "🌋", "name": "Lithosphere", "tag": "Drift continents, raise mountains and set off volcanoes", "url": "https://jacob711-oss.github.io/barycenter/lithosphere/", "color": "#ff8a5c"}, {"id": "troposphere", "icon": "🌀", "name": "Troposphere", "tag": "Steer winds, brew hurricanes and change the climate", "url": "https://jacob711-oss.github.io/barycenter/troposphere/", "color": "#60d6e6"}, {"id": "catalyst", "icon": "⚛️", "name": "Catalyst", "tag": "Mix atoms, spark reactions and build molecules", "url": "https://jacob711-oss.github.io/barycenter/catalyst/", "color": "#c48bff"}, {"id": "abyssal", "icon": "🐋", "name": "Abyssal", "tag": "Dive into a living ocean, from coral reefs to the deep sea", "url": "https://jacob711-oss.github.io/barycenter/abyssal/", "color": "#4fa3ff"}, {"id": "interchange", "icon": "🚉", "name": "Interchange", "tag": "Draw the transit lines of a growing city and keep everyone moving", "url": "https://jacob711-oss.github.io/barycenter/interchange/", "color": "#ff5ab4"}, {"id": "gridlock", "icon": "🚗", "name": "Gridlock", "tag": "Draw the roads of a growing town and keep the traffic flowing", "url": "https://jacob711-oss.github.io/barycenter/gridlock/", "color": "#ffd23a"}, {"id": "hivemind", "icon": "🐜", "name": "Hivemind", "tag": "Ant colonies that find food by following each other's scent trails", "url": "https://jacob711-oss.github.io/barycenter/hivemind/", "color": "#ff9a3d"}, {"id": "flux", "icon": "⚡", "name": "Flux", "tag": "Place charges and magnets, and watch the fields bend particles through space", "url": "https://jacob711-oss.github.io/barycenter/flux/", "color": "#5ae0ff"}],LB_GAME="hivemind";
+/* ===== simulator kit: core helpers shared by every simulator ===== */
+const $=id=>document.getElementById(id);
+const clamp=(v,a,b)=>v<a?a:v>b?b:v,lerp=(a,b,t)=>a+(b-a)*t,rr=(a,b)=>a+Math.random()*(b-a),ri=(a,b)=>Math.floor(rr(a,b+1)),pick=a=>a[Math.floor(Math.random()*a.length)];
+const mod=(a,n)=>((a%n)+n)%n;
+let W=innerWidth,H=innerHeight,DPR=Math.min(2,devicePixelRatio||1);
+const S={t:0,speed:1,speedI:0,paused:false,sel:null,view:'normal',tool:'select',brush:4,follow:false};
+const cam={x:0,y:0,z:4,ox:0};
+const CNT={moved:0,zoomed:0,scen:0,find:0,tool:0,view:0};const bump=k=>{CNT[k]=(CNT[k]||0)+1};
+function toast(msg,ms=3200){const el=document.createElement('div');el.className='toast panel';el.textContent=msg;const box=$('toasts');box.appendChild(el);while(box.children.length>4)box.firstChild.remove();setTimeout(()=>el.remove(),ms)}
+const fmtN=(v,d=0)=>Number(v).toLocaleString(undefined,{maximumFractionDigits:d,minimumFractionDigits:d});
+/* challenges */
+const CH={active:null,idx:-1,events:[],hold:{},t0:0,real0:0,done:false,failed:'',loading:false,ref:{}};
+function chEv(k,d){if(CH.active&&!CH.done&&!CH.loading)CH.events.push({k,...(d||{}),t:S.t})}
+const evN=k=>CH.events.filter(e=>e.k===k).length;
+const evHas=f=>CH.events.some(f);
+// hold a condition for an amount of simulated time (in the simulator's own time units)
+function hold(key,cond,dur){if(!cond){CH.hold[key]=null;return 0}if(CH.hold[key]==null)CH.hold[key]=S.t;return Math.min(1,(S.t-CH.hold[key])/dur)}
+const realSecs=()=>(performance.now()-CH.real0)/1000;
+const byTime=(t3,t2)=>()=>{const s=realSecs();return s<=t3?3:s<=t2?2:1};
+const CHALS=[];const CC=(diff,o)=>CHALS.push({diff,...o});
+const TSTEPS=[];const DEMO=[];
+const since=()=>S.t-CH.t0;
+
+/* ================= Hivemind: ant colonies and their scent trails ================= */
+// The world is a 160 x 100 grid of 1 cm cells. A day lasts 60 seconds of game time.
+const WW=160,WH=100,N=WW*WH,DAY=60,MAXANTS=2400;
+const NCOL=[{n:'Ember',c:'#ff7a3d',rgb:[255,122,61]},{n:'Azure',c:'#4ec3ff',rgb:[78,195,255]},{n:'Violet',c:'#c77dff',rgb:[199,125,255]}];
+let FOOD=new Float32Array(N),WALL=new Uint8Array(N),TOF=[],TOH=[],NESTS=[],ANTS=[],HIST=[],BASE=new Float32Array(N);
+const G={gathered:0,kills:0,born:0,deaths:0,rain:false,feast:false,winter:false,scent:1,fade:30,speed:1,feastT:0};
+let FOODADD=0,WALLADD=0,ERASED=0,SPRAYED=0,NESTADD=0,EVN=0,AID=0;
+let RS=1;function R(){RS|=0;RS=RS+0x6D2B79F5|0;let t=Math.imul(RS^RS>>>15,1|RS);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}
+const ix=(x,y)=>(y|0)*WW+(x|0),inW=(x,y)=>x>=0&&y>=0&&x<WW&&y<WH,blocked=(x,y)=>!inW(x,y)||WALL[ix(x,y)]>0;
+for(let c=0;c<3;c++){TOF.push(new Float32Array(N));TOH.push(new Float32Array(N))}
+/* ---------- world building ---------- */
+function addFood(x,y,r,amt){let n=0;for(let yy=-r;yy<=r;yy++)for(let xx=-r;xx<=r;xx++){const d=Math.hypot(xx,yy);if(d>r)continue;const X=x+xx,Y=y+yy;if(!inW(X,Y))continue;const i=ix(X,Y);if(WALL[i])continue;const v=amt*(1-d/(r+1))+1;if(FOOD[i]<v){n+=v-FOOD[i];FOOD[i]=v}}return n}
+function addWall(x,y,r){for(let yy=-r;yy<=r;yy++)for(let xx=-r;xx<=r;xx++){if(Math.hypot(xx,yy)>r)continue;const X=x+xx,Y=y+yy;if(!inW(X,Y))continue;if(NESTS.some(n=>Math.hypot(n.x-X,n.y-Y)<n.r+1))continue;const i=ix(X,Y);WALL[i]=1;FOOD[i]=0}}
+function wallLine(x0,y0,x1,y1,w){const L=Math.hypot(x1-x0,y1-y0);for(let k=0;k<=L;k+=0.7)addWall(x0+(x1-x0)*k/L,y0+(y1-y0)*k/L,w)}
+function addNest(x,y,c,ants){if(c==null){c=[0,1,2].find(k=>!NESTS.some(n=>n.c===k));if(c==null)return null}const n={c,x,y,r:3.2,food:0,store:ants!=null?0:10,born:0,id:NESTS.length};NESTS.push(n);for(let k=0;k<(ants??40);k++)spawnAnt(n);FX(x,y,NCOL[c].c);return n}
+function spawnAnt(n){if(ANTS.length>=MAXANTS)return null;const a=R()*7,ant={id:AID++,c:n.c,nest:n,x:n.x+Math.cos(a)*n.r*0.6,y:n.y+Math.sin(a)*n.r*0.6,a,carry:0,t:0,age:0,life:110+R()*80,trail:[]};ANTS.push(ant);n.born++;G.born++;return ant}
+/* ---------- the ants ---------- */
+function sense(f,x,y){if(!inW(x,y))return -1;const i=ix(x,y);return WALL[i]?-1:f[i]}
+function antStep(n,dt){const fld=n.carry?TOH[n.c]:TOF[n.c],sd=2.6,sa=0.62;
+  const l=sense(fld,n.x+Math.cos(n.a-sa)*sd,n.y+Math.sin(n.a-sa)*sd),m=sense(fld,n.x+Math.cos(n.a)*sd,n.y+Math.sin(n.a)*sd),r=sense(fld,n.x+Math.cos(n.a+sa)*sd,n.y+Math.sin(n.a+sa)*sd);
+  // searching ants smell food that is close by
+  if(!n.carry){const fl=sense(FOOD,n.x+Math.cos(n.a-sa)*sd,n.y+Math.sin(n.a-sa)*sd),fr=sense(FOOD,n.x+Math.cos(n.a+sa)*sd,n.y+Math.sin(n.a+sa)*sd);if(fl>0||fr>0)n.a+=fl>fr?-0.5:0.5}
+  else{const dn=Math.hypot(n.nest.x-n.x,n.nest.y-n.y);if(dn<16)n.a+=angTo(n.a,Math.atan2(n.nest.y-n.y,n.nest.x-n.x))*0.25}
+  if(m>=l&&m>=r){}else if(l>r)n.a-=0.35;else if(r>l)n.a+=0.35;n.a+=(R()-0.5)*0.55;
+  const sp=9*G.speed*(G.winter?0.45:1)*dt,nx=n.x+Math.cos(n.a)*sp,ny=n.y+Math.sin(n.a)*sp;
+  if(blocked(nx,ny)){n.a+=Math.PI*(0.6+R()*0.8);return}n.x=nx;n.y=ny;n.t+=dt;n.age+=dt;
+  const i=ix(n.x,n.y),drop=Math.max(0,1-n.t/40)*0.5*G.scent*dt*10;if(n.carry)TOF[n.c][i]=Math.min(4,TOF[n.c][i]+drop);else TOH[n.c][i]=Math.min(4,TOH[n.c][i]+drop);
+  if(!n.carry&&FOOD[i]>0){const take=Math.min(1,FOOD[i]);FOOD[i]-=take;n.carry=take;n.t=0;n.a+=Math.PI;chEv('pickup',{c:n.c})}
+  const nst=n.nest;if(Math.hypot(nst.x-n.x,nst.y-n.y)<nst.r){if(n.carry){nst.food+=n.carry;nst.store+=n.carry;G.gathered+=n.carry;n.carry=0;n.a+=Math.PI;chEv('gather',{c:n.c})}n.t=0}}
+const angTo=(a,b)=>{let d=b-a;while(d>Math.PI)d-=2*Math.PI;while(d<-Math.PI)d+=2*Math.PI;return d};
+function fights(dt){const B=new Map();for(const a of ANTS){const k=((a.x/3)|0)*1000+((a.y/3)|0);let L=B.get(k);if(!L)B.set(k,L=[]);L.push(a)}
+  for(const L of B.values()){if(L.length<2)continue;const c0=L[0].c;if(L.every(a=>a.c===c0))continue;for(const a of L){if(a.dead)continue;for(const b of L){if(b.dead||b.c===a.c)continue;if(Math.hypot(a.x-b.x,a.y-b.y)<1.4&&R()<0.9*dt){const loser=R()<0.5?a:b;loser.dead=true;loser.cause='fight';G.kills++;chEv('kill',{c:loser.c===a.c?b.c:a.c});FX(loser.x,loser.y,'#fff',true);break}}}}}
+/* ---------- scenes ---------- */
+function clearWorld(){FOOD.fill(0);WALL.fill(0);for(const f of [...TOF,...TOH])f.fill(0);NESTS=[];ANTS=[];HIST=[];PARTS=[];Object.assign(G,{gathered:0,kills:0,born:0,deaths:0,rain:false,feast:false,winter:false,feastT:0});
+  for(let i=0;i<N;i++){const x=i%WW,y=(i/WW)|0;BASE[i]=0.5+0.25*Math.sin(x*0.21+Math.sin(y*0.13)*2)*Math.cos(y*0.17+x*0.05)+0.15*(R()-0.5)}}
+const SCENS={
+  meadow:()=>{RS=3;addNest(80,50,0);for(const [x,y,r] of [[30,25,4],[130,30,5],[40,80,3],[125,78,4],[85,12,3]])addFood(x,y,r,6)},
+  maze:()=>{RS=7;addNest(14,50,0);wallLine(35,0,35,70,1.2);wallLine(70,30,70,100,1.2);wallLine(105,0,105,70,1.2);addFood(140,50,6,8);addFood(88,88,3,5)},
+  rivals:()=>{RS=11;addNest(30,50,0);addNest(130,50,1);addFood(80,50,7,8);addFood(80,15,3,6);addFood(80,85,3,6)},
+  desert:()=>{RS=17;addNest(80,85,0,30);addFood(20,10,4,10);addFood(145,15,3,10);for(const [x,y,w] of [[50,40,2],[110,45,2]])addWall(x,y,w*3)},
+  garden:()=>{RS=23;addNest(30,30,0);addNest(130,30,1);addNest(80,82,2);for(let k=0;k<7;k++)addFood(20+R()*120,10+R()*80,3,6)},
+};
+const SCENLIST=[{id:'meadow',name:'Meadow',desc:'One colony and scattered food. A gentle start.'},{id:'maze',name:'Maze',desc:'Walls stand between the nest and the food. Can the ants find the way?'},{id:'rivals',name:'Rivals',desc:'Two colonies, one feast in the middle. Expect war.'},{id:'desert',name:'Desert',desc:'Food is scarce and far away. Help them out.'},{id:'garden',name:'Garden',desc:'Three colonies share a garden.'}];
+/* ---------- panel ---------- */
+let PARTS=[];function FX(x,y,col,small){PARTS.push({x,y,col,age:0,small:!!small})}
+const antsOf=c=>ANTS.filter(a=>a.c===c).length;
+function syncPanel(){const inv=$('inv');if(!inv)return;inv.innerHTML=`<div>🐜 Ants <b>${ANTS.length}</b></div><div>🍯 Food gathered <b>${fmtN(Math.round(G.gathered))}</b></div><div>🏠 Colonies <b>${NESTS.length}</b></div><div>⚔️ Fights lost <b>${G.kills}</b></div>`;
+  $('scV').textContent=Math.round(G.scent*100)+'%';$('evV').textContent=G.fade+' s';$('spV').textContent=Math.round(G.speed*100)+'%';
+  const lab={rain:'🌧 Rain',feast:'🍯 Feast',winter:'❄ Winter'};document.querySelectorAll('[data-ev]').forEach(b=>{const L=lab[b.dataset.ev];if(!L)return;b.setAttribute('aria-pressed',G[b.dataset.ev]);b.textContent=G[b.dataset.ev]?'■ Stop '+L.slice(2).trim().toLowerCase():L})}
+$('scS').oninput=e=>{G.scent=e.target.value/100;chEv('tweak',{});syncPanel()};$('evS').oninput=e=>{G.fade=+e.target.value;chEv('tweak',{});syncPanel()};$('spS').oninput=e=>{G.speed=e.target.value/100;chEv('tweak',{});syncPanel()};
+document.querySelectorAll('[data-ev]').forEach(b=>b.onclick=()=>{const ev=b.dataset.ev;EVN++;chEv('event',{ev});if(ev==='normal'){G.rain=G.feast=G.winter=false;toast('All events stopped')}else{G[ev]=!G[ev];if(G[ev])toast({rain:'🌧 Rain washes the scent trails away',feast:'🍯 Feast: food appears everywhere',winter:'❄ Winter: ants slow right down'}[ev])}syncPanel()});
+/* ---------- drawing ---------- */
+const off=document.createElement('canvas');off.width=WW;off.height=WH;const ox=off.getContext('2d'),img=ox.createImageData(WW,WH);
+function paintLayer(){const d=img.data,v=S.view,night=v==='night',tr=v==='trails';
+  for(let i=0;i<N;i++){const b=BASE[i];let r,g,bl;if(WALL[i]){r=74+b*30;g=66+b*26;bl=58+b*20}else if(night){r=18+b*12;g=16+b*10;bl=14+b*8}else if(tr){r=14;g=12;bl=10}else{r=118+b*40;g=94+b*30;bl=60+b*20}
+    if(!WALL[i]){const f=FOOD[i];if(f>0){const k=Math.min(1,f/5);r=r*(1-k)+120*k;g=g*(1-k)+200*k;bl=bl*(1-k)+60*k}
+      for(let c=0;c<3;c++){const tf=TOF[c][i],th=TOH[c][i];if(tf+th<0.01)continue;const C=NCOL[c].rgb,k=Math.min(1,(tr?1.4:night?0.9:0.35)*(tf+th*0.5));r+=(C[0]-r)*k;g+=(C[1]-g)*k;bl+=(C[2]-bl)*k}}
+    const o=i*4;d[o]=r;d[o+1]=g;d[o+2]=bl;d[o+3]=255}ox.putImageData(img,0,0)}
+function render(c,now){const z=cam.z,night=S.view==='night';c.fillStyle='#0c0905';c.fillRect(0,0,W,H);paintLayer();c.imageSmoothingEnabled=true;c.imageSmoothingQuality='high';c.drawImage(off,sx(0),sy(0),WW*z,WH*z);
+  for(const n of NESTS){const X=sx(n.x),Y=sy(n.y),R0=n.r*z,col=NCOL[n.c].c;const gr=c.createRadialGradient(X,Y,R0*0.2,X,Y,R0*1.5);gr.addColorStop(0,'rgba(60,40,20,.95)');gr.addColorStop(0.55,'rgba(150,110,70,.9)');gr.addColorStop(1,'rgba(150,110,70,0)');c.fillStyle=gr;c.beginPath();c.arc(X,Y,R0*1.5,0,7);c.fill();
+    c.fillStyle='#1a1008';c.beginPath();c.arc(X,Y,R0*0.4,0,7);c.fill();c.strokeStyle=col;c.lineWidth=Math.max(2,z*0.35);c.beginPath();c.arc(X,Y,R0*1.05,0,7);c.stroke();
+    if(z>3){c.fillStyle='#fff';c.font=`600 ${Math.max(11,z*1.2)|0}px "IBM Plex Mono",monospace`;c.textAlign='center';c.fillText(`${NCOL[n.c].n} · ${antsOf(n.c)}`,X,Y-R0*1.6)}
+    if(S.sel&&S.sel.n===n){c.strokeStyle='#ffd23a';c.lineWidth=2;c.beginPath();c.arc(X,Y,R0*1.9,0,7);c.stroke()}}
+  // ants: dots when far away, little bodies when close
+  if(z<5){for(let k=0;k<3;k++){c.fillStyle=night?NCOL[k].c:k===0?'#2a1206':k===1?'#06202e':'#200a2e';const s=Math.max(1.6,z*0.55);for(const a of ANTS)if(a.c===k)c.fillRect(sx(a.x)-s/2,sy(a.y)-s/2,s,s)}
+    c.fillStyle='#b8f070';for(const a of ANTS)if(a.carry)c.fillRect(sx(a.x+Math.cos(a.a)*0.5)-1,sy(a.y+Math.sin(a.a)*0.5)-1,2,2)}
+  else{const L=z*0.45;for(const a of ANTS){const X=sx(a.x),Y=sy(a.y);if(X<-20||Y<-20||X>W+20||Y>H+20)continue;c.save();c.translate(X,Y);c.rotate(a.a);c.fillStyle=night?NCOL[a.c].c:'#1c0f06';c.strokeStyle=c.fillStyle;c.lineWidth=Math.max(1,L*0.12);
+      const wig=Math.sin(now*0.03+a.id)*L*0.25;c.beginPath();for(const s of [-1,1])for(const k of [-0.5,0,0.5]){c.moveTo(k*L,0);c.lineTo(k*L+wig*s*(k===0?-1:1),s*L*0.75)}c.stroke();
+      c.beginPath();c.ellipse(-L*0.7,0,L*0.5,L*0.32,0,0,7);c.ellipse(0,0,L*0.28,L*0.2,0,0,7);c.ellipse(L*0.55,0,L*0.3,L*0.26,0,0,7);c.fill();if(!night){c.fillStyle=NCOL[a.c].c;c.beginPath();c.arc(-L*0.75,0,L*0.18,0,7);c.fill()}
+      if(a.carry){c.fillStyle='#b8f070';c.beginPath();c.arc(L*1.05,0,L*0.32,0,7);c.fill()}c.restore();if(S.sel&&S.sel.a===a){c.strokeStyle='#ffd23a';c.lineWidth=2;c.beginPath();c.arc(X,Y,L*2.4,0,7);c.stroke()}}}
+  if(G.rain){c.strokeStyle='rgba(170,200,255,.35)';c.lineWidth=1;c.beginPath();for(let k=0;k<120;k++){const x=(k*97+now*0.4)%W,y=(k*53+now*0.9)%H;c.moveTo(x,y);c.lineTo(x-4,y+12)}c.stroke()}
+  for(const p of PARTS){c.strokeStyle=p.col;c.globalAlpha=Math.max(0,1-p.age);c.lineWidth=2;c.beginPath();c.arc(sx(p.x),sy(p.y),z*(p.small?0.6:3)+p.age*z*(p.small?1.5:6),0,7);c.stroke()}c.globalAlpha=1;
+  if(HOVER&&S.tool!=='select'&&S.tool!=='nest'){c.strokeStyle='rgba(255,210,140,.6)';c.lineWidth=1.5;c.beginPath();c.arc(sx(HOVER[0]),sy(HOVER[1]),S.brush*z,0,7);c.stroke()}}
+let HOVER=null;
+const SIM={id:'hivemind',name:'Hivemind',defTool:'food',world:{w:WW,h:WH,wrapX:false,maxZ:40,followZ:18},home:'meadow',freeScen:'meadow',tutScen:'meadow',defSpeed:1,homeSpeed:1,inspectTab:'insp',canFollow:true,
+  speeds:[['½×',0.5],['1×',1],['2×',2],['4×',4]],fmtRate:v=>`${v}× speed`,
+  dateTxt:()=>`Day ${Math.floor(S.t/DAY)+1}`,dateSub:()=>`${ANTS.length} ants · ${fmtN(Math.round(G.gathered))} food gathered`,stepSize:()=>0.05,
+  tools:[['',[['select','👆','Inspect']]],['Build',[['food','🍯','Food','Paint food for the ants to find.',1],['wall','🪨','Wall','Paint rocks the ants must walk around.',1],['erase','🧽','Erase','Remove walls and food.',1],['spray','💨','Spray','Wipe away scent trails: the ants have to find the way again.',1],['nest','🏠','New nest','Click to found a new colony (up to 3).']]]],
+  scens:SCENLIST,
+  load(id){clearWorld();(SCENS[id]||SCENS.meadow)();syncPanel()},
+  after(){if(!$('home').hidden)return;setTool('food')},
+  step(dt){const ev=Math.exp(-dt*(G.rain?2.5:1)*1.5/G.fade);for(let c=0;c<3;c++){if(!NESTS.some(n=>n.c===c)&&!TOF[c][0])continue;const F=TOF[c],Hh=TOH[c];for(let i=0;i<N;i++){F[i]*=ev;Hh[i]*=ev}}
+    for(const a of ANTS)antStep(a,dt);fights(dt);
+    for(const a of ANTS){if(a.age>a.life&&!a.dead){a.dead=true;a.cause='old age'}if(a.t>80&&!a.carry&&!a.dead){a.dead=true;a.cause='lost'}}
+    const before=ANTS.length;ANTS=ANTS.filter(a=>!a.dead);G.deaths+=before-ANTS.length;
+    for(const n of NESTS){if(n.store>=1.5){n.store-=1.5;spawnAnt(n)}else if(antsOf(n.c)<6&&n.store>=0.3){n.store-=0.3;spawnAnt(n)}}
+    if(G.feast){G.feastT-=dt;if(G.feastT<=0){G.feastT=3;addFood(5+R()*(WW-10),5+R()*(WH-10),2,5)}}},
+  frame(dt){for(const p of PARTS)p.age+=dt*1.4;PARTS=PARTS.filter(p=>p.age<1)},
+  render,
+  stats:()=>[['Ants',ANTS.length],['Gathered',fmtN(Math.round(G.gathered))],['Colonies',NESTS.length],['Day',Math.floor(S.t/DAY)+1]],
+  hud(){const last=HIST[HIST.length-1];if(!last||S.t-last.t>=2)HIST.push({t:S.t,n:[0,1,2].map(antsOf)});if(HIST.length>300)HIST.shift();syncPanel();renderStats();renderInspect()},
+  pick(wx,wy){for(const n of NESTS)if(Math.hypot(n.x-wx,n.y-wy)<n.r*1.3)return{n};let b=null,bd=2.2;for(const a of ANTS){const d=Math.hypot(a.x-wx,a.y-wy);if(d<bd){bd=d;b=a}}return b?{a:b}:null},
+  selPos(s){return s.a?[s.a.x,s.a.y]:s.n?[s.n.x,s.n.y]:null},
+  pointer(type,wx,wy){HOVER=[wx,wy];const t=S.tool,r=S.brush;if(type==='up')return;
+    if(t==='nest'){if(type!=='down')return;if(blocked(wx,wy)){toast('Nests need open ground');return}if(NESTS.length>=3){toast('Three colonies is the limit');return}const n=addNest(wx,wy,null,20);if(n){NESTADD++;chEv('nest',{c:n.c});toast(`🏠 The ${NCOL[n.c].n} colony is founded`)}syncPanel();return}
+    if(t==='food'){FOODADD+=addFood(wx|0,wy|0,r,6);chEv('food',{})}else if(t==='wall'){addWall(wx|0,wy|0,Math.max(1,r*0.6));WALLADD++;chEv('wall',{})}
+    else if(t==='erase'){for(let yy=-r;yy<=r;yy++)for(let xx=-r;xx<=r;xx++){if(Math.hypot(xx,yy)>r)continue;const X=(wx|0)+xx,Y=(wy|0)+yy;if(!inW(X,Y))continue;const i=ix(X,Y);WALL[i]=0;FOOD[i]=0}ERASED++;chEv('erase',{})}
+    else if(t==='spray'){for(let yy=-r*1.5;yy<=r*1.5;yy++)for(let xx=-r*1.5;xx<=r*1.5;xx++){const X=(wx|0)+xx,Y=(wy|0)+yy;if(!inW(X,Y))continue;const i=ix(X,Y);for(let c=0;c<3;c++){TOF[c][i]=0;TOH[c][i]=0}}SPRAYED++;chEv('spray',{})}},
+  hover(wx,wy){HOVER=[wx,wy]},
+  find(q){const out=[],add=(label,sub,go)=>out.push({label,sub,go});for(const n of NESTS)if(NCOL[n.c].n.toLowerCase().includes(q)||'nest colony'.includes(q))add(`🏠 ${NCOL[n.c].n} colony`,`${antsOf(n.c)} ants`,()=>{S.sel={n};flyToW(n.x,n.y,12);showTab('insp')});
+    if('ant carrying food'.includes(q)){const a=ANTS.find(a=>a.carry);if(a)add('🐜 An ant carrying food','follow it',()=>{S.sel={a};S.follow=true;flyToW(a.x,a.y,20);showTab('insp')})}
+    for(const [,items] of SIM.tools)for(const [id,ico,name] of items)if(id!=='select'&&name.toLowerCase().includes(q))add(`${ico} ${name}`,'tool',()=>setTool(id));
+    for(const s of SCENLIST)if(s.name.toLowerCase().includes(q))add('World: '+s.name,s.desc,()=>{loadScen(s.id);toast(s.name)});return out},
+  tabShown(id){if(id==='stats')renderStats(true)},selChanged(){renderInspect()},
+};
+function kv(rows){return rows.map(([k,v])=>`<div><span class="k">${k}</span><span class="v">${v}</span></div>`).join('')}
+function renderStats(force){if($('pane-stats').hidden&&!force)return;$('cStats').innerHTML=kv([['Ants',ANTS.length],['Carrying food',ANTS.filter(a=>a.carry).length],['Food gathered',fmtN(Math.round(G.gathered))],['Born',G.born],['Died',G.deaths],['Lost in fights',G.kills]]);
+  const g=$('graph'),gc=g.getContext('2d'),w=g.width=g.clientWidth*DPR,hh=g.height=g.clientHeight*DPR;gc.clearRect(0,0,w,hh);if(HIST.length>1){const t0=HIST[0].t,t1=HIST[HIST.length-1].t,m=Math.max(10,...HIST.flatMap(p=>p.n));for(let c=0;c<3;c++){if(!HIST.some(p=>p.n[c]))continue;gc.strokeStyle=NCOL[c].c;gc.lineWidth=2*DPR;gc.beginPath();HIST.forEach((p,i)=>{const x=8+(w-16)*(p.t-t0)/Math.max(1e-6,t1-t0),y=hh-6-(hh-12)*p.n[c]/m;i?gc.lineTo(x,y):gc.moveTo(x,y)});gc.stroke()}}
+  const L=$('nList');L.textContent='';for(const n of NESTS){const r=document.createElement('button');r.className='sprow';r.innerHTML='<i></i><span></span><b></b>';r.children[0].style.background=NCOL[n.c].c;r.children[1].textContent=`${NCOL[n.c].n} colony`;r.children[2].textContent=`${antsOf(n.c)} ants`;r.onclick=()=>{S.sel={n};flyToW(n.x,n.y,12);showTab('insp')};L.appendChild(r)}}
+function renderInspect(){const s=S.sel;$('inspEmpty').hidden=!!s;$('inspBody').hidden=!s;if(!s)return;const body=$('inspBody');
+  if(s.n){const n=s.n;body.innerHTML=`<h2 class="ititle" style="color:${NCOL[n.c].c}">${NCOL[n.c].n} colony</h2><div class="isub">Nest</div><div class="kv">${kv([['Ants',antsOf(n.c)],['Food brought home',Math.round(n.food)],['In the larder',n.store.toFixed(1)],['Ants born here',n.born]])}</div><p class="note">Every 1.5 food in the larder becomes a new ant.</p>`;return}
+  if(s.a){const a=s.a;if(!ANTS.includes(a)){body.innerHTML=`<h2 class="ititle">🐜 Ant</h2><p class="note">This ant has died${a.cause?` (${a.cause})`:''}.</p>`;return}body.innerHTML=`<h2 class="ititle" style="color:${NCOL[a.c].c}">🐜 ${NCOL[a.c].n} ant</h2><div class="isub">${a.carry?'Carrying food home':'Searching for food'}</div><div class="kv">${kv([['Age',Math.round(a.age)+' s of '+Math.round(a.life)],['Time since nest or food',a.t.toFixed(1)+' s'],['Following',a.carry?'home scent':'food scent']])}</div>`}}
+
+/* ================= Hivemind: challenges, tutorial, demo ================= */
+const gat=()=>G.gathered,sc=id=>SCENLIST.find(s=>s.id===id).name;
+CC(1,{t:'First harvest',g:'Bring 20 food back to the nest.',hint:'Just watch: scouts wander until one finds food, then the trail builds up. Paint 🍯 Food near the nest to speed it up.',scen:'meadow',check:()=>[gat()>=20,gat()/20,`${Math.round(gat())} of 20`],stars:byTime(30,80)});
+CC(1.1,{t:'Growing up',g:'Grow the colony to 120 ants.',hint:'Every 1.5 food makes a new ant. Food close to the nest is gathered fastest.',scen:'meadow',check:()=>[ANTS.length>=120,ANTS.length/120,`${ANTS.length} of 120`],stars:byTime(60,150)});
+CC(1.2,{t:'Desert relief',g:'Gather 40 food in the desert.',hint:'The food here is far away. Paint some closer to the nest with 🍯 Food.',scen:'desert',check:()=>[gat()>=40,gat()/40,`${Math.round(gat())} of 40`],stars:byTime(50,130)});
+CC(1.3,{t:'Maze runner',g:'Gather 30 food in the maze.',hint:'Be patient, or use 🧽 Erase to open a short cut through a wall.',scen:'maze',check:()=>[gat()>=30,gat()/30,`${Math.round(gat())} of 30`],stars:byTime(90,220)});
+CC(1.4,{t:'Roadblock',g:'Build a wall across a busy trail, then gather 30 more food.',hint:'Paint 🪨 Wall over a trail. The ants find a way round.',scen:'meadow',setup:()=>{for(let k=0;k<60;k++)spawnAnt(NESTS[0])},check:()=>{const w=evN('wall')>0;if(!w)CH.ref.g0=gat();const d=w?gat()-(CH.ref.g0||0):0;return[w&&d>=30,w?0.2+0.8*d/30:0,w?`${Math.round(d)} of 30 since the wall`:'Build a wall first']},stars:byTime(60,150)});
+CC(1.5,{t:'Lost and found',g:'Spray away the trails, then gather 25 more food.',hint:'💨 Spray wipes scent. The colony must find the food again.',scen:'meadow',setup:()=>{for(let k=0;k<60;k++)spawnAnt(NESTS[0])},check:()=>{const w=evN('spray')>0;if(!w)CH.ref.g0=gat();const d=w?gat()-(CH.ref.g0||0):0;return[w&&d>=25,w?0.2+0.8*d/25:0,w?`${Math.round(d)} of 25 since spraying`:'Spray a trail first']},stars:byTime(60,150)});
+CC(2,{t:'New queen',g:'Found a second colony and grow it to 60 ants.',hint:'Pick 🏠 New nest and click near food.',scen:'meadow',check:()=>{const n=NESTS.find(q=>q.c!==0);const k=n?antsOf(n.c):0;return[k>=60,n?0.2+0.8*k/60:0,n?`${k} of 60`:'Found a nest first']},stars:byTime(90,220)});
+CC(2.4,{t:'Turf war',g:'Make the Ember colony twice the size of Azure.',hint:'Put food near Ember and walls round Azure, or spray Azure’s trails.',scen:'rivals',check:()=>{const a=antsOf(0),b=Math.max(1,antsOf(1));return[a>=2*b&&a>=40,Math.min(1,a/(2*b)),`Ember ${a} · Azure ${antsOf(1)}`]},stars:byTime(90,240)});
+CC(2.8,{t:'Three kingdoms',g:'Have all three garden colonies reach 80 ants at once.',hint:'Give every colony food of its own, far from the others.',scen:'garden',check:()=>{const m=Math.min(antsOf(0),antsOf(1),antsOf(2));return[m>=80,m/80,`Smallest colony: ${m} of 80`]},stars:byTime(120,300)});
+CC(3,{t:'Rainy season',g:'Gather 60 food while it rains.',hint:'Rain washes scent away fast. Food close to the nest helps.',scen:'meadow',setup:()=>{G.rain=true},check:()=>[gat()>=60&&G.rain,G.rain?gat()/60:0,G.rain?`${Math.round(gat())} of 60`:'Keep the rain on'],stars:byTime(90,220)});
+CC(3.4,{t:'Megacolony',g:'Grow one colony to 600 ants.',hint:'Lots of food near the nest, and a strong scent.',scen:'meadow',check:()=>{const n=Math.max(...[0,1,2].map(antsOf));return[n>=600,n/600,`${n} of 600`]},stars:byTime(200,450)});
+CC(3.8,{t:'Warlord',g:'See 150 ants fall in battle.',hint:'Two colonies sharing one feast fight a lot.',scen:'rivals',check:()=>[G.kills>=150,G.kills/150,`${G.kills} of 150`],stars:byTime(120,300)});
+TSTEPS.push(
+ ['Look around','Right-drag (or two fingers) to move. Scroll or pinch to zoom in on the ants.',r=>CNT.moved+CNT.zoomed*50>r.m+150,r=>{r.m=CNT.moved+CNT.zoomed*50}],
+ ['Add food','With 🍯 Food, paint a little food near the nest.',r=>FOODADD>r.n+5,r=>{r.n=FOODADD}],
+ ['A trail forms','Watch. When an ant finds food it carries it home, leaving food scent. Others follow. Wait for 10 food to come home.',r=>G.gathered>=r.g+10,r=>{r.g=G.gathered}],
+ ['Scent trails','Switch to the Scent trails view in the Colony tab.',()=>S.view==='trails'],
+ ['Walls','Pick 🪨 Wall and paint a rock across a trail.',r=>WALLADD>r.n,r=>{r.n=WALLADD}],
+ ['Spray','Pick 💨 Spray and wipe a trail away.',r=>SPRAYED>r.n,r=>{r.n=SPRAYED}],
+ ['Erase','Pick 🧽 Erase and remove some rock or food.',r=>ERASED>r.n,r=>{r.n=ERASED}],
+ ['A new colony','Pick 🏠 New nest and click somewhere to found a rival colony.',r=>NESTADD>r.n,r=>{r.n=NESTADD}],
+ ['Follow an ant','Click an ant, then press Follow (or double-click it).',()=>S.follow&&S.sel&&S.sel.a],
+ ['Weather','Press 🌧 Rain in the Colony tab.',()=>G.rain],
+ ['Speed up','Press 4× next to the time.',()=>!S.paused&&S.speed>=4],
+ ['Other worlds','Press Worlds in the top bar and pick another world.',r=>CNT.scen>r.n,r=>{r.n=CNT.scen}],
+);
+DEMO.push(
+ ['meadow','The meadow','Scouts wander at random. Once one finds food, a scent trail grows into a highway.',()=>{setSpeed(2);for(let k=0;k<80;k++)spawnAnt(NESTS[0])}],
+ ['maze','The maze','No ant knows the way, yet together they solve the maze.',()=>{setSpeed(4);setView('trails')}],
+ ['rivals','Rivals','Two colonies race for the same food. Where trails cross, they fight.',()=>{setSpeed(2)}],
+ ['garden','The garden at night','Three colonies glow in the dark.',()=>{setSpeed(2);setView('night')}],
+);
+
+/* ===== simulator kit: UI, home, accounts, challenges, tutorial, demo, main loop ===== */
+const cv=$('world'),ctx=cv.getContext('2d');
+function resize(){W=innerWidth;H=innerHeight;DPR=Math.min(2,devicePixelRatio||1);cv.width=Math.round(W*DPR);cv.height=Math.round(H*DPR);measureHud();if(SIM.resize)SIM.resize()}
+function measureHud(){const h=document.querySelector('.hud-top');if(h)document.documentElement.style.setProperty('--hudH',Math.round(h.getBoundingClientRect().height)+'px')}
+const sx=wx=>(wx-cam.x)*cam.z+W/2+cam.ox,sy=wy=>(wy-cam.y)*cam.z+H/2;
+const wxOf=px=>(px-W/2-cam.ox)/cam.z+cam.x,wyOf=py=>(py-H/2)/cam.z+cam.y;
+function freeRect(){let l=0,r=W,t=0,b=H;if(!$('home').hidden)return{l,r,t,b};const vis=e=>e&&getComputedStyle(e).display!=='none'&&e.getBoundingClientRect().width>0;const hud=document.querySelector('.hud-top'),rail=$('rail'),dock=$('dock');
+  if(vis(hud))t=hud.getBoundingClientRect().bottom+8;if(innerWidth>760){if(vis(rail))l=rail.getBoundingClientRect().right+8;if(vis(dock))r=dock.getBoundingClientRect().left-8;b=H-50}else{if(vis(rail))b=rail.getBoundingClientRect().top-8;if(vis(dock)&&document.body.classList.contains('dockOpen'))b=Math.min(b,dock.getBoundingClientRect().top-8)}
+  if(r-l<200){l=0;r=W}if(b-t<150){t=0;b=H}return{l,r,t,b}}
+function fitWorld(){const w=SIM.world.w,h=SIM.world.h;if(SIM.world.wrapX){cam.z=Math.max(W/w,H/h);cam.x=w/2;cam.y=h/2;clampCam();return}const f=freeRect(),fw=f.r-f.l,fh=f.b-f.t;cam.z=Math.min(fw/w,fh/h)*0.96;cam.x=w/2-((f.l+f.r)/2-W/2-cam.ox)/cam.z;cam.y=h/2-((f.t+f.b)/2-H/2)/cam.z;clampCam()}
+function minZoom(){const w=SIM.world.w,h=SIM.world.h;return SIM.world.wrapX?H/h:Math.min(W/w,H/h)*0.5}
+function clampCam(){const h=SIM.world.h,w=SIM.world.w;cam.z=clamp(cam.z,minZoom(),SIM.world.maxZ||40);if(SIM.world.wrapX){const hy=H/2/cam.z;cam.y=clamp(cam.y,Math.min(h/2,hy),Math.max(h/2,h-hy))}else cam.y=clamp(cam.y,-h*0.5,h*1.5);if(SIM.world.wrapX)cam.x=mod(cam.x,w);else cam.x=clamp(cam.x,-w*0.5,w*1.5)}
+function zoomAt(f,px,py){const wx=wxOf(px),wy=wyOf(py);cam.z*=f;clampCam();cam.x+=wx-wxOf(px);cam.y+=wy-wyOf(py);clampCam();bump('zoomed')}
+function flyToW(x,y,z){S.follow=false;cam.x=x;cam.y=y;if(z)cam.z=Math.max(cam.z,z);clampCam()}
+
+/* speeds */
+function buildSpeeds(){const b=$('spds');b.textContent='';SIM.speeds.forEach(([l,v],i)=>{const e=document.createElement('button');e.className='spd';e.textContent=l;e.onclick=()=>{setSpeed(i);setPaused(false)};b.appendChild(e)})}
+function setSpeed(i){i=clamp(i,0,SIM.speeds.length-1);S.speedI=i;S.speed=SIM.speeds[i][1];[...$('spds').children].forEach((e,k)=>e.setAttribute('aria-pressed',k===i));updateRate()}
+function setPaused(p){S.paused=p;$('pauseBtn').textContent=p?'▶':'⏸';$('pauseBtn').setAttribute('aria-label',p?'Resume':'Pause');updateRate()}
+function updateRate(){$('rateTxt').textContent=S.paused?'Paused':SIM.fmtRate(S.speed)+(S.achieved<S.speed*0.8&&!S.paused?` (running ${SIM.fmtRate(Math.max(S.achieved,S.speed*0.01))})`:'')}
+$('pauseBtn').onclick=()=>setPaused(!S.paused);
+
+/* tools */
+function buildRail(){const r=$('rail');r.textContent='';for(const [g,items] of SIM.tools){if(g){const h=document.createElement('h3');h.textContent=g;r.appendChild(h)}
+  for(const [id,ico,name] of items){const b=document.createElement('button');b.className='tool';b.dataset.tool=id;b.innerHTML='<span class="ico"></span><span></span>';b.children[0].textContent=ico;b.children[1].textContent=name;b.onclick=()=>setTool(id);r.appendChild(b)}}}
+function toolInfo(id){for(const [,items] of SIM.tools)for(const t of items)if(t[0]===id)return t;return null}
+function setTool(id){S.tool=id;document.querySelectorAll('.tool').forEach(b=>b.setAttribute('aria-pressed',b.dataset.tool===id));const t=toolInfo(id);
+  $('placeopts').hidden=id==='select'||!t;$('toolNote').textContent=t&&t[3]||'';$('brush').parentElement.hidden=!(t&&t[4]);cv.classList.toggle('place',id!=='select');if(id!=='select')bump('tool');if(SIM.toolChanged)SIM.toolChanged(id)}
+$('brush').oninput=e=>{S.brush=+e.target.value;$('brushV').textContent=S.brush};
+
+/* dock tabs */
+function showTab(id){document.body.classList.remove('dockHidden');document.querySelectorAll('.tab').forEach(t=>t.setAttribute('aria-selected',t.dataset.tab===id));document.querySelectorAll('#dock .pane').forEach(p=>p.hidden=p.id!=='pane-'+id);bump('tab_'+id);if(SIM.tabShown)SIM.tabShown(id)}
+document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>showTab(t.dataset.tab));
+$('dockBtn').onclick=()=>{if(document.body.classList.contains('dockHidden')){document.body.classList.remove('dockHidden');document.body.classList.add('dockOpen')}else document.body.classList.toggle('dockOpen');setTimeout(()=>{if(!SIM.world.wrapX)fitWorld()},30)};
+$('dockClose').onclick=()=>{document.body.classList.add('dockHidden');document.body.classList.remove('dockOpen');bump('dockclose');setTimeout(()=>{if(!SIM.world.wrapX)fitWorld()},30)};
+function setView(v){S.view=v;document.querySelectorAll('[data-view]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.view===v));bump('view');if(SIM.viewChanged)SIM.viewChanged(v)}
+document.querySelectorAll('[data-view]').forEach(b=>b.onclick=()=>setView(b.dataset.view));
+function setLegend(title,grad,ticks){const L=$('legend');if(!title){L.hidden=true;return}L.hidden=false;L.children[0].textContent=title;L.children[1].style.background=grad;[...L.children[2].children].forEach((s,i)=>s.textContent=ticks[i]||'')}
+
+/* scenarios */
+function buildScen(){const g=$('scgrid');g.textContent='';for(const s of SIM.scens){const b=document.createElement('button');b.className='scb';b.innerHTML='<b></b><span></span>';b.children[0].textContent=s.name;b.children[1].textContent=s.desc;b.onclick=()=>{$('scen').hidden=true;loadScen(s.id);bump('scen');toast(s.name)};g.appendChild(b)}}
+function loadScen(id){S.t=0;S.sel=null;S.follow=false;SIM.load(id);S.scen=id;fitWorld();if(SIM.after)SIM.after()}
+$('scenBtn').onclick=()=>$('scen').hidden=!$('scen').hidden;$('scenClose').onclick=()=>$('scen').hidden=true;
+
+/* find */
+let findItems=[],findI=0;
+function renderFind(){const L=$('findList'),q=$('find').value.trim();findItems=q?SIM.find(q.toLowerCase()).slice(0,10):[];findI=0;L.hidden=!findItems.length;L.textContent='';
+  findItems.forEach((it,i)=>{const b=document.createElement('button');b.className=i===findI?'on':'';b.innerHTML='<span></span><small></small>';b.children[0].textContent=it.label;b.children[1].textContent=it.sub||'';b.onmousedown=e=>{e.preventDefault();doFind(i)};L.appendChild(b)})}
+function doFind(i){const it=findItems[i];if(!it)return;$('find').value='';$('findList').hidden=true;$('find').blur();it.go();bump('find')}
+$('find').oninput=renderFind;$('find').onblur=()=>setTimeout(()=>$('findList').hidden=true,120);
+$('find').onkeydown=e=>{if(e.key==='Enter'){doFind(findI)}else if(e.key==='ArrowDown'||e.key==='ArrowUp'){findI=clamp(findI+(e.key==='ArrowDown'?1:-1),0,findItems.length-1);[...$('findList').children].forEach((b,k)=>b.className=k===findI?'on':'');e.preventDefault()}else if(e.key==='Escape'){$('find').blur()}};
+
+/* pointer input */
+const ptrs=new Map();let drag=null,pinch=null;
+cv.addEventListener('contextmenu',e=>e.preventDefault());
+cv.addEventListener('pointerdown',e=>{cv.setPointerCapture(e.pointerId);ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY});
+  if(ptrs.size===2){const [a,b]=[...ptrs.values()];pinch={d:Math.hypot(a.x-b.x,a.y-b.y),z:cam.z};if(drag&&drag.tool)SIM.pointer('up',wxOf(e.clientX),wyOf(e.clientY),e);drag=null;return}
+  const pan=S.tool==='select'||e.button===1||e.button===2;
+  drag={x0:e.clientX,y0:e.clientY,lx:e.clientX,ly:e.clientY,moved:0,pan,tool:!pan};
+  if(!pan)SIM.pointer('down',wxOf(e.clientX),wyOf(e.clientY),e)});
+cv.addEventListener('pointermove',e=>{const p=ptrs.get(e.pointerId);if(p){p.x=e.clientX;p.y=e.clientY}
+  if(pinch&&ptrs.size===2){const [a,b]=[...ptrs.values()];const d=Math.hypot(a.x-b.x,a.y-b.y),mx=(a.x+b.x)/2,my=(a.y+b.y)/2;const f=pinch.z*d/pinch.d/cam.z;zoomAt(f,mx,my);if(pinch.mx!=null){S.follow=false;cam.x-=(mx-pinch.mx)/cam.z;cam.y-=(my-pinch.my)/cam.z;clampCam();CNT.moved+=Math.abs(mx-pinch.mx)+Math.abs(my-pinch.my)}pinch.mx=mx;pinch.my=my;return}
+  if(!drag){if(SIM.hover)SIM.hover(wxOf(e.clientX),wyOf(e.clientY));return}
+  const dx=e.clientX-drag.lx,dy=e.clientY-drag.ly;drag.lx=e.clientX;drag.ly=e.clientY;drag.moved+=Math.abs(dx)+Math.abs(dy);
+  if(drag.pan){S.follow=false;cam.x-=dx/cam.z;cam.y-=dy/cam.z;clampCam();CNT.moved+=Math.abs(dx)+Math.abs(dy)}else SIM.pointer('drag',wxOf(e.clientX),wyOf(e.clientY),e)});
+function endPtr(e){ptrs.delete(e.pointerId);if(ptrs.size<2)pinch=null;if(!drag)return;const d=drag;drag=null;
+  if(d.tool)SIM.pointer('up',wxOf(e.clientX),wyOf(e.clientY),e);else if(d.moved<6&&e.button!==2){S.follow=false;S.sel=SIM.pick(wxOf(e.clientX),wyOf(e.clientY))||null;if(S.sel&&SIM.inspectTab){showTab(SIM.inspectTab);document.body.classList.add('dockOpen')}if(SIM.selChanged)SIM.selChanged();deselBtn()}}
+cv.addEventListener('pointerup',endPtr);cv.addEventListener('pointercancel',endPtr);
+cv.addEventListener('dblclick',e=>{if(S.sel&&S.tool==='select'&&SIM.canFollow){S.follow=true;cam.z=Math.max(cam.z,SIM.world.followZ||cam.z)}});
+cv.addEventListener('wheel',e=>{e.preventDefault();zoomAt(Math.exp(-e.deltaY*0.0015),e.clientX,e.clientY)},{passive:false});
+$('zIn').onclick=()=>zoomAt(1.4,W/2+cam.ox,H/2);$('zOut').onclick=()=>zoomAt(1/1.4,W/2+cam.ox,H/2);$('zFit').onclick=()=>{fitWorld();bump('zoomed')};
+const keys=new Set();
+addEventListener('keydown',e=>{if(e.target.tagName==='INPUT'||e.target.tagName==='SELECT'||e.target.tagName==='TEXTAREA')return;const k=e.key.toLowerCase();
+  if(k===' '){e.preventDefault();setPaused(!S.paused)}else if(k==='escape'){if(S.tool!=='select')setTool('select');else{S.sel=null;S.follow=false;if(SIM.selChanged)SIM.selChanged()}}
+  else if(k==='+'||k==='=')zoomAt(1.25,W/2+cam.ox,H/2);else if(k==='-')zoomAt(0.8,W/2+cam.ox,H/2);else keys.add(k)});
+addEventListener('keyup',e=>keys.delete(e.key.toLowerCase()));
+function camKeys(dt){let dx=0,dy=0;if(keys.has('a')||keys.has('arrowleft'))dx--;if(keys.has('d')||keys.has('arrowright'))dx++;if(keys.has('w')||keys.has('arrowup'))dy--;if(keys.has('s')||keys.has('arrowdown'))dy++;
+  if(dx||dy){S.follow=false;const sp=600*dt/cam.z;cam.x+=dx*sp;cam.y+=dy*sp;clampCam();CNT.moved+=600*dt}}
+
+/* accounts (shared by every simulator on the site) */
+const lsGet=k=>{try{return JSON.parse(localStorage.getItem(k)||'null')}catch(e){return null}};
+const lsSet=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}};
+const ACC_KEY='barycenter.accounts',PROG_KEY=SIM.id+'.progress';
+let ACC=lsGet(ACC_KEY);if(!ACC||!Array.isArray(ACC.list))ACC={list:[],cur:'guest',devicePlays:0};if(ACC.cur!=='guest'&&!ACC.list.some(a=>a.id===ACC.cur))ACC.cur='guest';
+let ACCN=0;
+const progKey=id=>id==='guest'?PROG_KEY:PROG_KEY+'.'+id;
+const blankProg=()=>({stars:{},plays:0,secs:0});
+let PROG=blankProg();
+function loadProg(){const v=lsGet(progKey(ACC.cur));PROG=Object.assign(blankProg(),v&&typeof v.stars==='object'?v:{})}
+function saveProg(){lsSet(progKey(ACC.cur),PROG)}
+function saveAcc(){const cur=lsGet(ACC_KEY);if(cur&&Array.isArray(cur.list)){for(const a of ACC.list){const o=cur.list.find(x=>x.id===a.id);if(o)Object.keys(o).forEach(k=>{if(!(k in a))a[k]=o[k]})}for(const o of cur.list)if(!ACC.list.some(a=>a.id===o.id))ACC.list.push(o);if(cur.devicePlays>ACC.devicePlays)ACC.devicePlays=cur.devicePlays}lsSet(ACC_KEY,ACC)}
+const curAcc=()=>ACC.list.find(a=>a.id===ACC.cur);
+const accName=()=>(curAcc()||{name:'Guest'}).name;
+const pinHash=p=>{let h=5381;for(const c of 'bary:'+p)h=((h*33)^c.charCodeAt(0))>>>0;return h.toString(36)};
+const GCOUNT='https://abacus.jasoncameron.dev',GPATH='barycenter-sandbox/'+SIM.id+'-plays';let GLOBAL=null;
+function gCount(op){try{const ctl=new AbortController();setTimeout(()=>ctl.abort(),6000);fetch(`${GCOUNT}/${op}/${GPATH}`,{signal:ctl.signal,cache:'no-store'}).then(r=>r.ok?r.json():null).then(j=>{if(j&&Number.isFinite(+j.value)){GLOBAL=Math.max(GLOBAL||0,+j.value);updateAcctUI()}}).catch(()=>{})}catch(e){}}
+function countPlay(){PROG.plays++;ACC.devicePlays=(ACC.devicePlays||0)+1;saveProg();saveAcc();if(GLOBAL!=null)GLOBAL++;updateAcctUI();gCount('hit')}
+function updateAcctUI(){$('hAcctName').textContent=curAcc()?accName():'Guest · make an account';$('hPlaysN').textContent=(GLOBAL!=null?GLOBAL:PROG.plays).toLocaleString();$('hPlaysL').textContent=GLOBAL!=null?'plays by everyone':'plays';$('acctBtn').title=`Account: ${accName()} (saved on this device)`}
+function switchAcc(id,quiet){if(id===ACC.cur)return;saveProg();ACC.cur=id;saveAcc();loadProg();ACCN++;updateAcctUI();if(!$('home').hidden)homeView($('hChalView').hidden?'hMain':'hChalView');if(!quiet)toast(`Signed in as ${accName()}`);renderAcct()}
+let acctPend=null;
+function renderAcct(msg){const L=$('acctList');L.textContent='';$('acctMsg').textContent=msg||'';
+  for(const a of [{id:'guest',name:'Guest',guest:1},...ACC.list]){const pr=a.id===ACC.cur?PROG:(lsGet(progKey(a.id))||{stars:{},plays:0}),cur=a.id===ACC.cur,r=document.createElement('div');r.className='arow'+(cur?' cur':'');
+    const nm=document.createElement('div');nm.className='an';nm.innerHTML='<div></div><div class="as"></div>';nm.children[0].textContent=(a.pin?'🔒 ':'')+a.name+(cur?' (signed in)':'');nm.children[1].textContent=`★ ${Object.values(pr.stars||{}).reduce((x,y)=>x+y,0)} in ${SIM.name} · ${pr.plays||0} plays`;r.appendChild(nm);
+    if(!cur){if(acctPend===a.id){const inp=document.createElement('input');inp.placeholder='PIN';inp.maxLength=4;const go=document.createElement('button');go.className='btn primary';go.textContent='OK';const t=()=>{if(pinHash(inp.value)===a.pin){acctPend=null;switchAcc(a.id)}else renderAcct('Wrong PIN')};go.onclick=t;inp.onkeydown=e=>{if(e.key==='Enter')t()};r.append(inp,go);setTimeout(()=>inp.focus(),0)}
+      else{const b=document.createElement('button');b.className='btn';b.textContent=a.guest?'Use guest':'Sign in';b.onclick=()=>{if(a.pin){acctPend=a.id;renderAcct()}else switchAcc(a.id)};r.appendChild(b)}}
+    else if(!a.guest){const so=document.createElement('button');so.className='btn';so.textContent='Sign out';so.onclick=()=>switchAcc('guest');r.appendChild(so)}
+    L.appendChild(r)}}
+function openAcct(){acctPend=null;$('acct').hidden=false;renderAcct()}
+$('acctForm').addEventListener('submit',e=>{e.preventDefault();const name=$('acctNew').value.trim().replace(/\s+/g,' ').slice(0,20),pin=$('acctPin').value.trim();
+  if(!name)return renderAcct('Type a name first');if(/^guest$/i.test(name)||ACC.list.some(a=>a.name.toLowerCase()===name.toLowerCase()))return renderAcct('That name is taken on this device');if(pin&&!/^\d{4}$/.test(pin))return renderAcct('A PIN is 4 digits (or leave it empty)');
+  const fromGuest=ACC.cur==='guest'&&(PROG.plays||Object.keys(PROG.stars).length);const a={id:'a'+Date.now().toString(36)+Math.floor(Math.random()*1e4).toString(36),name,created:Date.now()};if(pin)a.pin=pinHash(pin);
+  if(fromGuest){lsSet(progKey(a.id),PROG);lsSet(PROG_KEY,blankProg())}ACC.list.push(a);saveAcc();$('acctNew').value='';$('acctPin').value='';switchAcc(a.id,true);toast(`Account ${name} created`);renderAcct(fromGuest?'Your guest progress moved into this account.':'')});
+$('hAcctBtn').onclick=openAcct;$('acctBtn').onclick=openAcct;$('acctClose').onclick=()=>$('acct').hidden=true;$('acct').addEventListener('click',e=>{if(e.target.id==='acct')$('acct').hidden=true});
+$('hPlays').onclick=()=>{gCount('get');toast(GLOBAL!=null?`${GLOBAL.toLocaleString()} plays by everyone · ${PROG.plays} by you`:`${PROG.plays} plays by you on this device`)};
+
+/* challenges */
+CHALS.sort((a,b)=>a.diff-b.diff);loadProg();
+const NCH=CHALS.length;
+const starsOf=i=>(CHALS[i]&&PROG.stars[CHALS[i].t])||0;
+const unlocked=i=>{if(i===0||starsOf(i-1)||starsOf(i))return true;for(let j=i+1;j<NCH;j++)if(starsOf(j))return true;return false};
+function totalStars(){let n=0;for(let i=0;i<NCH;i++)n+=starsOf(i);return n}
+const doneCount=()=>CHALS.filter((c,i)=>starsOf(i)>0).length;
+function setMode(m){document.body.classList.toggle('mHome',m==='home');document.body.classList.toggle('mDemo',m==='demo')}
+function homeView(v){for(const id of ['hMain','hChalView','hDemoView'])$(id).hidden=id!==v;if(v==='hChalView')renderGrid();const d=doneCount();$('hChalSub').textContent=d?`${d} of ${NCH} complete · ${totalStars()} of ${NCH*3} stars`:`${NCH} goals, from easy to fiendish`;updateAcctUI()}
+function showHome(){stopDemo(true);if(CH.active)endChallenge();if(TUT.on)endTutorial();$('chDone').hidden=true;$('scen').hidden=true;
+  CH.loading=true;loadScen(SIM.home);CH.loading=false;setSpeed(SIM.homeSpeed??SIM.defSpeed);setPaused(false);setTool('select');setView('normal');
+  cam.ox=innerWidth>900?innerWidth*0.2:0;setMode('home');$('home').hidden=false;homeView('hMain')}
+function leaveHome(){cam.ox=0;$('home').hidden=true;setMode('');fitWorld()}
+$('homeBtn').onclick=showHome;document.querySelectorAll('.hback').forEach(b=>b.onclick=()=>homeView('hMain'));
+$('hChal').onclick=()=>homeView('hChalView');$('hDemo').onclick=()=>homeView('hDemoView');
+function startFree(){leaveHome();loadScen(SIM.freeScen||SIM.home);setSpeed(SIM.defSpeed);countPlay()}
+$('hFree').onclick=startFree;
+function renderGrid(){const g=$('hGrid');g.textContent='';let next=-1;
+  CHALS.forEach((c,i)=>{const st=starsOf(i),un=unlocked(i);if(un&&!st&&next<0)next=i;const b=document.createElement('button');b.className='ct'+(i===next?' next':'');b.disabled=!un;b.title=un?`${c.t}: ${c.g}`:'Finish the previous challenge to unlock';
+    b.innerHTML='<span class="cn"></span><span class="ctt"></span><span class="cs"></span>';b.children[0].textContent=`#${i+1}`;b.children[1].textContent=un?c.t:'Locked';b.children[2].textContent=un?(st?'★'.repeat(st)+'☆'.repeat(3-st):'☆☆☆'):'🔒';b.onclick=()=>startChallenge(i);g.appendChild(b)});
+  $('hStars').textContent=`★ ${totalStars()} / ${NCH*3}`;if(next>=0)setTimeout(()=>{const el=g.children[next];if(el)el.scrollIntoView({block:'nearest'})},30)}
+function startChallenge(i){const c=CHALS[i];if(!c||!unlocked(i))return;leaveHome();countPlay();$('chDone').hidden=true;
+  CH.active=c;CH.idx=i;CH.events=[];CH.hold={};CH.ref={};CH.done=false;CH.failed='';CH.loading=true;try{loadScen(c.scen||SIM.home);setSpeed(c.speed??SIM.defSpeed);if(c.setup)c.setup()}finally{CH.loading=false}
+  CH.t0=S.t;CH.real0=performance.now();setPaused(false);setTool(SIM.defTool||'select');
+  $('chHud').hidden=false;$('chNum').textContent=`Challenge ${i+1} of ${NCH}`;$('chTitle').textContent=c.t;$('chGoal').textContent=c.g;$('chProg').textContent='';$('chBar').style.width='0%';$('chHint').hidden=!c.hint;$('chRestart').textContent='Restart'}
+function endChallenge(){CH.active=null;$('chHud').hidden=true}
+function chTick(){if(TUT.on)tutTick();if(!CH.active||CH.done)return;const c=CH.active;let r;try{r=c.check()}catch(e){console.warn(e);r=[false,0,'']}
+  const [done,p,txt]=r;$('chProg').textContent=txt||'';$('chBar').style.width=Math.round(clamp(p||0,0,1)*100)+'%';const t=realSecs();$('chTime').textContent=`${Math.floor(t/60)}:${String(Math.floor(t%60)).padStart(2,'0')}`;
+  if(done){CH.done=true;const st=clamp((c.stars||byTime(60,150))(),1,3),prev=starsOf(CH.idx);if(st>prev)PROG.stars[c.t]=st;saveProg();
+    $('dStars').innerHTML='★'.repeat(st)+'<span class="off">'+'★'.repeat(3-st)+'</span>';$('dTitle').textContent=`Challenge ${CH.idx+1} complete!`;$('dText').textContent=`${c.t} · ${Math.floor(t/60)}:${String(Math.floor(t%60)).padStart(2,'0')}${st<3?' · Faster solutions earn more stars.':' · Perfect!'}${prev>st?` Your best is still ${prev} ★.`:''}`;
+    $('dNext').hidden=CH.idx>=NCH-1;$('dNext').textContent='Next challenge';$('dRetry').hidden=false;$('dList').textContent='All challenges';$('chDone').hidden=false;$('chHud').hidden=true;return}
+  const f=c.fail&&c.fail();if(f){CH.done=true;$('dStars').innerHTML='<span class="off">★★★</span>';$('dTitle').textContent='Not this time';$('dText').textContent=f+'. Try again?';$('dNext').hidden=true;$('dRetry').hidden=false;$('dList').textContent='All challenges';$('chDone').hidden=false;$('chHud').hidden=true}}
+$('chRestart').addEventListener('click',()=>{if(TUT.on){TUT.i++;tutStep();return}startChallenge(CH.idx)});
+$('chExit').addEventListener('click',()=>{if(TUT.on){endTutorial();showHome();homeView('hDemoView');return}endChallenge();showHome();homeView('hChalView')});
+$('chHint').onclick=()=>{if(CH.active)toast('Hint: '+CH.active.hint,6000)};
+$('dNext').onclick=()=>{if(TUT.finished){TUT.finished=false;showHome();homeView('hChalView');return}startChallenge(CH.idx+1)};
+$('dRetry').onclick=()=>{if(TUT.finished){TUT.finished=false;startTutorial();return}startChallenge(CH.idx)};
+$('dList').onclick=()=>{if(TUT.finished){TUT.finished=false;$('chDone').hidden=true;startFree();return}endChallenge();showHome();homeView('hChalView')};
+
+/* tutorial */
+const TUT={on:false,i:0,ref:{},finished:false};
+function startTutorial(){leaveHome();countPlay();$('chDone').hidden=true;CH.loading=true;loadScen(SIM.tutScen||SIM.home);CH.loading=false;setSpeed(SIM.defSpeed);setPaused(false);setTool(SIM.defTool||'select');TUT.on=true;TUT.i=0;TUT.finished=false;tutStep()}
+function tutStep(){const st=TSTEPS[TUT.i];if(!st){TUT.on=false;TUT.finished=true;$('chHud').hidden=true;$('dStars').innerHTML='★★★';$('dTitle').textContent='Tutorial complete!';$('dText').textContent='You know all the controls. Try the challenges, or build anything in free play.';$('dNext').hidden=false;$('dNext').textContent='Challenges';$('dRetry').hidden=false;$('dList').textContent='Free play';$('chDone').hidden=false;$('chRestart').textContent='Restart';return}
+  TUT.ref={};if(st[3])st[3](TUT.ref);$('chHud').hidden=false;$('chNum').textContent=`Tutorial · step ${TUT.i+1} of ${TSTEPS.length}`;$('chTitle').textContent=st[0];$('chGoal').textContent=st[1];$('chProg').textContent='';$('chTime').textContent='';$('chBar').style.width=Math.round(TUT.i/TSTEPS.length*100)+'%';$('chHint').hidden=true;$('chRestart').textContent='Skip step'}
+function tutTick(){const st=TSTEPS[TUT.i];let ok=false;try{ok=st&&st[2](TUT.ref)}catch(e){}if(ok){TUT.i++;toast('✓ '+st[0]);tutStep()}}
+function endTutorial(){TUT.on=false;$('chHud').hidden=true;$('chRestart').textContent='Restart'}
+$('hTut').onclick=startTutorial;
+
+/* demo */
+let demoI=-1,demoTimer=0;
+function startDemo(){leaveHome();countPlay();setMode('demo');$('demoCap').hidden=false;demoI=-1;nextDemo()}
+function nextDemo(){clearTimeout(demoTimer);demoI=(demoI+1)%DEMO.length;const [id,t,x,f]=DEMO[demoI];CH.loading=true;loadScen(id);CH.loading=false;setView('normal');setPaused(false);if(f)f();
+  $('demoStep').textContent=`Demo · ${demoI+1} of ${DEMO.length}`;$('demoTitle').textContent=t;$('demoText').textContent=x;demoTimer=setTimeout(nextDemo,12000)}
+function stopDemo(quiet){clearTimeout(demoTimer);if(demoI<0&&quiet)return;demoI=-1;$('demoCap').hidden=true;setMode('');if(!quiet)showHome()}
+$('hWatch').onclick=startDemo;$('demoExit').onclick=()=>stopDemo();$('demoNext').onclick=nextDemo;
+
+/* main loop */
+let last=performance.now(),uiT=0,achAcc=0,achT=0,renderMs=4,stepMs=1;S.achieved=1;
+function frame(now){const dtR=Math.min(0.1,(now-last)/1000);last=now;camKeys(dtR);
+  try{
+    if(!S.paused){const want=S.speed*dtR,step=SIM.stepSize(S.speed),t0=performance.now(),budget=clamp((SIM.budget||12.5)-renderMs,2,9);let done=0;
+      while(done<want-1e-12){const el=performance.now()-t0;if(el+stepMs*0.9>budget&&done>0)break;const s0=performance.now(),d=Math.min(step,want-done);SIM.step(d);S.t+=d;done+=d;stepMs=stepMs*0.8+(performance.now()-s0)*0.2}
+      achAcc+=done}
+    achT+=dtR;if(achT>=0.5){S.achieved=achAcc/achT;achAcc=0;achT=0}
+    if(SIM.frame)SIM.frame(dtR);
+    if(S.follow&&S.sel&&SIM.selPos){const p=SIM.selPos(S.sel);if(p){cam.x=lerp(cam.x,p[0],Math.min(1,dtR*6));cam.y=lerp(cam.y,p[1],Math.min(1,dtR*6));clampCam()}}
+    const r0=performance.now();ctx.setTransform(DPR,0,0,DPR,0,0);SIM.render(ctx,now);renderMs=renderMs*0.85+(performance.now()-r0)*0.15;
+    uiT+=dtR;if(uiT>0.25){uiT=0;updateHud()}
+  }catch(err){console.error('['+SIM.name+']',err)}
+  requestAnimationFrame(frame)}
+function deselect(){S.sel=null;S.follow=false;if(SIM.selChanged)SIM.selChanged()}
+function deselBtn(){const p=$('pane-insp');if(!p)return;let b=$('kitDesel');if(!b){b=document.createElement('button');b.id='kitDesel';b.className='btn';b.textContent='✕ Stop inspecting';b.onclick=deselect;p.insertBefore(b,p.firstChild)}b.hidden=!S.sel}
+function updateHud(){deselBtn();measureHud();const st=SIM.stats(),box=$('stats');if(box.children.length!==st.length){box.textContent='';for(const [k] of st){const d=document.createElement('div');d.className='stat';d.innerHTML='<span class="k"></span><span class="v"></span>';d.children[0].textContent=k;box.appendChild(d)}}
+  st.forEach(([k,v],i)=>{box.children[i].children[1].textContent=v});$('dateTxt').textContent=SIM.dateTxt();$('dateSub').textContent=SIM.dateSub?SIM.dateSub():'';updateRate();SIM.hud();chTick();
+  if(document.visibilityState==='visible'&&$('home').hidden)PROG.secs=(PROG.secs||0)+0.25}
+addEventListener('resize',resize);addEventListener('pagehide',saveProg);
+resize();buildRail();buildSpeeds();buildScen();if(SIM.init)SIM.init();setSpeed(SIM.defSpeed);setTool('select');updateAcctUI();gCount('get');showHome();requestAnimationFrame(frame);
+
+/* ===== account helpers shared by every simulator: a sign-out button on the home page while signed in ===== */
+{const h=$('hAcctBtn');if(h&&!$('hOut')){const b=document.createElement('button');b.className='chip';b.id='hOut';b.textContent='↩ Sign out';b.title='Sign out (back to guest)';b.onclick=()=>switchAcc('guest');h.after(b)}
+  setInterval(()=>{const b=$('hOut');if(b)b.hidden=!curAcc()},500)}
+
+</script>
+</body>
+</html>

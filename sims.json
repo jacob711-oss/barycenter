@@ -62,5 +62,21 @@
   "tag": "Draw the roads of a growing town and keep the traffic flowing",
   "url": "https://jacob711-oss.github.io/barycenter/gridlock/",
   "color": "#ffd23a"
+ },
+ {
+  "id": "hivemind",
+  "icon": "🐜",
+  "name": "Hivemind",
+  "tag": "Ant colonies that find food by following each other's scent trails",
+  "url": "https://jacob711-oss.github.io/barycenter/hivemind/",
+  "color": "#ff9a3d"
+ },
+ {
+  "id": "flux",
+  "icon": "⚡",
+  "name": "Flux",
+  "tag": "Place charges and magnets, and watch the fields bend particles through space",
+  "url": "https://jacob711-oss.github.io/barycenter/flux/",
+  "color": "#5ae0ff"
  }
 ]
