@@ -173,6 +173,7 @@ body.mHome .legend,body.mDemo .legend{display:none!important}@media (max-width:7
 #dockBtn{display:none}@media (max-width:760px){#dockBtn{display:inline-block}}
 .sprow{text-align:left;width:100%}@media (max-width:760px){#dateSub{display:none}}
 #hAcctBtn,#acctBtn,#hOut,#acct{display:none!important}
+body.dockHidden .dock,body.dockHidden .zoomb{display:none!important}@media (min-width:761px){body.dockHidden #dockBtn{display:inline-block!important}}
 .mlist{display:flex;flex-direction:column;gap:2px}
 .rlog{display:flex;flex-direction:column;gap:2px;font-size:12px;color:var(--ink2)}
 .ptab{display:grid;grid-template-columns:repeat(5,1fr);gap:4px}.ptab button{font-family:var(--f-mono);font-size:12px;padding:6px 0;border-radius:6px;border:1px solid var(--line);color:var(--ink)}
@@ -207,7 +208,7 @@ body.mHome .legend,body.mDemo .legend{display:none!important}@media (max-width:7
 </div>
 
 <aside class="dock panel" id="dock">
-  <div class="tabs" role="tablist"><button class="tab" role="tab" data-tab="world" aria-selected="true">Lab</button><button class="tab" role="tab" data-tab="mols" aria-selected="false">Molecules</button><button class="tab" role="tab" data-tab="insp" aria-selected="false">Inspect</button></div>
+  <div class="tabs" role="tablist"><button class="tab" role="tab" data-tab="world" aria-selected="true">Lab</button><button class="tab" role="tab" data-tab="mols" aria-selected="false">Molecules</button><button class="tab" role="tab" data-tab="insp" aria-selected="false">Inspect</button><button class="tab" id="dockClose" title="Close this panel" aria-label="Close panel" style="flex:0 0 40px">✕</button></div>
   <div class="pane" id="pane-world">
     <div class="sl"><div class="row"><span class="k">Wall temperature</span><span id="tempV">300 K</span></div><input type="range" id="tempS" min="5" max="6000" step="5" value="300"></div>
     <div class="row"><span class="k">Thermostat (walls heat or cool the atoms)</span><button class="btn" id="thermBtn" aria-pressed="true">On</button></div>
@@ -664,7 +665,7 @@ function measureHud(){const h=document.querySelector('.hud-top');if(h)document.d
 const sx=wx=>(wx-cam.x)*cam.z+W/2+cam.ox,sy=wy=>(wy-cam.y)*cam.z+H/2;
 const wxOf=px=>(px-W/2-cam.ox)/cam.z+cam.x,wyOf=py=>(py-H/2)/cam.z+cam.y;
 function freeRect(){let l=0,r=W,t=0,b=H;if(!$('home').hidden)return{l,r,t,b};const vis=e=>e&&getComputedStyle(e).display!=='none'&&e.getBoundingClientRect().width>0;const hud=document.querySelector('.hud-top'),rail=$('rail'),dock=$('dock');
-  if(vis(hud))t=hud.getBoundingClientRect().bottom+8;if(innerWidth>760){if(vis(rail))l=rail.getBoundingClientRect().right+8;if(vis(dock))r=dock.getBoundingClientRect().left-8;b=H-50;const lb=$('lineBar');if(vis(lb))b=Math.min(b,lb.getBoundingClientRect().top-8)}else{if(vis(rail))b=rail.getBoundingClientRect().top-8;const lb=$('lineBar');if(vis(lb))b=Math.min(b,lb.getBoundingClientRect().top-8);if(vis(dock)&&document.body.classList.contains('dockOpen'))b=Math.min(b,dock.getBoundingClientRect().top-8)}
+  if(vis(hud))t=hud.getBoundingClientRect().bottom+8;if(innerWidth>760){if(vis(rail))l=rail.getBoundingClientRect().right+8;if(vis(dock))r=dock.getBoundingClientRect().left-8;b=H-50}else{if(vis(rail))b=rail.getBoundingClientRect().top-8;if(vis(dock)&&document.body.classList.contains('dockOpen'))b=Math.min(b,dock.getBoundingClientRect().top-8)}
   if(r-l<200){l=0;r=W}if(b-t<150){t=0;b=H}return{l,r,t,b}}
 function fitWorld(){const w=SIM.world.w,h=SIM.world.h;if(SIM.world.wrapX){cam.z=Math.max(W/w,H/h);cam.x=w/2;cam.y=h/2;clampCam();return}const f=freeRect(),fw=f.r-f.l,fh=f.b-f.t;cam.z=Math.min(fw/w,fh/h)*0.96;cam.x=w/2-((f.l+f.r)/2-W/2-cam.ox)/cam.z;cam.y=h/2-((f.t+f.b)/2-H/2)/cam.z;clampCam()}
 function minZoom(){const w=SIM.world.w,h=SIM.world.h;return SIM.world.wrapX?H/h:Math.min(W/w,H/h)*0.5}
@@ -688,9 +689,10 @@ function setTool(id){S.tool=id;document.querySelectorAll('.tool').forEach(b=>b.s
 $('brush').oninput=e=>{S.brush=+e.target.value;$('brushV').textContent=S.brush};
 
 /* dock tabs */
-function showTab(id){document.querySelectorAll('.tab').forEach(t=>t.setAttribute('aria-selected',t.dataset.tab===id));document.querySelectorAll('#dock .pane').forEach(p=>p.hidden=p.id!=='pane-'+id);bump('tab_'+id);if(SIM.tabShown)SIM.tabShown(id)}
+function showTab(id){document.body.classList.remove('dockHidden');document.querySelectorAll('.tab').forEach(t=>t.setAttribute('aria-selected',t.dataset.tab===id));document.querySelectorAll('#dock .pane').forEach(p=>p.hidden=p.id!=='pane-'+id);bump('tab_'+id);if(SIM.tabShown)SIM.tabShown(id)}
 document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>showTab(t.dataset.tab));
-$('dockBtn').onclick=()=>document.body.classList.toggle('dockOpen');
+$('dockBtn').onclick=()=>{if(document.body.classList.contains('dockHidden')){document.body.classList.remove('dockHidden');document.body.classList.add('dockOpen')}else document.body.classList.toggle('dockOpen');setTimeout(()=>{if(!SIM.world.wrapX)fitWorld()},30)};
+$('dockClose').onclick=()=>{document.body.classList.add('dockHidden');document.body.classList.remove('dockOpen');bump('dockclose');setTimeout(()=>{if(!SIM.world.wrapX)fitWorld()},30)};
 function setView(v){S.view=v;document.querySelectorAll('[data-view]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.view===v));bump('view');if(SIM.viewChanged)SIM.viewChanged(v)}
 document.querySelectorAll('[data-view]').forEach(b=>b.onclick=()=>setView(b.dataset.view));
 function setLegend(title,grad,ticks){const L=$('legend');if(!title){L.hidden=true;return}L.hidden=false;L.children[0].textContent=title;L.children[1].style.background=grad;[...L.children[2].children].forEach((s,i)=>s.textContent=ticks[i]||'')}

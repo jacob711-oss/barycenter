@@ -173,6 +173,7 @@ body.mHome .legend,body.mDemo .legend{display:none!important}@media (max-width:7
 #dockBtn{display:none}@media (max-width:760px){#dockBtn{display:inline-block}}
 .sprow{text-align:left;width:100%}@media (max-width:760px){#dateSub{display:none}}
 #hAcctBtn,#acctBtn,#hOut,#acct{display:none!important}
+body.dockHidden .dock,body.dockHidden .zoomb{display:none!important}@media (min-width:761px){body.dockHidden #dockBtn{display:inline-block!important}}
 .inv{display:grid;grid-template-columns:repeat(2,1fr);gap:6px}.inv div{border:1px solid var(--line);border-radius:8px;padding:7px 9px;font-size:13px}.inv b{font-family:var(--f-mono);float:right;color:var(--flare)}
 .lrow{display:grid;grid-template-columns:16px 1fr auto;gap:8px;align-items:center;padding:6px 8px;border:1px solid var(--line);border-radius:8px;font-size:12.5px}.lrow i{width:12px;height:12px;border-radius:50%;display:block}
 .lbtns{display:flex;gap:4px;flex-wrap:wrap;margin-top:4px}.lbtns .btn{padding:4px 8px;font-size:11px}
@@ -208,7 +209,7 @@ body.mHome .legend,body.mDemo .legend{display:none!important}@media (max-width:7
 </div>
 
 <aside class="dock panel" id="dock">
-  <div class="tabs" role="tablist"><button class="tab" role="tab" data-tab="world" aria-selected="true">Network</button><button class="tab" role="tab" data-tab="stats" aria-selected="false">City</button><button class="tab" role="tab" data-tab="insp" aria-selected="false">Inspect</button></div>
+  <div class="tabs" role="tablist"><button class="tab" role="tab" data-tab="world" aria-selected="true">Network</button><button class="tab" role="tab" data-tab="stats" aria-selected="false">City</button><button class="tab" role="tab" data-tab="insp" aria-selected="false">Inspect</button><button class="tab" id="dockClose" title="Close this panel" aria-label="Close panel" style="flex:0 0 40px">✕</button></div>
   <div class="pane" id="pane-world">
     <span class="k">Your stock</span>
     <div class="inv" id="inv"></div>
@@ -504,8 +505,8 @@ function renderInspect(){const b=S.sel;$('inspEmpty').hidden=!!b;$('inspBody').h
   b.onclick=()=>{MODE='classic';leaveHome();loadScen('harbour');setSpeed(SIM.defSpeed);countPlay();toast('Classic mode: keep every station from overflowing!')};
   document.addEventListener('pointerdown',e=>{if(e.target.closest('#hFree'))MODE='free';else if(e.target.closest('#home,#chDone,#hClassic'))MODE='classic'},true)}
 
-{const bar=document.createElement('div');bar.id='lineBar';bar.className='panel';bar.style.cssText='position:fixed;left:calc(var(--gut) + 96px);bottom:var(--bot);z-index:5;display:flex;gap:7px;padding:7px 10px;align-items:center;flex-wrap:wrap;max-width:calc(100% - 520px)';document.body.appendChild(bar);
-  const css=document.createElement('style');css.textContent='body.mHome #lineBar,body.mDemo #lineBar{display:none!important}#lineBar button{width:30px;height:30px;border-radius:50%;border:3px solid transparent;cursor:pointer}#lineBar button[aria-pressed="true"]{border-color:#fff;transform:scale(1.15)}#lineBar button:disabled{opacity:.25;cursor:default}@media (max-width:760px){#lineBar{left:var(--gut)!important;bottom:calc(var(--bot) + 74px)!important;max-width:calc(100% - 32px)!important}}#placeopts,#hint{display:none!important}#lineBar .pz{width:auto;height:30px;border-radius:8px;padding:0 10px;border:1px solid rgba(255,195,90,.6);background:rgba(255,195,90,.12);color:#fff;font-size:13px}';document.head.appendChild(css);
+{const bar=document.createElement('div');bar.id='lineBar';bar.className='panel';bar.style.cssText='display:flex;gap:6px;padding:8px 10px;align-items:center;flex-wrap:wrap';const hud=document.querySelector('.hud-top .time');hud.after(bar);
+  const css=document.createElement('style');css.textContent='body.mHome #lineBar,body.mDemo #lineBar{display:none!important}#lineBar button{width:30px;height:30px;border-radius:50%;border:3px solid transparent;cursor:pointer}#lineBar button[aria-pressed="true"]{border-color:#fff;transform:scale(1.15)}#lineBar button:disabled{opacity:.25;cursor:default}@media (max-width:760px){#lineBar{flex:1 1 100%;justify-content:center}}#lineBar button:not(.pz){width:26px!important;height:26px!important}#lineBar .pz{white-space:nowrap}#placeopts,#hint{display:none!important}#lineBar .pz{width:auto;height:30px;border-radius:8px;padding:0 10px;border:1px solid rgba(255,195,90,.6);background:rgba(255,195,90,.12);color:#fff;font-size:13px}';document.head.appendChild(css);
   const draw=()=>{bar.innerHTML='';const pz=document.createElement('button');pz.className='pz';pz.textContent=S.paused?'▶ Play':'⏸ Pause';pz.onclick=()=>{setPaused(!S.paused);draw()};bar.appendChild(pz);const lb=document.createElement('span');lb.className='k';lb.style.margin='0 2px 0 6px';lb.textContent='Line';bar.appendChild(lb);LCOL.forEach((col,k)=>{const b=document.createElement('button');b.style.background=col;const L=LINES[k];b.disabled=!L;b.title=L?(L.st.length?`Line ${k+1}: ${L.st.length} stations`:`Line ${k+1}: not built yet`):'Not unlocked yet';b.setAttribute('aria-pressed',k===CUR);b.onclick=()=>{CUR=k;setTool('draw');syncPanel();draw()};bar.appendChild(b)})};
   setInterval(draw,400);draw()}
 
@@ -564,7 +565,7 @@ function measureHud(){const h=document.querySelector('.hud-top');if(h)document.d
 const sx=wx=>(wx-cam.x)*cam.z+W/2+cam.ox,sy=wy=>(wy-cam.y)*cam.z+H/2;
 const wxOf=px=>(px-W/2-cam.ox)/cam.z+cam.x,wyOf=py=>(py-H/2)/cam.z+cam.y;
 function freeRect(){let l=0,r=W,t=0,b=H;if(!$('home').hidden)return{l,r,t,b};const vis=e=>e&&getComputedStyle(e).display!=='none'&&e.getBoundingClientRect().width>0;const hud=document.querySelector('.hud-top'),rail=$('rail'),dock=$('dock');
-  if(vis(hud))t=hud.getBoundingClientRect().bottom+8;if(innerWidth>760){if(vis(rail))l=rail.getBoundingClientRect().right+8;if(vis(dock))r=dock.getBoundingClientRect().left-8;b=H-50;const lb=$('lineBar');if(vis(lb))b=Math.min(b,lb.getBoundingClientRect().top-8)}else{if(vis(rail))b=rail.getBoundingClientRect().top-8;const lb=$('lineBar');if(vis(lb))b=Math.min(b,lb.getBoundingClientRect().top-8);if(vis(dock)&&document.body.classList.contains('dockOpen'))b=Math.min(b,dock.getBoundingClientRect().top-8)}
+  if(vis(hud))t=hud.getBoundingClientRect().bottom+8;if(innerWidth>760){if(vis(rail))l=rail.getBoundingClientRect().right+8;if(vis(dock))r=dock.getBoundingClientRect().left-8;b=H-50}else{if(vis(rail))b=rail.getBoundingClientRect().top-8;if(vis(dock)&&document.body.classList.contains('dockOpen'))b=Math.min(b,dock.getBoundingClientRect().top-8)}
   if(r-l<200){l=0;r=W}if(b-t<150){t=0;b=H}return{l,r,t,b}}
 function fitWorld(){const w=SIM.world.w,h=SIM.world.h;if(SIM.world.wrapX){cam.z=Math.max(W/w,H/h);cam.x=w/2;cam.y=h/2;clampCam();return}const f=freeRect(),fw=f.r-f.l,fh=f.b-f.t;cam.z=Math.min(fw/w,fh/h)*0.96;cam.x=w/2-((f.l+f.r)/2-W/2-cam.ox)/cam.z;cam.y=h/2-((f.t+f.b)/2-H/2)/cam.z;clampCam()}
 function minZoom(){const w=SIM.world.w,h=SIM.world.h;return SIM.world.wrapX?H/h:Math.min(W/w,H/h)*0.5}
@@ -588,9 +589,10 @@ function setTool(id){S.tool=id;document.querySelectorAll('.tool').forEach(b=>b.s
 $('brush').oninput=e=>{S.brush=+e.target.value;$('brushV').textContent=S.brush};
 
 /* dock tabs */
-function showTab(id){document.querySelectorAll('.tab').forEach(t=>t.setAttribute('aria-selected',t.dataset.tab===id));document.querySelectorAll('#dock .pane').forEach(p=>p.hidden=p.id!=='pane-'+id);bump('tab_'+id);if(SIM.tabShown)SIM.tabShown(id)}
+function showTab(id){document.body.classList.remove('dockHidden');document.querySelectorAll('.tab').forEach(t=>t.setAttribute('aria-selected',t.dataset.tab===id));document.querySelectorAll('#dock .pane').forEach(p=>p.hidden=p.id!=='pane-'+id);bump('tab_'+id);if(SIM.tabShown)SIM.tabShown(id)}
 document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>showTab(t.dataset.tab));
-$('dockBtn').onclick=()=>document.body.classList.toggle('dockOpen');
+$('dockBtn').onclick=()=>{if(document.body.classList.contains('dockHidden')){document.body.classList.remove('dockHidden');document.body.classList.add('dockOpen')}else document.body.classList.toggle('dockOpen');setTimeout(()=>{if(!SIM.world.wrapX)fitWorld()},30)};
+$('dockClose').onclick=()=>{document.body.classList.add('dockHidden');document.body.classList.remove('dockOpen');bump('dockclose');setTimeout(()=>{if(!SIM.world.wrapX)fitWorld()},30)};
 function setView(v){S.view=v;document.querySelectorAll('[data-view]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.view===v));bump('view');if(SIM.viewChanged)SIM.viewChanged(v)}
 document.querySelectorAll('[data-view]').forEach(b=>b.onclick=()=>setView(b.dataset.view));
 function setLegend(title,grad,ticks){const L=$('legend');if(!title){L.hidden=true;return}L.hidden=false;L.children[0].textContent=title;L.children[1].style.background=grad;[...L.children[2].children].forEach((s,i)=>s.textContent=ticks[i]||'')}
