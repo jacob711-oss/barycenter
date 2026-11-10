@@ -1000,7 +1000,7 @@ function renderGrid(){const g=$('hGrid');g.textContent='';let next=-1;
   $('hStars').textContent=`★ ${totalStars()} / ${NCH*3}`;if(next>=0)setTimeout(()=>{const el=g.children[next];if(el)el.scrollIntoView({block:'nearest'})},30)}
 function startChallenge(i){const c=CHALS[i];if(!c||!unlocked(i))return;leaveHome();countPlay();$('chDone').hidden=true;
   CH.active=c;CH.idx=i;CH.events=[];CH.hold={};CH.ref={};CH.done=false;CH.failed='';CH.loading=true;try{loadScen(c.scen||SIM.home);setSpeed(c.speed??SIM.defSpeed);if(c.setup)c.setup()}finally{CH.loading=false}
-  CH.t0=S.t;CH.real0=performance.now();setPaused(false);setTool('select');
+  CH.t0=S.t;CH.real0=performance.now();setPaused(false);setTool(SIM.defTool||'select');
   $('chHud').hidden=false;$('chNum').textContent=`Challenge ${i+1} of ${NCH}`;$('chTitle').textContent=c.t;$('chGoal').textContent=c.g;$('chProg').textContent='';$('chBar').style.width='0%';$('chHint').hidden=!c.hint;$('chRestart').textContent='Restart'}
 function endChallenge(){CH.active=null;$('chHud').hidden=true}
 function chTick(){if(TUT.on)tutTick();if(!CH.active||CH.done)return;const c=CH.active;let r;try{r=c.check()}catch(e){console.warn(e);r=[false,0,'']}
@@ -1018,7 +1018,7 @@ $('dList').onclick=()=>{if(TUT.finished){TUT.finished=false;$('chDone').hidden=t
 
 /* tutorial */
 const TUT={on:false,i:0,ref:{},finished:false};
-function startTutorial(){leaveHome();countPlay();$('chDone').hidden=true;CH.loading=true;loadScen(SIM.tutScen||SIM.home);CH.loading=false;setSpeed(SIM.defSpeed);setPaused(false);TUT.on=true;TUT.i=0;TUT.finished=false;tutStep()}
+function startTutorial(){leaveHome();countPlay();$('chDone').hidden=true;CH.loading=true;loadScen(SIM.tutScen||SIM.home);CH.loading=false;setSpeed(SIM.defSpeed);setPaused(false);setTool(SIM.defTool||'select');TUT.on=true;TUT.i=0;TUT.finished=false;tutStep()}
 function tutStep(){const st=TSTEPS[TUT.i];if(!st){TUT.on=false;TUT.finished=true;$('chHud').hidden=true;$('dStars').innerHTML='★★★';$('dTitle').textContent='Tutorial complete!';$('dText').textContent='You know all the controls. Try the challenges, or build anything in free play.';$('dNext').hidden=false;$('dNext').textContent='Challenges';$('dRetry').hidden=false;$('dList').textContent='Free play';$('chDone').hidden=false;$('chRestart').textContent='Restart';return}
   TUT.ref={};if(st[3])st[3](TUT.ref);$('chHud').hidden=false;$('chNum').textContent=`Tutorial · step ${TUT.i+1} of ${TSTEPS.length}`;$('chTitle').textContent=st[0];$('chGoal').textContent=st[1];$('chProg').textContent='';$('chTime').textContent='';$('chBar').style.width=Math.round(TUT.i/TSTEPS.length*100)+'%';$('chHint').hidden=true;$('chRestart').textContent='Skip step'}
 function tutTick(){const st=TSTEPS[TUT.i];let ok=false;try{ok=st&&st[2](TUT.ref)}catch(e){}if(ok){TUT.i++;toast('✓ '+st[0]);tutStep()}}

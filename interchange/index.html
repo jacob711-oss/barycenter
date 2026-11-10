@@ -336,7 +336,7 @@ const TK=Object.keys(TYPES);
 const LCOL=['#ff5a8a','#4aa8ff','#ffc23a','#3ad08a','#b07aff','#ff8a3a','#3adbe0'];
 let ST=[],LINES=[],WATER=[],PARTS=[],HIST=[],NEXT={};
 const G={lines:3,trains:3,cars:0,bridges:2,hubs:0,week:1,delivered:0,over:false,relaxed:false,spawnT:0,weekT:0,choosing:false,seed:1,rush:false,match:false,boom:false,storm:false};
-let CUR=0,DRAG=null,HOVER=null,LBL=true,EVN=0,EVSTOP=0,UPG=0,DRAWN=0,EXT=0,TRADD=0,CARADD=0,HUBADD=0,REMOVED=0;
+let MODE='classic';let CUR=0,DRAG=null,HOVER=null,LBL=true,EVN=0,EVSTOP=0,UPG=0,DRAWN=0,EXT=0,TRADD=0,CARADD=0,HUBADD=0,REMOVED=0;
 let RS=1;function R(){RS|=0;RS=RS+0x6D2B79F5|0;let t=Math.imul(RS^RS>>>15,1|RS);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}
 /* ---------- water: rivers and coasts are polygons ---------- */
 function inPoly(x,y,P){let c=false;for(let i=0,j=P.length-1;i<P.length;j=i++){const [xi,yi]=P[i],[xj,yj]=P[j];if(((yi>y)!==(yj>y))&&(x<(xj-xi)*(y-yi)/(yj-yi)+xi))c=!c}return c}
@@ -369,6 +369,12 @@ function linkStations(a,b){// extend the chosen line or start it
   if(L.st.includes(b.id)){toast('That station is already on this line');return false}
   if(pathCross(a,b)>G.bridges-bridgesUsed()){toast('🌉 Not enough bridges to cross the water');return false}
   if(atEnd>0)L.st.push(b.id);else{L.st.unshift(b.id);for(const t of L.trains)t.d+=0}geom(L);if(atEnd<0)for(const t of L.trains){t.d=clamp(t.d+(L.stops[1]||0),0,L.len)}EXT++;chEv('extend',{});routes();return true}
+function gapAt(L,x,y){// which pair of stations (gap index) the point is closest to along the line
+  let best=0,bd=1e9,acc=0,bestD=0;for(let i=1;i<L.pts.length;i++){const [ax,ay]=L.pts[i-1],[bx,by]=L.pts[i],dx=bx-ax,dy=by-ay,l=Math.hypot(dx,dy)||1,t=clamp(((x-ax)*dx+(y-ay)*dy)/(l*l),0,1),d=(ax+dx*t-x)**2+(ay+dy*t-y)**2;if(d<bd){bd=d;bestD=acc+t*l}acc+=l}
+  for(let k=1;k<L.stops.length;k++)if(bestD<=L.stops[k]+1e-6)return k;return L.stops.length-1}
+function insertStation(L,gap,s){const seq=L.loop?L.st.concat([L.st[0]]):L.st;const a=ST[seq[gap-1]],b=ST[seq[gap]];if(!a||!b)return false;
+  const extra=pathCross(a,s)+pathCross(s,b)-pathCross(a,b);if(extra>G.bridges-bridgesUsed()){toast('🌉 Not enough bridges');return false}
+  const frac=L.len?L.trains.map(t=>t.d/L.len):[];if(gap>=L.st.length)L.st.push(s.id);else L.st.splice(gap,0,s.id);geom(L);L.trains.forEach((t,i)=>{t.d=clamp(frac[i]*L.len,0,L.len)});routes();EXT++;chEv('insert',{});toast('Station added to the line');return true}
 function removeLine(L){G.trains+=L.trains.length;G.cars+=L.trains.reduce((s,t)=>s+t.cars,0);for(const t of L.trains)for(const p of t.pax){const s=ST[L.st[0]];if(s)s.pax.push(p)}L.st=[];L.trains=[];L.loop=false;geom(L);routes();REMOVED++;chEv('remove',{})}
 function trimLine(L,end){if(L.st.length<=2){removeLine(L);return}if(L.loop){L.loop=false}else if(end>0)L.st.pop();else L.st.shift();geom(L);for(const t of L.trains)t.d=clamp(t.d,0,L.len);routes();REMOVED++}
 /* ---------- routing: from every station, the next station on the quickest way to each kind of place ---------- */
@@ -391,15 +397,18 @@ function exchange(L,t,s){const cap=6*(1+t.cars);const nxt=nextStopOf(L,t,s);
   const keep=[];for(const p of t.pax){if(s.type===p.to){G.delivered++;s.served++;chEv('deliver',{to:p.to});FX(s.x,s.y,TYPES[p.to].col,true)}else if(NEXT[p.to]&&NEXT[p.to][s.id]!==nxt&&NEXT[p.to][s.id]!==-1){s.pax.push(p)}else keep.push(p)}t.pax=keep;
   // board passengers whose route continues on this train
   const stay=[];for(const p of s.pax){const nh=NEXT[p.to]?NEXT[p.to][s.id]:-1;if(nh===nxt&&t.pax.length<cap){t.pax.push(p)}else stay.push(p)}s.pax=stay}
-function weekUp(){G.week++;G.trains++;UPG++;const all=[['line','🛤️','New line','Another line colour to draw with'],['car','🚃','Carriage','Add 6 seats to a train'],['bridge','🌉','2 bridges','Cross more rivers'],['hub','🔄','Interchange','A station that holds 3× as many people and boards faster'],['train','🚆','Extra train','Another train for any line']].filter(o=>!(o[0]==='line'&&G.lines>=LCOL.length));
+function weekUp(){G.week++;G.trains++;UPG++;if(MODE==='free'){toast(`Week ${G.week}`);return}const all=[['line','🛤️','New line','Another line colour to draw with'],['car','🚃','Carriage','Add 6 seats to a train'],['bridge','🌉','2 bridges','Cross more rivers'],['hub','🔄','Interchange','A station that holds 3× as many people and boards faster'],['train','🚆','Extra train','Another train for any line']].filter(o=>!(o[0]==='line'&&G.lines>=LCOL.length));
   const opts=[];while(opts.length<2){const o=pick(all);if(!opts.includes(o))opts.push(o)}showWeek(opts)}
 function grant(k){if(k==='line'){G.lines=Math.min(LCOL.length,G.lines+1);LINES.length<G.lines&&LINES.push(newLine(LINES.length))}else if(k==='car')G.cars++;else if(k==='bridge')G.bridges+=2;else if(k==='hub')G.hubs++;else if(k==='train')G.trains++;chEv('upgrade',{k});syncPanel()}
 function showWeek(opts){if(CH.loading||!$('home').hidden||document.body.classList.contains('mDemo')){grant(opts[0][0]);return}G.choosing=true;const box=document.createElement('div');box.className='weekbox';box.innerHTML=`<div class="weekcard panel"><span class="k">Week ${G.week}</span><h2>A new train arrives 🚆</h2><p class="hfoot">Pick one more upgrade:</p><div class="wopts"></div></div>`;
   for(const [k,ic,n,d] of opts){const b=document.createElement('button');b.className='wopt';b.innerHTML=`<span class="ic">${ic}</span><b>${n}</b><span>${d}</span>`;b.onclick=()=>{grant(k);box.remove();G.choosing=false;toast(`${ic} ${n}`)};box.querySelector('.wopts').appendChild(b)}document.body.appendChild(box)}
+let ACTX=null;function beep(f,d,v){try{ACTX=ACTX||new (window.AudioContext||window.webkitAudioContext)();const o=ACTX.createOscillator(),g=ACTX.createGain();o.type='square';o.frequency.value=f;g.gain.value=v||0.05;o.connect(g);g.connect(ACTX.destination);const t=ACTX.currentTime;g.gain.setValueAtTime(v||0.05,t);g.gain.exponentialRampToValueAtTime(0.0001,t+d);o.start(t);o.stop(t+d)}catch(e){}}
+function alarm(s){ALARMS++;chEv('alarm',{});if(CH.loading||!$('home').hidden||document.body.classList.contains('mDemo'))return;beep(880,0.18,0.04);setTimeout(()=>beep(660,0.22,0.04),200);toast(`🚨 The ${TYPES[s.type].n.toLowerCase()} station is overflowing! ${Math.round(s.over*100)}%`)}
+let ALARMS=0;
 function gameOver(s){G.over=true;chEv('gameover',{});if(CH.loading)return;const box=document.createElement('div');box.className='weekbox';box.innerHTML=`<div class="weekcard panel"><span class="k">Week ${G.week}</span><h2>The city gave up 😩</h2><p class="hfoot">The ${TYPES[s.type].n.toLowerCase()} station was crowded for too long. You delivered <b>${fmtN(G.delivered)}</b> passengers.</p><div class="actions" style="justify-content:center"><button class="btn primary" id="goRelax">Keep playing (relaxed)</button><button class="btn" id="goAgain">Start again</button></div></div>`;document.body.appendChild(box);
   box.querySelector('#goRelax').onclick=()=>{G.over=false;G.relaxed=true;for(const q of ST)q.over=0;box.remove();syncPanel()};box.querySelector('#goAgain').onclick=()=>{box.remove();loadScen(S.scen)};flyToW(s.x,s.y,Math.max(cam.z,10))}
 /* ---------- cities ---------- */
-function clearCity(){ST=[];LINES=[];WATER=[];PARTS=[];HIST=[];NEXT={};Object.assign(G,{lines:3,trains:3,cars:0,bridges:2,hubs:0,week:1,delivered:0,over:false,spawnT:0,weekT:0,choosing:false,rush:false,match:false,boom:false,storm:false});for(let k=0;k<G.lines;k++)LINES.push(newLine(k));CUR=0;document.querySelectorAll('.weekbox').forEach(b=>b.remove())}
+function clearCity(){ST=[];LINES=[];WATER=[];PARTS=[];HIST=[];NEXT={};Object.assign(G,{relaxed:false,lines:3,trains:3,cars:0,bridges:2,hubs:0,week:1,delivered:0,over:false,spawnT:0,weekT:0,choosing:false,rush:false,match:false,boom:false,storm:false});for(let k=0;k<G.lines;k++)LINES.push(newLine(k));CUR=0;document.querySelectorAll('.weekbox').forEach(b=>b.remove())}
 const SCENS={
   harbour:()=>{RS=11;WATER.push(river([[60,-5],[58,20],[64,40],[56,60],[60,90]],5))},
   twin:()=>{RS=23;WATER.push(river([[-5,30],[30,28],[60,36],[90,30],[125,34]],4.5),river([[80,-5],[78,20],[86,40],[82,85]],4))},
@@ -434,30 +443,30 @@ function render(c,now){const day=S.view==='day',z=cam.z;c.fillStyle=day?'#e8e4da
   if(DRAG&&DRAG.from){const L=LINES[CUR];c.strokeStyle=L?L.col:'#fff';c.globalAlpha=0.6;c.lineWidth=lw;c.setLineDash([lw,lw]);c.beginPath();c.moveTo(sx(DRAG.from.x),sy(DRAG.from.y));c.lineTo(sx(DRAG.x),sy(DRAG.y));c.stroke();c.setLineDash([]);c.globalAlpha=1}
   // trains
   for(const L of LINES)for(const t of L.trains){if(!lineActive(L))continue;const [x,y,a]=posAt(L,t.d),X=sx(x),Y=sy(y),len=Math.max(14,z*2.6)*(1+t.cars*0.5),wd=Math.max(8,z*1.3);c.save();c.translate(X,Y);c.rotate(a);c.fillStyle=day?'#222':'#f4f0ff';if(!day){c.shadowColor=L.col;c.shadowBlur=10}rr2(c,-len/2,-wd/2,len,wd,wd/2);c.fill();c.shadowBlur=0;c.strokeStyle=L.col;c.lineWidth=2;c.stroke();
-    const cap=6*(1+t.cars);t.pax.forEach((p,i)=>{const col=TYPES[p.to].col;c.fillStyle=col;const px=-len/2+wd*0.45+(i%Math.ceil(cap/2))*(len-wd*0.9)/Math.max(1,Math.ceil(cap/2)-1||1),py=i<Math.ceil(cap/2)?-wd*0.18:wd*0.18;c.beginPath();c.arc(Math.min(len/2-wd*0.4,px),py,Math.max(1.6,wd*0.14),0,7);c.fill()});c.restore()}
+    c.restore();const cap=6*(1+t.cars);if(t.pax.length){const isz=Math.max(9,Math.min(16,z*1.3)),per=Math.ceil(cap/2),bw=Math.min(t.pax.length,per)*isz+6,bh=(t.pax.length>per?2:1)*isz+4,bx=X-bw/2,by=Y-wd-bh-2;c.fillStyle=day?'rgba(255,255,255,.92)':'rgba(16,16,36,.88)';c.strokeStyle=L.col;c.lineWidth=1.5;rr2(c,bx,by,bw,bh,4);c.fill();c.stroke();c.font=`${Math.round(isz*0.82)}px sans-serif`;c.textAlign='center';c.textBaseline='middle';t.pax.forEach((p,i)=>{c.fillText(TYPES[p.to].ic,bx+3+isz*(i%per)+isz/2,by+2+isz*Math.floor(i/per)+isz/2+1)});c.textBaseline='alphabetic'}}
   // stations
   const R0=Math.max(9,z*1.7);for(const s of ST){const X=sx(s.x),Y=sy(s.y),T=TYPES[s.type],crowd=s.pax.length/s.cap;
-    if(s.over>0){c.strokeStyle=`rgba(255,${120-100*s.over},80,.95)`;c.lineWidth=4;c.beginPath();c.arc(X,Y,R0*1.5,-Math.PI/2,-Math.PI/2+Math.PI*2*s.over);c.stroke()}
+    if(s.over>0){if(s.over>0.3){const pu=0.5+0.5*Math.sin(now*0.012);c.fillStyle=`rgba(255,40,40,${0.12+0.25*pu*s.over})`;c.beginPath();c.arc(X,Y,R0*(1.9+pu*0.6),0,7);c.fill()}c.strokeStyle=`rgba(255,${120-100*s.over},80,.95)`;c.lineWidth=4;c.beginPath();c.arc(X,Y,R0*1.5,-Math.PI/2,-Math.PI/2+Math.PI*2*s.over);c.stroke()}
     if(S.view==='crowd'){c.fillStyle=`rgba(255,${200-180*Math.min(1,crowd)},80,.35)`;c.beginPath();c.arc(X,Y,R0*(1.2+crowd),0,7);c.fill()}
     c.fillStyle=day?'#fff':'#141632';c.strokeStyle=T.col;c.lineWidth=s.hub?5:3;if(!day){c.shadowColor=T.col;c.shadowBlur=12}rr2(c,X-R0,Y-R0,R0*2,R0*2,s.hub?R0:R0*0.45);c.fill();c.stroke();c.shadowBlur=0;
     c.font=`${Math.round(R0*1.15)}px sans-serif`;c.textAlign='center';c.textBaseline='middle';c.fillText(T.ic,X,Y+1);c.textBaseline='alphabetic';
     // waiting passengers
-    const ps=Math.max(3,R0*0.32);s.pax.slice(0,24).forEach((p,i)=>{const col=i%6,row=Math.floor(i/6);c.fillStyle=TYPES[p.to].col;c.beginPath();c.arc(X+R0*1.35+col*ps*2.3,Y-R0*0.6+row*ps*2.3,ps,0,7);c.fill()});if(s.pax.length>24){c.fillStyle=day?'#000':'#fff';c.font='600 11px "IBM Plex Mono",monospace';c.textAlign='left';c.fillText('+'+(s.pax.length-24),X+R0*1.3,Y+R0*1.6)}
+    const ps=Math.max(9,R0*0.75);c.font=`${Math.round(ps*0.85)}px sans-serif`;c.textAlign='center';c.textBaseline='middle';s.pax.slice(0,24).forEach((p,i)=>{const col=i%6,row=Math.floor(i/6);c.fillText(TYPES[p.to].ic,X+R0*1.25+ps/2+col*ps,Y-R0*0.7+row*ps+ps/2)});c.textBaseline='alphabetic';if(s.pax.length>24){c.fillStyle=day?'#000':'#fff';c.font='600 11px "IBM Plex Mono",monospace';c.textAlign='left';c.fillText('+'+(s.pax.length-24),X+R0*1.3,Y+R0*1.6)}
     if(S.sel&&S.sel.s===s){c.strokeStyle='#ffc35a';c.lineWidth=2;c.beginPath();c.arc(X,Y,R0*1.9,0,7);c.stroke()}}
   for(const p of PARTS){const al=1-p.age;c.strokeStyle=p.col;c.globalAlpha=Math.max(0,al);c.lineWidth=2;c.beginPath();c.arc(sx(p.x),sy(p.y),(p.small?R0*1.2:R0*1.4)+p.age*R0*(p.small?1:3),0,7);c.stroke()}c.globalAlpha=1;
   if(G.choosing||G.over){}}
 /* ---------- tools ---------- */
 const nearStation=(x,y,r)=>{let b=null,bd=r*r;for(const s of ST){const d=(s.x-x)**2+(s.y-y)**2;if(d<bd){bd=d;b=s}}return b};
 function nearLine(x,y){let best=null,bd=4;for(const L of LINES){for(let i=1;i<L.pts.length;i++){const [ax,ay]=L.pts[i-1],[bx,by]=L.pts[i],dx=bx-ax,dy=by-ay,t=clamp(((x-ax)*dx+(y-ay)*dy)/(dx*dx+dy*dy||1),0,1),d=(ax+dx*t-x)**2+(ay+dy*t-y)**2;if(d<bd){bd=d;best=L}}}return best}
-const SIM={id:'interchange',name:'Interchange',world:{w:WW,h:WH,wrapX:false,maxZ:30,followZ:12},home:'plain',freeScen:'harbour',tutScen:'plain',defSpeed:1,homeSpeed:1,inspectTab:'insp',
+const SIM={id:'interchange',name:'Interchange',defTool:'draw',world:{w:WW,h:WH,wrapX:false,maxZ:30,followZ:12},home:'plain',freeScen:'harbour',tutScen:'plain',defSpeed:1,homeSpeed:1,inspectTab:'insp',
   speeds:[['½×',0.5],['1×',1],['2×',2],['4×',4]],fmtRate:v=>`${v}× speed`,
   dateTxt:()=>`Week ${G.week}`,dateSub:()=>`${fmtN(G.delivered)} passengers delivered`,stepSize:()=>0.05,
   tools:[['',[['select','👆','Inspect']]],['Build',[['draw','✏️','Draw line','Drag from a station to another station. Drag from the end of a line to make it longer, or back to its first station to make a loop.'],['train','🚆','Add train','Click a line to put another train on it.'],['car','🚃','Carriage','Click a line to add a carriage to one of its trains (6 more seats).'],['hub','🔄','Interchange','Click a station to make it an interchange: room for 18 people and faster boarding.'],['erase','✂️','Shorten','Click near the end of a line to remove its last stop.']]]],
   scens:SCENLIST,
-  load(id){clearCity();(SCENS[id]||SCENS.harbour)();for(let k=0;k<3;k++)addStation(['home','office','shop'][k]);this.t0=0;HIST=[];syncPanel()},
+  load(id){clearCity();(SCENS[id]||SCENS.harbour)();for(let k=0;k<3;k++)addStation(['home','office','shop'][k]);this.t0=0;HIST=[];if(MODE==='free'&&$('home').hidden){G.lines=LCOL.length;while(LINES.length<G.lines)LINES.push(newLine(LINES.length));G.trains=G.cars=G.bridges=G.hubs=999;G.relaxed=true}syncPanel()},
   after(){if(!$('home').hidden)return;setTool('draw')},
   step(dt){if(G.over||G.choosing)return;G.spawnT+=dt;G.weekT+=dt;const every=Math.max(4,13-G.week*0.6)*(G.boom?0.35:1);if(G.spawnT>=every&&ST.length<48){G.spawnT=0;addStation()}
-    for(const s of ST){spawnPax(s,dt);for(const p of s.pax)p.age+=dt;const cap=s.hub?18:6;s.cap=cap;if(s.pax.length>cap)s.over+=dt/(G.relaxed?1e9:40);else s.over=Math.max(0,s.over-dt/20);if(s.over>=1&&!G.relaxed&&!G.over){gameOver(s);return}}
+    for(const s of ST){spawnPax(s,dt);for(const p of s.pax)p.age+=dt;const cap=s.hub?18:6;s.cap=cap;if(s.pax.length>cap)s.over+=dt/(G.relaxed?1e9:40);else s.over=Math.max(0,s.over-dt/20);if(!G.relaxed&&s.over>0.3){s.alT=(s.alT||0)-dt;if(s.alT<=0){s.alT=s.over>0.7?2.5:5;alarm(s)}}else s.alT=0;if(s.over>=1&&!G.relaxed&&!G.over){gameOver(s);return}}
     for(const L of LINES)for(const t of L.trains)trainStep(L,t,dt);
     if(G.weekT>=WEEK){G.weekT=0;weekUp()}},
   frame(dt){for(const p of PARTS)p.age+=dt*1.4;PARTS=PARTS.filter(p=>p.age<1)},
@@ -466,7 +475,7 @@ const SIM={id:'interchange',name:'Interchange',world:{w:WW,h:WH,wrapX:false,maxZ
   hud(){const last=HIST[HIST.length-1];if(!last||S.t-last.t>=2)HIST.push({t:S.t,d:G.delivered});if(HIST.length>300)HIST.shift();syncPanel();renderStats();renderInspect()},
   pick(wx,wy){const s=nearStation(wx,wy,2.5);if(s)return{s};const L=nearLine(wx,wy);if(L)return{L};return null},
   pointer(type,wx,wy){const t=S.tool;HOVER=[wx,wy];
-    if(t==='draw'){if(type==='down'){const s=nearStation(wx,wy,3);DRAG=s?{from:s,x:wx,y:wy}:null}else if(type==='drag'&&DRAG){DRAG.x=wx;DRAG.y=wy;const s=nearStation(wx,wy,2.6);if(s&&s!==DRAG.from){if(linkStations(DRAG.from,s)){DRAG.from=s;syncPanel()}else DRAG=null}}else if(type==='up')DRAG=null;return}
+    if(t==='draw'){if(type==='down'){const s=nearStation(wx,wy,3);if(s){DRAG={from:s,x:wx,y:wy}}else{const L=nearLine(wx,wy);if(L){CUR=L.id;syncPanel();DRAG={mid:L,x:wx,y:wy,gap:gapAt(L,wx,wy)}}else DRAG=null}}else if(type==='drag'&&DRAG&&DRAG.mid){DRAG.x=wx;DRAG.y=wy;const s=nearStation(wx,wy,2.6);if(s&&!DRAG.mid.st.includes(s.id)){if(insertStation(DRAG.mid,DRAG.gap,s)){DRAG.gap++;syncPanel()}}}else if(type==='drag'&&DRAG){DRAG.x=wx;DRAG.y=wy;const s=nearStation(wx,wy,2.6);if(s&&s!==DRAG.from){if(linkStations(DRAG.from,s)){DRAG.from=s;syncPanel()}else DRAG=null}}else if(type==='up')DRAG=null;return}
     if(type!=='down')return;
     if(t==='train'){const L=nearLine(wx,wy);if(L){addTrain(L);syncPanel()}else toast('Click on a line');return}
     if(t==='car'){const L=nearLine(wx,wy);if(!L){toast('Click on a line');return}if(!G.cars){toast('No spare carriages');return}const tr=L.trains.find(q=>q.cars<3);if(!tr){toast('Add a train to this line first');return}tr.cars++;G.cars--;CARADD++;chEv('car',{});syncPanel();return}
@@ -489,23 +498,36 @@ function renderInspect(){const b=S.sel;$('inspEmpty').hidden=!!b;$('inspBody').h
     body.innerHTML=`<h2 class="ititle">${T.ic} ${T.n}</h2><div class="isub">${s.hub?'Interchange · ':''}${lines.length?`on ${lines.length} line${lines.length>1?'s':''}`:'not connected yet'}</div><div class="kv">${kv([['Waiting',`${s.pax.length} of ${s.cap}`],['Crowding',s.over>0?Math.round(s.over*100)+'% to giving up':'fine'],['Passengers arrived here',s.served],['Open since',`week ${Math.floor((s.born||0)/WEEK)+1}`]])}</div><p class="note">${Object.keys(want).length?'Heading for: '+Object.entries(want).map(([t,n])=>`${TYPES[t].ic} ${n}`).join('  '):'Nobody waiting.'}</p>`;return}
   if(b.L){const L=b.L;body.innerHTML=`<h2 class="ititle" style="color:${L.col}">Line ${L.id+1}</h2><div class="isub">${L.st.length} stations${L.loop?' · loop':''}</div><div class="kv">${kv([['Trains',L.trains.length],['Carriages',L.trains.reduce((s,t)=>s+t.cars,0)],['On board',L.trains.reduce((s,t)=>s+t.pax.length,0)],['Length',Math.round(L.len)+' blocks']])}</div>`}}
 
+// home page: Classic mode button; Free play means anything goes
+{const f=$('hFree');const b=document.createElement('button');b.className='hb';b.id='hClassic';b.innerHTML='<span class="ht">Classic</span><span class="hd">Limited lines, trains and bridges. Alarms sound when a station overflows, and if one stays full too long, the game is over.</span>';f.before(b);
+  f.querySelector('.hd').textContent='Anything goes: every line colour, unlimited trains, carriages, bridges and interchanges, and no game over';
+  b.onclick=()=>{MODE='classic';leaveHome();loadScen('harbour');setSpeed(SIM.defSpeed);countPlay();toast('Classic mode: keep every station from overflowing!')};
+  document.addEventListener('pointerdown',e=>{if(e.target.closest('#hFree'))MODE='free';else if(e.target.closest('#home,#chDone,#hClassic'))MODE='classic'},true)}
+
+{const bar=document.createElement('div');bar.id='lineBar';bar.className='panel';bar.style.cssText='position:fixed;left:50%;transform:translateX(-50%);bottom:calc(var(--bot) + 46px);z-index:5;display:flex;gap:8px;padding:8px 12px;align-items:center';document.body.appendChild(bar);
+  const css=document.createElement('style');css.textContent='body.mHome #lineBar,body.mDemo #lineBar{display:none!important}#lineBar button{width:30px;height:30px;border-radius:50%;border:3px solid transparent;cursor:pointer}#lineBar button[aria-pressed="true"]{border-color:#fff;transform:scale(1.15)}#lineBar button:disabled{opacity:.25;cursor:default}@media (max-width:760px){#lineBar{bottom:calc(var(--bot) + 130px)}}';document.head.appendChild(css);
+  const draw=()=>{bar.innerHTML='<span class="k" style="margin-right:4px">Line</span>';LCOL.forEach((col,k)=>{const b=document.createElement('button');b.style.background=col;const L=LINES[k];b.disabled=!L;b.title=L?(L.st.length?`Line ${k+1}: ${L.st.length} stations`:`Line ${k+1}: not built yet`):'Not unlocked yet';b.setAttribute('aria-pressed',k===CUR);b.onclick=()=>{CUR=k;setTool('draw');syncPanel();draw()};bar.appendChild(b)})};
+  setInterval(draw,400);draw()}
+
 /* ================= Interchange: auto-built networks for the home screen and demo, challenges, tutorial ================= */
 function autoNet(nSt){while(ST.length<nSt)if(!addStation())break;G.bridges=99;G.trains+=6;
   // greedy lines: each line threads through nearby stations, making sure every kind of place is on the network
   const left=new Set(ST.map(s=>s.id));let k=0;while(left.size>1&&k<G.lines){const L=LINES[k];let cur=ST[[...left][0]];const seq=[cur.id];left.delete(cur.id);
     while(seq.length<7){let best=null,bd=1e9;for(const id of left){const s=ST[id],d=Math.hypot(s.x-cur.x,s.y-cur.y);if(d<bd){bd=d;best=s}}if(!best)break;seq.push(best.id);left.delete(best.id);cur=best}
     if(k>0){const prev=LINES[k-1].st;seq.unshift(prev[Math.floor(prev.length/2)])}L.st=seq;geom(L);addTrain(L);addTrain(L);k++}routes();G.bridges=Math.max(G.bridges,bridgesUsed()+2)}
-{const l0=SIM.load;SIM.load=function(id){l0.call(this,id);if(!$('home').hidden||document.body.classList.contains('mDemo')){for(let q=0;q<9;q++)addStation();autoNet(12);G.relaxed=true}}}
+{const l0=SIM.load;SIM.load=function(id){if(!$('home').hidden||document.body.classList.contains('mDemo'))MODE='classic';l0.call(this,id);if(!$('home').hidden||document.body.classList.contains('mDemo')){for(let q=0;q<9;q++)addStation();autoNet(12);G.relaxed=true}}}
 const wk=()=>G.week,del=()=>G.delivered,activeLines=()=>LINES.filter(lineActive).length;
 const deliverCh=(t,d,n,sc,hint)=>CC(d,{t,g:`Deliver ${fmtN(n)} passengers in ${SCENLIST.find(s=>s.id===sc).name}.`,hint:hint||'Connect every kind of place. Add trains to busy lines and carriages when trains fill up.',scen:sc,setup:()=>{G.relaxed=false},check:()=>[del()>=n,del()/n,`${fmtN(del())} of ${fmtN(n)} delivered`],fail:()=>G.over?'A station overflowed':'',stars:byTime(n*0.6+40,n*1.4+100)});
 CC(1,{t:'First line',g:'Draw a line that links all three stations.',hint:'Pick ✏️ Draw line, then drag from one station to another, and on to the third.',scen:'plain',check:()=>{const ok=LINES.some(L=>L.st.length>=3);return[ok,Math.max(...LINES.map(L=>L.st.length))/3,'']},stars:byTime(15,40)});
 CC(1.1,{t:'All aboard',g:'Deliver 10 passengers.',hint:'Draw a line through your stations: the train starts running at once.',scen:'plain',setup:()=>{G.relaxed=false},check:()=>[del()>=10,del()/10,`${del()} of 10`],stars:byTime(30,70)});
 CC(1.2,{t:'Over the river',g:'Use a bridge to link both sides of the river.',hint:'Draw a line from a station on one bank to a station on the other. Each crossing uses a bridge.',scen:'harbour',setup:()=>{while(ST.length<6)addStation()},check:()=>{const ok=bridgesUsed()>0;return[ok,ok?1:0,'']},stars:byTime(20,50)});
 CC(1.3,{t:'Full circle',g:'Make a loop line.',hint:'Draw a line through 3 or more stations, then drag from its last station back to its first.',scen:'plain',setup:()=>{while(ST.length<5)addStation()},check:()=>{const ok=LINES.some(L=>L.loop);return[ok,ok?1:0,'']},stars:byTime(25,60)});
+CC(1.35,{t:'Detour',g:'Add a station to the middle of a line by dragging the line onto it.',hint:'With ✏️ Draw line, press on the middle of a line and drag it onto a station.',scen:'plain',setup:()=>{while(ST.length<6)addStation();CUR=0;linkStations(ST[0],ST[1]);linkStations(ST[1],ST[2])},check:()=>{const ok=evN('insert')>0;return[ok,ok?1:0,'']},stars:byTime(20,50)});
 CC(1.4,{t:'Rush hour',g:'Get through a rush hour: deliver 60 passengers without a station giving up.',hint:'Add extra trains to the busiest lines (🚆 Add train).',scen:'plain',setup:()=>{G.relaxed=false;G.rush=true;while(ST.length<6)addStation()},check:()=>[del()>=60,del()/60,`${del()} of 60`],fail:()=>G.over?'A station overflowed':'',stars:byTime(60,140)});
 CC(1.5,{t:'Three lines',g:'Run 3 lines at the same time.',hint:'Click a line colour in the Network tab, then draw with it.',scen:'harbour',setup:()=>{while(ST.length<9)addStation()},check:()=>{const n=activeLines();return[n>=3,n/3,`${n} of 3 lines`]},stars:byTime(40,90)});
 deliverCh('Harbourton commuter',2,200,'harbour');deliverCh('Prairie express',1.8,250,'plain');deliverCh('Twin Rivers',2.6,300,'twin','Bridges are few: put both rivers’ crossings on the same busy line.');deliverCh('Isla Nova',3,400,'island');deliverCh('Deltaport',3.4,500,'delta','Four parts of the city: one line that crosses every channel helps a lot.');
 deliverCh('Harbourton legend',4.2,1200,'harbour');deliverCh('Delta master',4.6,1500,'delta');
+CC(2.0,{t:'Sound the alarm',g:'Hear a station alarm, then calm it down so no station is overcrowded.',hint:'Let a station fill up, then add trains or a line there.',scen:'plain',setup:()=>{G.relaxed=false;G.rush=true;while(ST.length<7)addStation()},check:()=>{const a=evN('alarm')>0,calm=ST.every(s=>s.over<0.05);return[a&&calm,a?(calm?1:0.5):0,a?(calm?'All calm':'Now fix the crowded station'):'Waiting for an alarm']},fail:()=>G.over?'A station overflowed':'',stars:byTime(90,200)});
 CC(2.4,{t:'Survive 5 weeks',g:'Keep the network running until week 6 in Harbourton.',hint:'Each week you get a new train and an upgrade. Watch for red rings: a station is getting too crowded.',scen:'harbour',setup:()=>{G.relaxed=false},check:()=>[wk()>=6,(wk()-1)/5,`Week ${wk()}`],fail:()=>G.over?'A station overflowed':'',stars:byTime(330,480)});
 CC(3.6,{t:'Survive 10 weeks',g:'Keep Twin Rivers running until week 11.',hint:'Interchanges hold three times as many people. Put them where lines meet.',scen:'twin',setup:()=>{G.relaxed=false},check:()=>[wk()>=11,(wk()-1)/10,`Week ${wk()}`],fail:()=>G.over?'A station overflowed':'',stars:byTime(640,900)});
 CC(2.8,{t:'Big match',g:'The stadium is open and everyone is going: deliver 80 fans to the stadium.',hint:'Give the stadium a line of its own, with lots of trains.',scen:'plain',setup:()=>{G.relaxed=false;addStation('stadium');G.match=true},check:()=>{const n=CH.events.filter(e=>e.k==='deliver'&&e.to==='stadium').length;return[n>=80,n/80,`${n} of 80 fans`]},fail:()=>G.over?'A station overflowed':'',stars:byTime(90,200)});
@@ -518,11 +540,13 @@ TSTEPS.push(
  ['Draw a line','With ✏️ Draw line, drag from one station to another.',r=>DRAWN>r.n,r=>{r.n=DRAWN}],
  ['Extend it','Drag from the end of your line to another station.',r=>EXT>r.n,r=>{r.n=EXT}],
  ['Passengers','The coloured dots are passengers. Their colour shows the kind of place they want (🏠 green, 🏢 blue, 🛍 yellow…). Deliver 5.',r=>G.delivered>=r.d+5,r=>{r.d=G.delivered}],
- ['Another line','In the Network tab, press Draw on a second colour and draw a new line.',()=>activeLines()>=2],
+ ['Add a stop in the middle','Drag the middle of a line onto another station to add it as a stop.',r=>evN('insert')>r.n||EXT>r.e+2,r=>{r.n=evN('insert');r.e=EXT}],
+ ['Another line','Pick another colour in the line bar at the bottom of the map and draw a new line.',()=>activeLines()>=2],
  ['More trains','Pick 🚆 Add train and click a line (or + Train in the Network tab).',r=>TRADD>r.n,r=>{r.n=TRADD}],
  ['Speed up','Press 2× next to the pause button.',()=>!S.paused&&S.speed>=2],
  ['A new week','Wait for the week to end and pick an upgrade.',r=>UPG>r.n,r=>{r.n=UPG}],
  ['Shorten a line','Pick ✂️ Shorten and click near the end of a line to remove its last stop.',r=>REMOVED>r.n,r=>{r.n=REMOVED}],
+ ['Alarms','When a station gets too full an alarm sounds and it glows red. Add trains or lines there before it overflows.',r=>ALARMS>r.n||S.view==='crowd',r=>{r.n=ALARMS}],
  ['Crowding','Switch to the Crowding view to see which stations are filling up.',()=>S.view==='crowd'],
  ['Other cities','Press Cities in the top bar and pick another city.',r=>CNT.scen>r.n,r=>{r.n=CNT.scen}],
 );
@@ -667,7 +691,7 @@ function renderGrid(){const g=$('hGrid');g.textContent='';let next=-1;
   $('hStars').textContent=`★ ${totalStars()} / ${NCH*3}`;if(next>=0)setTimeout(()=>{const el=g.children[next];if(el)el.scrollIntoView({block:'nearest'})},30)}
 function startChallenge(i){const c=CHALS[i];if(!c||!unlocked(i))return;leaveHome();countPlay();$('chDone').hidden=true;
   CH.active=c;CH.idx=i;CH.events=[];CH.hold={};CH.ref={};CH.done=false;CH.failed='';CH.loading=true;try{loadScen(c.scen||SIM.home);setSpeed(c.speed??SIM.defSpeed);if(c.setup)c.setup()}finally{CH.loading=false}
-  CH.t0=S.t;CH.real0=performance.now();setPaused(false);setTool('select');
+  CH.t0=S.t;CH.real0=performance.now();setPaused(false);setTool(SIM.defTool||'select');
   $('chHud').hidden=false;$('chNum').textContent=`Challenge ${i+1} of ${NCH}`;$('chTitle').textContent=c.t;$('chGoal').textContent=c.g;$('chProg').textContent='';$('chBar').style.width='0%';$('chHint').hidden=!c.hint;$('chRestart').textContent='Restart'}
 function endChallenge(){CH.active=null;$('chHud').hidden=true}
 function chTick(){if(TUT.on)tutTick();if(!CH.active||CH.done)return;const c=CH.active;let r;try{r=c.check()}catch(e){console.warn(e);r=[false,0,'']}
@@ -685,7 +709,7 @@ $('dList').onclick=()=>{if(TUT.finished){TUT.finished=false;$('chDone').hidden=t
 
 /* tutorial */
 const TUT={on:false,i:0,ref:{},finished:false};
-function startTutorial(){leaveHome();countPlay();$('chDone').hidden=true;CH.loading=true;loadScen(SIM.tutScen||SIM.home);CH.loading=false;setSpeed(SIM.defSpeed);setPaused(false);TUT.on=true;TUT.i=0;TUT.finished=false;tutStep()}
+function startTutorial(){leaveHome();countPlay();$('chDone').hidden=true;CH.loading=true;loadScen(SIM.tutScen||SIM.home);CH.loading=false;setSpeed(SIM.defSpeed);setPaused(false);setTool(SIM.defTool||'select');TUT.on=true;TUT.i=0;TUT.finished=false;tutStep()}
 function tutStep(){const st=TSTEPS[TUT.i];if(!st){TUT.on=false;TUT.finished=true;$('chHud').hidden=true;$('dStars').innerHTML='★★★';$('dTitle').textContent='Tutorial complete!';$('dText').textContent='You know all the controls. Try the challenges, or build anything in free play.';$('dNext').hidden=false;$('dNext').textContent='Challenges';$('dRetry').hidden=false;$('dList').textContent='Free play';$('chDone').hidden=false;$('chRestart').textContent='Restart';return}
   TUT.ref={};if(st[3])st[3](TUT.ref);$('chHud').hidden=false;$('chNum').textContent=`Tutorial · step ${TUT.i+1} of ${TSTEPS.length}`;$('chTitle').textContent=st[0];$('chGoal').textContent=st[1];$('chProg').textContent='';$('chTime').textContent='';$('chBar').style.width=Math.round(TUT.i/TSTEPS.length*100)+'%';$('chHint').hidden=true;$('chRestart').textContent='Skip step'}
 function tutTick(){const st=TSTEPS[TUT.i];let ok=false;try{ok=st&&st[2](TUT.ref)}catch(e){}if(ok){TUT.i++;toast('✓ '+st[0]);tutStep()}}

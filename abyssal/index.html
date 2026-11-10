@@ -627,7 +627,7 @@ CC(1.6,{t:'Turtle rescue',g:'Have 15 sea turtles on the reef.',hint:'Release tur
 CC(2.4,{t:'Whale feast',g:'Grow the whales to 8 in the polar sea.',hint:'Whales eat krill (animal plankton). Paint plankton and nutrients, and keep the water cold.',scen:'polar',check:()=>{const n=pop('whale');return[n>=8,n/8,`${n} of 8 whales`]},stars:byTime(60,150)});
 CC(2.2,{t:'Predators and prey',g:'Keep sharks and tuna alive together for 1 year.',hint:'If the sharks eat all the tuna, they starve. Keep plenty of sardines for the tuna.',scen:'open',check:()=>{const p=hold('h',pop('shark')>0&&pop('tuna')>0,365);return[p>=1,p,`${pop('shark')} sharks · ${pop('tuna')} tuna · ${Math.round(p*365)} of 365 days`]},fail:()=>!pop('shark')?'The sharks died out':!pop('tuna')?'The tuna died out':'',stars:byTime(60,150)});
 CC(2.6,{t:'Life at the vents',g:'Have 120 crabs living on the deep sea floor.',hint:'Crabs eat marine snow. More life up above means more food falling down. Open more vents too.',scen:'vents',check:()=>{const n=pop('crab');return[n>=120,n/120,`${n} of 120 crabs`]},stars:byTime(60,150)});
-CC(2.3,{t:'Kelp forest',g:'Grow 60 kelp plants in the cold coastal water.',hint:'Pick 🌿 Kelp and plant on shallow floor. Kelp shrinks in warm water.',scen:'kelp',check:()=>{const n=KELP.filter(k=>k.len>8).length;return[n>=60,n/60,`${n} of 60 tall kelp`]},stars:byTime(45,110)});
+CC(2.3,{t:'Kelp forest',g:'Grow 30 new tall kelp plants in the cold coastal water.',hint:'Pick 🌿 Kelp and plant on shallow floor, then let it grow. Kelp shrinks in warm water.',scen:'kelp',setup:()=>{CH.ref.k=KELP.length},check:()=>{const n=KELP.slice(CH.ref.k).filter(k=>k.len>8).length;return[n>=30,n/30,`${n} of 30 new tall kelp`]},stars:byTime(60,150)});
 CC(3.0,{t:'Jellyfish takeover',g:'Let the jellyfish grow to 350.',hint:'Jellyfish thrive when their predators (turtles) and competitors (small fish) vanish, and plankton is plentiful.',scen:'reef',check:()=>{const n=pop('jelly');return[n>=350,n/350,`${n} of 350 jellyfish`]},stars:byTime(60,150)});
 CC(2.8,{t:'Night shift',g:'Watch lanternfish rise toward the surface at night: get 60 of them above 600 m.',hint:'Slow time to 1 hour per second. At night the lanternfish swim up to feed.',scen:'open',check:()=>{const n=AG.filter(a=>a.sp==='lantern'&&a.y<600/MPU).length;return[n>=60,n/60,`${n} of 60 lanternfish shallower than 600 m`]},stars:byTime(45,110)});
 // people and the ocean
@@ -804,7 +804,7 @@ function renderGrid(){const g=$('hGrid');g.textContent='';let next=-1;
   $('hStars').textContent=`★ ${totalStars()} / ${NCH*3}`;if(next>=0)setTimeout(()=>{const el=g.children[next];if(el)el.scrollIntoView({block:'nearest'})},30)}
 function startChallenge(i){const c=CHALS[i];if(!c||!unlocked(i))return;leaveHome();countPlay();$('chDone').hidden=true;
   CH.active=c;CH.idx=i;CH.events=[];CH.hold={};CH.ref={};CH.done=false;CH.failed='';CH.loading=true;try{loadScen(c.scen||SIM.home);setSpeed(c.speed??SIM.defSpeed);if(c.setup)c.setup()}finally{CH.loading=false}
-  CH.t0=S.t;CH.real0=performance.now();setPaused(false);setTool('select');
+  CH.t0=S.t;CH.real0=performance.now();setPaused(false);setTool(SIM.defTool||'select');
   $('chHud').hidden=false;$('chNum').textContent=`Challenge ${i+1} of ${NCH}`;$('chTitle').textContent=c.t;$('chGoal').textContent=c.g;$('chProg').textContent='';$('chBar').style.width='0%';$('chHint').hidden=!c.hint;$('chRestart').textContent='Restart'}
 function endChallenge(){CH.active=null;$('chHud').hidden=true}
 function chTick(){if(TUT.on)tutTick();if(!CH.active||CH.done)return;const c=CH.active;let r;try{r=c.check()}catch(e){console.warn(e);r=[false,0,'']}
@@ -822,7 +822,7 @@ $('dList').onclick=()=>{if(TUT.finished){TUT.finished=false;$('chDone').hidden=t
 
 /* tutorial */
 const TUT={on:false,i:0,ref:{},finished:false};
-function startTutorial(){leaveHome();countPlay();$('chDone').hidden=true;CH.loading=true;loadScen(SIM.tutScen||SIM.home);CH.loading=false;setSpeed(SIM.defSpeed);setPaused(false);TUT.on=true;TUT.i=0;TUT.finished=false;tutStep()}
+function startTutorial(){leaveHome();countPlay();$('chDone').hidden=true;CH.loading=true;loadScen(SIM.tutScen||SIM.home);CH.loading=false;setSpeed(SIM.defSpeed);setPaused(false);setTool(SIM.defTool||'select');TUT.on=true;TUT.i=0;TUT.finished=false;tutStep()}
 function tutStep(){const st=TSTEPS[TUT.i];if(!st){TUT.on=false;TUT.finished=true;$('chHud').hidden=true;$('dStars').innerHTML='★★★';$('dTitle').textContent='Tutorial complete!';$('dText').textContent='You know all the controls. Try the challenges, or build anything in free play.';$('dNext').hidden=false;$('dNext').textContent='Challenges';$('dRetry').hidden=false;$('dList').textContent='Free play';$('chDone').hidden=false;$('chRestart').textContent='Restart';return}
   TUT.ref={};if(st[3])st[3](TUT.ref);$('chHud').hidden=false;$('chNum').textContent=`Tutorial · step ${TUT.i+1} of ${TSTEPS.length}`;$('chTitle').textContent=st[0];$('chGoal').textContent=st[1];$('chProg').textContent='';$('chTime').textContent='';$('chBar').style.width=Math.round(TUT.i/TSTEPS.length*100)+'%';$('chHint').hidden=true;$('chRestart').textContent='Skip step'}
 function tutTick(){const st=TSTEPS[TUT.i];let ok=false;try{ok=st&&st[2](TUT.ref)}catch(e){}if(ok){TUT.i++;toast('✓ '+st[0]);tutStep()}}
