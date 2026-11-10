@@ -432,7 +432,7 @@ function render(c,now){const day=S.view==='day',z=cam.z;c.fillStyle=day?'#e8e4da
   c.fillStyle=day?'#f2efe8':'#0d0f20';c.fillRect(sx(0),sy(0),WW*z,WH*z);
   // faint street grid
   c.strokeStyle=day?'rgba(0,0,0,.05)':'rgba(140,150,220,.06)';c.lineWidth=1;c.beginPath();for(let x=0;x<=WW;x+=4){c.moveTo(sx(x),sy(0));c.lineTo(sx(x),sy(WH))}for(let y=0;y<=WH;y+=4){c.moveTo(sx(0),sy(y));c.lineTo(sx(WW),sy(y))}c.stroke();
-  for(const P of WATER){c.fillStyle=day?'#a8cfe6':'#0f2a4a';c.strokeStyle=day?'#8ab8d8':'rgba(80,170,255,.35)';c.lineWidth=2;c.beginPath();P.forEach(([x,y],i)=>i?c.lineTo(sx(x),sy(y)):c.moveTo(sx(x),sy(y)));c.closePath();c.fill();c.stroke()}
+  c.save();c.beginPath();c.rect(sx(0),sy(0),WW*z,WH*z);c.clip();for(const P of WATER){c.fillStyle=day?'#a8cfe6':'#0f2a4a';c.strokeStyle=day?'#8ab8d8':'rgba(80,170,255,.35)';c.lineWidth=2;c.beginPath();P.forEach(([x,y],i)=>i?c.lineTo(sx(x),sy(y)):c.moveTo(sx(x),sy(y)));c.closePath();c.fill();c.stroke()}c.restore();
   // lines
   const lw=Math.max(4,z*0.9);c.lineCap='round';c.lineJoin='round';
   LINES.forEach((L,k)=>{if(L.pts.length<2)return;const off=0;c.strokeStyle=L.col;if(!day){c.shadowColor=L.col;c.shadowBlur=lw*1.6}c.lineWidth=lw;c.beginPath();L.pts.forEach(([x,y],i)=>i?c.lineTo(sx(x),sy(y)):c.moveTo(sx(x),sy(y)));c.stroke();c.shadowBlur=0;
@@ -457,7 +457,7 @@ function render(c,now){const day=S.view==='day',z=cam.z;c.fillStyle=day?'#e8e4da
   if(G.choosing||G.over){}}
 /* ---------- tools ---------- */
 const nearStation=(x,y,r)=>{let b=null,bd=r*r;for(const s of ST){const d=(s.x-x)**2+(s.y-y)**2;if(d<bd){bd=d;b=s}}return b};
-function nearLine(x,y){let best=null,bd=4;for(const L of LINES){for(let i=1;i<L.pts.length;i++){const [ax,ay]=L.pts[i-1],[bx,by]=L.pts[i],dx=bx-ax,dy=by-ay,t=clamp(((x-ax)*dx+(y-ay)*dy)/(dx*dx+dy*dy||1),0,1),d=(ax+dx*t-x)**2+(ay+dy*t-y)**2;if(d<bd){bd=d;best=L}}}return best}
+function nearLine(x,y){let best=null,bd=9;for(const L of LINES){for(let i=1;i<L.pts.length;i++){const [ax,ay]=L.pts[i-1],[bx,by]=L.pts[i],dx=bx-ax,dy=by-ay,t=clamp(((x-ax)*dx+(y-ay)*dy)/(dx*dx+dy*dy||1),0,1),d=(ax+dx*t-x)**2+(ay+dy*t-y)**2;if(d<bd){bd=d;best=L}}}return best}
 const SIM={id:'interchange',name:'Interchange',defTool:'draw',world:{w:WW,h:WH,wrapX:false,maxZ:30,followZ:12},home:'plain',freeScen:'harbour',tutScen:'plain',defSpeed:1,homeSpeed:1,inspectTab:'insp',
   speeds:[['½×',0.5],['1×',1],['2×',2],['4×',4]],fmtRate:v=>`${v}× speed`,
   dateTxt:()=>`Week ${G.week}`,dateSub:()=>`${fmtN(G.delivered)} passengers delivered`,stepSize:()=>0.05,
@@ -504,9 +504,9 @@ function renderInspect(){const b=S.sel;$('inspEmpty').hidden=!!b;$('inspBody').h
   b.onclick=()=>{MODE='classic';leaveHome();loadScen('harbour');setSpeed(SIM.defSpeed);countPlay();toast('Classic mode: keep every station from overflowing!')};
   document.addEventListener('pointerdown',e=>{if(e.target.closest('#hFree'))MODE='free';else if(e.target.closest('#home,#chDone,#hClassic'))MODE='classic'},true)}
 
-{const bar=document.createElement('div');bar.id='lineBar';bar.className='panel';bar.style.cssText='position:fixed;left:50%;transform:translateX(-50%);bottom:calc(var(--bot) + 46px);z-index:5;display:flex;gap:8px;padding:8px 12px;align-items:center';document.body.appendChild(bar);
-  const css=document.createElement('style');css.textContent='body.mHome #lineBar,body.mDemo #lineBar{display:none!important}#lineBar button{width:30px;height:30px;border-radius:50%;border:3px solid transparent;cursor:pointer}#lineBar button[aria-pressed="true"]{border-color:#fff;transform:scale(1.15)}#lineBar button:disabled{opacity:.25;cursor:default}@media (max-width:760px){#lineBar{bottom:calc(var(--bot) + 130px)}}';document.head.appendChild(css);
-  const draw=()=>{bar.innerHTML='<span class="k" style="margin-right:4px">Line</span>';LCOL.forEach((col,k)=>{const b=document.createElement('button');b.style.background=col;const L=LINES[k];b.disabled=!L;b.title=L?(L.st.length?`Line ${k+1}: ${L.st.length} stations`:`Line ${k+1}: not built yet`):'Not unlocked yet';b.setAttribute('aria-pressed',k===CUR);b.onclick=()=>{CUR=k;setTool('draw');syncPanel();draw()};bar.appendChild(b)})};
+{const bar=document.createElement('div');bar.id='lineBar';bar.className='panel';bar.style.cssText='position:fixed;left:calc(var(--gut) + 96px);bottom:var(--bot);z-index:5;display:flex;gap:7px;padding:7px 10px;align-items:center;flex-wrap:wrap;max-width:calc(100% - 520px)';document.body.appendChild(bar);
+  const css=document.createElement('style');css.textContent='body.mHome #lineBar,body.mDemo #lineBar{display:none!important}#lineBar button{width:30px;height:30px;border-radius:50%;border:3px solid transparent;cursor:pointer}#lineBar button[aria-pressed="true"]{border-color:#fff;transform:scale(1.15)}#lineBar button:disabled{opacity:.25;cursor:default}@media (max-width:760px){#lineBar{left:var(--gut)!important;bottom:calc(var(--bot) + 74px)!important;max-width:calc(100% - 32px)!important}}#placeopts,#hint{display:none!important}#lineBar .pz{width:auto;height:30px;border-radius:8px;padding:0 10px;border:1px solid rgba(255,195,90,.6);background:rgba(255,195,90,.12);color:#fff;font-size:13px}';document.head.appendChild(css);
+  const draw=()=>{bar.innerHTML='';const pz=document.createElement('button');pz.className='pz';pz.textContent=S.paused?'▶ Play':'⏸ Pause';pz.onclick=()=>{setPaused(!S.paused);draw()};bar.appendChild(pz);const lb=document.createElement('span');lb.className='k';lb.style.margin='0 2px 0 6px';lb.textContent='Line';bar.appendChild(lb);LCOL.forEach((col,k)=>{const b=document.createElement('button');b.style.background=col;const L=LINES[k];b.disabled=!L;b.title=L?(L.st.length?`Line ${k+1}: ${L.st.length} stations`:`Line ${k+1}: not built yet`):'Not unlocked yet';b.setAttribute('aria-pressed',k===CUR);b.onclick=()=>{CUR=k;setTool('draw');syncPanel();draw()};bar.appendChild(b)})};
   setInterval(draw,400);draw()}
 
 /* ================= Interchange: auto-built networks for the home screen and demo, challenges, tutorial ================= */
@@ -563,9 +563,12 @@ function resize(){W=innerWidth;H=innerHeight;DPR=Math.min(2,devicePixelRatio||1)
 function measureHud(){const h=document.querySelector('.hud-top');if(h)document.documentElement.style.setProperty('--hudH',Math.round(h.getBoundingClientRect().height)+'px')}
 const sx=wx=>(wx-cam.x)*cam.z+W/2+cam.ox,sy=wy=>(wy-cam.y)*cam.z+H/2;
 const wxOf=px=>(px-W/2-cam.ox)/cam.z+cam.x,wyOf=py=>(py-H/2)/cam.z+cam.y;
-function fitWorld(){const w=SIM.world.w,h=SIM.world.h,m=innerWidth<760?1:0.82;cam.z=SIM.world.wrapX?Math.max(W/w,H/h):Math.min(W/w,(H-90)/h)*m;cam.x=w/2;cam.y=h/2;clampCam()}
+function freeRect(){let l=0,r=W,t=0,b=H;if(!$('home').hidden)return{l,r,t,b};const vis=e=>e&&getComputedStyle(e).display!=='none'&&e.getBoundingClientRect().width>0;const hud=document.querySelector('.hud-top'),rail=$('rail'),dock=$('dock');
+  if(vis(hud))t=hud.getBoundingClientRect().bottom+8;if(innerWidth>760){if(vis(rail))l=rail.getBoundingClientRect().right+8;if(vis(dock))r=dock.getBoundingClientRect().left-8;b=H-50;const lb=$('lineBar');if(vis(lb))b=Math.min(b,lb.getBoundingClientRect().top-8)}else{if(vis(rail))b=rail.getBoundingClientRect().top-8;const lb=$('lineBar');if(vis(lb))b=Math.min(b,lb.getBoundingClientRect().top-8);if(vis(dock)&&document.body.classList.contains('dockOpen'))b=Math.min(b,dock.getBoundingClientRect().top-8)}
+  if(r-l<200){l=0;r=W}if(b-t<150){t=0;b=H}return{l,r,t,b}}
+function fitWorld(){const w=SIM.world.w,h=SIM.world.h;if(SIM.world.wrapX){cam.z=Math.max(W/w,H/h);cam.x=w/2;cam.y=h/2;clampCam();return}const f=freeRect(),fw=f.r-f.l,fh=f.b-f.t;cam.z=Math.min(fw/w,fh/h)*0.96;cam.x=w/2-((f.l+f.r)/2-W/2-cam.ox)/cam.z;cam.y=h/2-((f.t+f.b)/2-H/2)/cam.z;clampCam()}
 function minZoom(){const w=SIM.world.w,h=SIM.world.h;return SIM.world.wrapX?H/h:Math.min(W/w,H/h)*0.5}
-function clampCam(){const h=SIM.world.h,w=SIM.world.w;cam.z=clamp(cam.z,minZoom(),SIM.world.maxZ||40);if(SIM.world.wrapX){const hy=H/2/cam.z;cam.y=clamp(cam.y,Math.min(h/2,hy),Math.max(h/2,h-hy))}else cam.y=clamp(cam.y,0,h);if(SIM.world.wrapX)cam.x=mod(cam.x,w);else cam.x=clamp(cam.x,0,w)}
+function clampCam(){const h=SIM.world.h,w=SIM.world.w;cam.z=clamp(cam.z,minZoom(),SIM.world.maxZ||40);if(SIM.world.wrapX){const hy=H/2/cam.z;cam.y=clamp(cam.y,Math.min(h/2,hy),Math.max(h/2,h-hy))}else cam.y=clamp(cam.y,-h*0.5,h*1.5);if(SIM.world.wrapX)cam.x=mod(cam.x,w);else cam.x=clamp(cam.x,-w*0.5,w*1.5)}
 function zoomAt(f,px,py){const wx=wxOf(px),wy=wyOf(py);cam.z*=f;clampCam();cam.x+=wx-wxOf(px);cam.y+=wy-wyOf(py);clampCam();bump('zoomed')}
 function flyToW(x,y,z){S.follow=false;cam.x=x;cam.y=y;if(z)cam.z=Math.max(cam.z,z);clampCam()}
 
