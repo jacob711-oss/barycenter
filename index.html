@@ -265,6 +265,14 @@ body.mDemo .rail,body.mDemo .campad,body.mDemo .hint,body.mDemo .insp,body.mDemo
   .toast{white-space:normal;text-align:center}
 }
 #hAcctBtn,#acctBtn,#hOut,#acct,#hLb,#acctLb,#dLb,#lbBox{display:none!important}
+/* phones: compact top bar, no camera pad (drag, pinch and two-finger gestures move the camera) */
+@media (max-width:760px){
+  .brand{display:none!important}.stat{display:none!important}
+  .campad{display:none!important}
+  .time{padding:6px 8px!important}.find{font-size:16px!important}
+  .right .btn{padding:7px 7px!important;font-size:11.5px!important}.right{gap:6px!important}
+  .btn{min-height:34px}
+}
 </style>
 </head>
 <body>
