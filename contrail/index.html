@@ -1,0 +1,742 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="You are the control tower. Draw flight paths, line planes up with the right runway, and keep everyone a safe distance apart">
+<title>Contrail</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Oxanium:wght@500;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Simulator kit: shared with Barycenter and Biosphere */
+:root{
+  --voidRGB:6,8,18;--deepRGB:10,13,28;--accRGB:159,168,255;--lineRGB:180,190,240;--panel:rgba(10,13,28,.88);--ink:#eef0ff;--ink2:#d4d8f2;--dim:#959bbc;
+  --void:rgb(var(--voidRGB));
+  --line:rgba(var(--lineRGB),.16);
+  --line-strong:rgba(var(--lineRGB),.34);
+  --flare:#ffc35a;
+  --cool:rgb(var(--accRGB));
+  --danger:#ff6b5a;
+  --f-display:'Oxanium','Segoe UI',system-ui,sans-serif;
+  --f-body:'IBM Plex Sans',system-ui,-apple-system,sans-serif;
+  --f-mono:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+  --gut:max(16px, env(safe-area-inset-left, 0px));
+  --gutR:max(16px, env(safe-area-inset-right, 0px));
+  --top:calc(env(safe-area-inset-top, 0px) + 12px);
+  --bot:calc(env(safe-area-inset-bottom, 0px) + 12px);
+  color-scheme:dark;
+}
+[hidden]{display:none!important}
+html,body{height:100%;margin:0}
+body{background:var(--void);color:var(--ink);font-family:var(--f-body);overflow:hidden;-webkit-user-select:none;user-select:none}
+#world{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:none;cursor:grab}
+#world.place{cursor:crosshair}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+.k{font-family:var(--f-mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--dim)}
+.v{font-family:var(--f-mono);font-size:13px;font-variant-numeric:tabular-nums;color:var(--ink)}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+button:focus-visible,input:focus-visible{outline:2px solid var(--cool);outline-offset:2px}
+.btn{font-family:var(--f-mono);font-size:12px;padding:7px 11px;border:1px solid var(--line-strong);border-radius:7px;color:var(--ink);background:rgba(var(--accRGB),.06);white-space:nowrap}
+.btn:hover{background:rgba(var(--accRGB),.14)}
+.btn[aria-pressed="true"]{background:rgba(var(--accRGB),.22);border-color:var(--cool)}
+.btn.primary{background:rgba(255,195,90,.16);border-color:rgba(255,195,90,.6);color:#ffe6b8}
+.btn.danger{border-color:rgba(255,107,90,.5);color:#ffb1a6}
+.btn.ghost{border-color:transparent;color:var(--dim)}
+input[type=range]{accent-color:var(--cool);width:100%}
+
+/* top bar */
+.hud-top{position:fixed;top:var(--top);left:var(--gut);right:var(--gutR);display:flex;gap:10px;align-items:stretch;z-index:5;pointer-events:none}
+.hud-top>*{pointer-events:auto}
+.brand{padding:10px 14px;display:flex;flex-direction:column;justify-content:center}
+.brand h1{font-family:var(--f-display);font-weight:700;font-size:18px;letter-spacing:.1em;margin:0;text-transform:uppercase}.brand h1 b{color:var(--flare)}
+.brand .sub{font-size:11px;color:var(--dim)}
+.time{display:flex;gap:12px;align-items:center;padding:8px 12px}
+#pauseBtn{width:40px;height:40px;border-radius:9px;border:1px solid rgba(255,195,90,.55);background:rgba(255,195,90,.12);font-size:16px}
+.spds{display:flex;gap:3px}.spd{font-family:var(--f-mono);font-size:10px;padding:3px 5px;border-radius:5px;border:1px solid var(--line);color:var(--dim);white-space:nowrap}
+.spd:hover{color:var(--ink)}.spd[aria-pressed="true"]{color:var(--ink);border-color:rgba(255,195,90,.6);background:rgba(255,195,90,.14)}
+.tcol{display:flex;flex-direction:column;gap:4px}
+.right{margin-left:auto;display:flex;gap:10px;align-items:center;padding:8px 10px;flex-wrap:wrap;justify-content:flex-end}
+.stat{display:flex;flex-direction:column;gap:2px;min-width:54px}
+.findwrap{position:relative}
+.find{width:210px;font:inherit;font-size:13px;padding:8px 10px;border-radius:8px;border:1px solid var(--line-strong);background:rgba(0,0,0,.35);color:var(--ink)}
+.findlist{position:absolute;top:calc(100% + 4px);left:0;right:0;z-index:9;padding:4px;display:flex;flex-direction:column;gap:2px;max-height:300px;overflow:auto}
+.findlist button{text-align:left;padding:7px 9px;border-radius:6px;font-size:13px}.findlist button:hover,.findlist button.on{background:rgba(var(--accRGB),.14)}
+.findlist small{color:var(--dim);margin-left:6px}
+
+/* tool rail */
+.rail{position:fixed;left:var(--gut);top:calc(var(--top) + var(--hudH,64px) + 10px);bottom:var(--bot);width:86px;overflow-y:auto;overflow-x:hidden;z-index:4;padding:6px;display:flex;flex-direction:column;gap:3px;scrollbar-width:thin}
+.rail h3{font-family:var(--f-mono);font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--dim);margin:8px 2px 2px;font-weight:500}
+.tool{display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 2px;border-radius:7px;border:1px solid transparent;font-size:10.5px;color:var(--ink2);line-height:1.1;text-align:center}
+.tool .ico{font-size:19px;line-height:1}
+.tool:hover{background:rgba(var(--accRGB),.1)}.tool[aria-pressed="true"]{background:rgba(255,195,90,.15);border-color:rgba(255,195,90,.55);color:#fff}
+.placeopts{position:fixed;left:calc(var(--gut) + 96px);bottom:var(--bot);z-index:4;padding:8px 12px;display:flex;gap:14px;align-items:center;font-size:12px}
+.placeopts label{display:flex;gap:6px;align-items:center;color:var(--dim)}.placeopts input[type=range]{width:110px}
+.seg{display:flex;gap:3px}.seg button{font-family:var(--f-mono);font-size:11px;padding:3px 8px;border-radius:5px;border:1px solid var(--line);color:var(--dim)}.seg button[aria-pressed="true"]{color:var(--ink);border-color:var(--cool);background:rgba(var(--accRGB),.16)}
+
+/* dock */
+.dock{position:fixed;right:var(--gutR);top:calc(var(--top) + var(--hudH,64px) + 10px);bottom:var(--bot);width:330px;z-index:4;display:flex;flex-direction:column;overflow:hidden}
+.tabs{display:flex;border-bottom:1px solid var(--line)}.tab{flex:1;padding:10px 4px;font-family:var(--f-mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--dim);border-bottom:2px solid transparent}
+.tab[aria-selected="true"]{color:var(--ink);border-color:var(--flare)}
+.pane{padding:12px 14px;overflow:auto;flex:1;display:flex;flex-direction:column;gap:12px}
+.row{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.sl{display:flex;flex-direction:column;gap:4px}.sl .row span:last-child{font-family:var(--f-mono);font-size:12px}
+.evs{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.views{display:flex;gap:4px;flex-wrap:wrap}
+.splist{display:flex;flex-direction:column;gap:3px}
+.sprow{display:grid;grid-template-columns:14px 1fr auto;gap:8px;align-items:center;font-size:12.5px;padding:3px 4px;border-radius:5px}
+.sprow:hover{background:rgba(var(--accRGB),.08)}.sprow i{width:10px;height:10px;border-radius:50%;display:block}.sprow b{font-family:var(--f-mono);font-weight:500;font-size:12px}
+.sprow.zero{opacity:.4}
+#graph{width:100%;height:150px;display:block;border:1px solid var(--line);border-radius:8px;background:rgba(0,0,0,.25)}
+.gene{display:grid;grid-template-columns:86px 1fr 46px;gap:8px;align-items:center;font-size:12px}
+.gene .bar{height:6px;border-radius:3px;background:rgba(var(--accRGB),.12);overflow:hidden}.gene .bar span{display:block;height:100%;background:var(--cool)}
+.gene input{margin:0}
+.ititle{font-family:var(--f-display);font-weight:500;font-size:22px;margin:0}
+.isub{font-size:12.5px;color:var(--dim);margin-top:-8px}
+.kv{display:grid;grid-template-columns:1fr 1fr;gap:6px}.kv div{border:1px solid var(--line);border-radius:7px;padding:6px 8px}.kv .k{display:block}.kv .v{font-size:13px}
+.note{font-size:12px;color:var(--dim);line-height:1.5;margin:0}
+#iPic{width:100%;height:120px;border-radius:8px;background:rgb(var(--deepRGB));display:block}
+.toasts{position:fixed;left:50%;transform:translateX(-50%);top:calc(var(--top) + var(--hudH,64px) + 16px);z-index:8;display:flex;flex-direction:column;gap:6px;align-items:center;pointer-events:none}
+.toast{font-size:13px;padding:8px 14px;border-radius:99px;background:var(--panel);border:1px solid var(--line-strong);animation:tin .25s ease-out}
+@keyframes tin{from{opacity:0;transform:translateY(-6px)}}
+.hint{position:fixed;left:50%;transform:translateX(-50%);bottom:var(--bot);font-family:var(--f-mono);font-size:11.5px;color:var(--dim);background:var(--panel);border:1px solid var(--line);border-radius:99px;padding:7px 14px;white-space:nowrap;z-index:3;pointer-events:none}
+.zoomb{position:fixed;right:calc(var(--gutR) + 342px);bottom:var(--bot);z-index:4;display:flex;flex-direction:column;gap:4px;padding:4px}
+.zoomb button{width:32px;height:30px;border-radius:6px;border:1px solid var(--line);font-size:15px;color:var(--dim)}.zoomb button:hover{color:var(--ink)}
+
+/* scenarios */
+.scen{position:fixed;right:var(--gutR);top:calc(var(--top) + var(--hudH,64px) + 10px);width:min(520px,calc(100% - 32px));z-index:7;padding:14px;display:flex;flex-direction:column;gap:10px;max-height:calc(100% - 120px);overflow:auto}
+.scgrid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.scb{text-align:left;padding:10px 12px;border-radius:9px;border:1px solid var(--line);display:flex;flex-direction:column;gap:3px}.scb:hover{border-color:var(--cool)}
+.scb b{font-family:var(--f-display);font-weight:500;font-size:15px}.scb span{font-size:12px;color:var(--dim);line-height:1.35}
+
+/* home */
+.home{position:fixed;inset:0;z-index:20;pointer-events:none;background:linear-gradient(90deg,rgba(var(--voidRGB),.93) 0,rgba(var(--voidRGB),.78) 34%,rgba(var(--voidRGB),0) 62%)}
+.hcard{pointer-events:auto;position:absolute;left:var(--gut);top:calc(var(--top) + 16px);bottom:calc(var(--bot) + 16px);width:min(560px,calc(100% - 32px));overflow:auto;display:flex;flex-direction:column;gap:22px;padding:8px 4px}
+.htitle{font-family:var(--f-display);font-weight:700;font-size:clamp(40px,7vw,72px);letter-spacing:.08em;text-transform:uppercase;margin:0;line-height:1}.htitle b{color:var(--flare)}
+.htag{margin:10px 0 0;color:var(--dim);font-size:16px}
+.hacct{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+.chip{display:inline-flex;align-items:center;gap:6px;font-family:var(--f-mono);font-size:12px;padding:7px 12px;border-radius:99px;border:1px solid var(--line-strong);background:rgba(var(--deepRGB),.82);color:var(--ink);text-decoration:none}
+.chip:hover{border-color:var(--cool)}.chip b{color:var(--flare);font-weight:600}.chip.other{border-color:rgba(127,178,255,.5);color:#cfe0ff}
+.hview{display:flex;flex-direction:column;gap:12px}
+.hb{display:flex;flex-direction:column;align-items:flex-start;gap:4px;text-align:left;padding:18px 20px;border-radius:12px;border:1px solid var(--line-strong);background:rgba(var(--deepRGB),.84)}
+.hb:hover{border-color:var(--cool);background:rgba(var(--accRGB),.10)}.hb .ht{font-family:var(--f-display);font-weight:500;font-size:22px}.hb .hd{font-size:13px;color:var(--dim);line-height:1.4}
+.hb.primary{border-color:rgba(255,195,90,.6);background:rgba(40,30,12,.86)}.hb.primary:hover{background:rgba(60,44,14,.92)}
+.hfoot{margin:0;font-size:12px;color:var(--dim);line-height:1.5}
+.hbar{display:flex;align-items:center;gap:14px}.hbar h2{font-family:var(--f-display);font-weight:500;font-size:24px;margin:0;flex:1}.hstars{font-family:var(--f-mono);font-size:12px;color:var(--flare)}
+.hgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:6px}
+.ct{display:flex;flex-direction:column;align-items:flex-start;gap:3px;padding:8px 9px;border-radius:8px;border:1px solid var(--line);background:rgba(var(--deepRGB),.86);text-align:left;min-height:70px}
+.ct:hover:not(:disabled){border-color:var(--cool)}.ct:disabled{opacity:.45;cursor:not-allowed}.ct .cn{font-family:var(--f-mono);font-size:10px;color:var(--dim)}.ct .ctt{font-size:11.5px;line-height:1.25}
+.ct .cs{font-size:12px;color:var(--flare);letter-spacing:1px;margin-top:auto}.ct.next{border-color:rgba(255,195,90,.7);box-shadow:0 0 0 1px rgba(255,195,90,.3)}
+body.mHome .hud-top,body.mHome .rail,body.mHome .dock,body.mHome .placeopts,body.mHome .hint,body.mHome .zoomb,body.mHome .scen,body.mHome #chHud,body.mHome .toasts{display:none!important}
+body.mDemo .rail,body.mDemo .dock,body.mDemo .placeopts,body.mDemo .hint,body.mDemo .zoomb,body.mDemo .hud-top{display:none!important}
+.chhud{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(var(--bot) + 52px);width:min(600px,calc(100% - 480px));min-width:300px;padding:12px 14px;z-index:6;display:flex;flex-direction:column;gap:6px}
+.chtop{display:flex;justify-content:space-between}.chtitle{font-family:var(--f-display);font-weight:500;font-size:17px}.chgoal{font-size:13px;line-height:1.45;color:var(--ink2)}
+.chbarw{height:6px;border-radius:3px;background:rgba(var(--accRGB),.12);overflow:hidden}#chBar{display:block;height:100%;width:0;background:var(--flare);transition:width .25s}
+.chrow{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}.chprog{font-family:var(--f-mono);font-size:11.5px;color:var(--dim)}.chbtns{display:flex;gap:6px}
+.donebg{pointer-events:auto;display:grid;place-items:center;background:rgba(var(--voidRGB),.6)}
+.donecard{width:min(440px,calc(100% - 32px));padding:24px;text-align:center;display:flex;flex-direction:column;gap:10px}.donecard h2{font-family:var(--f-display);font-weight:500;margin:0}
+.dstars{font-size:34px;color:var(--flare);letter-spacing:4px}.dstars .off{color:rgba(255,255,255,.15)}
+.actions{display:flex;gap:8px;flex-wrap:wrap}
+.democap{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(var(--bot) + 10px);width:min(640px,calc(100% - 32px));padding:14px 18px;z-index:21;display:flex;flex-direction:column;gap:6px}
+.democap h2{font-family:var(--f-display);font-weight:500;font-size:22px;margin:0}.democap p{margin:0;font-size:14px;color:var(--ink2)}
+.ovl{position:fixed;inset:0;z-index:30;display:grid;place-items:center;background:rgba(var(--voidRGB),.6)}
+.obox{width:min(460px,calc(100% - 32px));max-height:min(80vh,640px);overflow:auto;padding:18px;display:flex;flex-direction:column;gap:12px}
+.obox h2{font-family:var(--f-display);font-weight:500;font-size:22px;margin:0;flex:1}
+.arow{display:flex;align-items:center;gap:8px;padding:9px 10px;border:1px solid var(--line);border-radius:8px}.arow.cur{border-color:rgba(255,195,90,.6);background:rgba(40,30,12,.5)}
+.arow .an{flex:1;min-width:0}.arow .as{font-family:var(--f-mono);font-size:11px;color:var(--dim)}
+.arow input,.aform input{font:inherit;font-size:13px;padding:7px 9px;border-radius:7px;border:1px solid var(--line-strong);background:rgba(0,0,0,.35);color:var(--ink);min-width:0}
+.arow input{width:80px}.aform{display:flex;gap:6px;flex-wrap:wrap}.aform input{flex:1 1 120px}
+.endbox{border:1px solid rgba(255,107,90,.45);background:rgba(60,16,12,.35);border-radius:8px;padding:8px 10px;display:flex;flex-direction:column;gap:4px}.endbox .k{color:#ffb1a6}.endrow{display:flex;justify-content:space-between;font-size:12.5px;text-align:left;padding:2px 0}.endrow b{font-family:var(--f-mono);font-weight:500;color:#ffb1a6}.endrow.ext{opacity:.6;text-decoration:line-through}
+.endbadge{position:fixed;right:calc(var(--gutR) + 342px);top:calc(var(--top) + var(--hudH,64px) + 12px);z-index:4;padding:7px 12px;border-color:rgba(255,107,90,.55);color:#ffc0b6;font-family:var(--f-mono);font-size:12px}
+@media (max-width:760px){.endbadge{right:var(--gutR);top:auto;bottom:calc(var(--bot) + 230px)}}
+body.mHome .endbadge,body.mDemo .endbadge{display:none!important}
+.dna{width:100%;height:28px;display:block;border-radius:6px;background:rgba(0,0,0,.25)}.fam{display:flex;gap:6px;flex-wrap:wrap;align-items:center}.gsel,.coatsel{font:inherit;font-size:12px;background:rgba(0,0,0,.35);color:var(--ink);border:1px solid var(--line-strong);border-radius:6px;padding:4px 6px}
+.legend{position:fixed;left:calc(var(--gut) + 96px);top:calc(var(--top) + var(--hudH,64px) + 12px);z-index:4;padding:8px 12px;width:220px;display:flex;flex-direction:column;gap:5px}.legend .lbar{height:10px;border-radius:5px}.legend .lticks{display:flex;justify-content:space-between;font-family:var(--f-mono);font-size:10.5px;color:var(--dim)}
+body.mHome .legend,body.mDemo .legend{display:none!important}@media (max-width:760px){.legend{left:var(--gut);top:auto;bottom:calc(var(--bot) + 190px)}}
+.pbig{font-family:var(--f-display);font-size:54px;line-height:1;color:var(--flare)}
+
+@media (max-width:1600px){.right .stat{display:none}.find{width:170px}}
+@media (max-width:1300px){.brand .sub{display:none}.find{width:140px}.brand{padding:10px}}
+@media (max-width:760px){
+  .hud-top{flex-wrap:wrap}.brand{display:none}.time{flex:1 1 100%}.right{flex:1 1 100%;justify-content:space-between}.findwrap{flex:1 1 100%;order:-1}.find{width:100%;box-sizing:border-box}
+  .rail{top:auto;left:var(--gut);right:var(--gutR);bottom:var(--bot);width:auto;height:64px;flex-direction:row;overflow-x:auto;overflow-y:hidden}
+  .rail h3{display:none}.tool{min-width:58px}
+  .placeopts{left:var(--gut);bottom:calc(var(--bot) + 72px)}
+  .dock{top:auto;bottom:calc(var(--bot) + 120px);left:var(--gut);right:var(--gutR);width:auto;height:42vh}
+  body:not(.dockOpen) .dock{display:none}
+  .zoomb{right:var(--gutR);bottom:calc(var(--bot) + 120px)}
+  .home{background:rgba(var(--voidRGB),.74)}
+  .chhud{width:auto;min-width:0;left:var(--gut);right:var(--gutR);transform:none;bottom:calc(var(--bot) + 124px);max-height:36vh;overflow:auto}
+  .hint{display:none}
+}
+#dockBtn{display:none}@media (max-width:760px){#dockBtn{display:inline-block}}
+.sprow{text-align:left;width:100%}@media (max-width:760px){#dateSub{display:none}}
+#hAcctBtn,#acctBtn,#hOut,#acct{display:none!important}
+body.dockHidden .dock,body.dockHidden .zoomb{display:none!important}@media (min-width:761px){body.dockHidden #dockBtn{display:inline-block!important}}
+/* phones: compact top bar, big touch targets, nothing covering the panel */
+@media (max-width:760px){
+  .hud-top{gap:6px}
+  .time{padding:6px 8px;gap:8px}#rateTxt{display:none}
+  .time .tcol:last-child .k{display:none}.time .tcol:last-child #dateTxt{font-size:12px;white-space:normal!important;max-width:110px}
+  #pauseBtn{width:44px;height:44px}
+  .spds{flex-wrap:wrap}.spd{padding:7px 8px;font-size:11px;min-width:34px}
+  .right{padding:6px;gap:6px;flex-wrap:nowrap}.findwrap{flex:1 1 120px!important;order:0!important;min-width:0}.find{width:100%!important;font-size:16px!important;padding:8px}
+  .right .btn{padding:8px 9px;font-size:12px}
+  .zoomb{display:none!important}
+  body.dockOpen .legend,body.dockOpen #endBadge{display:none!important}
+  .legend{width:auto;left:var(--gut)!important;right:var(--gutR);top:auto!important;bottom:calc(var(--bot) + 80px)!important}
+  .dock{height:46vh!important;bottom:calc(var(--bot) + 80px)!important}
+  .tab{padding:12px 4px}
+  .tool{min-width:64px;padding:8px 2px}
+  .placeopts{bottom:calc(var(--bot) + 80px)!important;left:var(--gut)!important;right:var(--gutR);flex-wrap:wrap}
+  .chhud{bottom:calc(var(--bot) + 82px)!important}
+  .btn{min-height:34px}
+  input[type=range]{height:28px}
+}
+.inv{display:grid;grid-template-columns:repeat(2,1fr);gap:6px}.inv div{border:1px solid var(--line);border-radius:8px;padding:7px 9px;font-size:13px}.inv b{font-family:var(--f-mono);float:right;color:var(--flare)}
+.weekbox{position:fixed;inset:0;z-index:40;display:grid;place-items:center;background:rgba(6,8,18,.6)}.weekcard{width:min(460px,calc(100% - 32px));padding:22px;display:flex;flex-direction:column;gap:12px;text-align:center}
+.weekcard h2{font-family:var(--f-display);font-weight:500;margin:0;font-size:24px}.wopts{display:grid;grid-template-columns:1fr 1fr;gap:10px}.wopt{padding:16px 10px;border-radius:12px;border:1px solid var(--line-strong);display:flex;flex-direction:column;gap:6px;align-items:center}.wopt:hover{border-color:var(--cool);background:rgba(var(--accRGB),.1)}.wopt .ic{font-size:30px}.wopt b{font-family:var(--f-display);font-weight:500;font-size:16px}.wopt span{font-size:12px;color:var(--dim)}
+#placeopts,#hint{display:none!important}
+
+</style>
+</head>
+<body>
+<canvas id="world" aria-label="The airspace"></canvas>
+
+<header class="hud-top">
+  <div class="brand panel"><h1>Con<b>trail</b></h1><span class="sub">An air traffic sandbox</span></div>
+  <div class="time panel">
+    <button id="pauseBtn" title="Pause or resume (Space)" aria-label="Pause">⏸</button>
+    <div class="tcol"><span class="k">Time rate</span><div class="spds" id="spds"></div><span class="v" id="rateTxt"></span></div>
+    <div class="tcol"><span class="k">Week</span><span class="v" id="dateTxt" style="white-space:nowrap"></span><span class="v" id="dateSub" style="font-size:11px;color:var(--dim)"></span></div>
+  </div>
+  <div class="right panel">
+    <div id="stats" style="display:contents"></div>
+    <div class="findwrap"><input id="find" class="find" placeholder="Find a flight, runway or tool…" aria-label="Find a flight, runway or tool…" autocomplete="off" spellcheck="false"><div id="findList" class="findlist panel" hidden></div></div>
+    <button id="homeBtn" class="btn" title="Back to the home page">⌂ Home</button>
+    <button id="acctBtn" class="btn" title="Account: save your progress on this device">👤</button>
+    <button id="scenBtn" class="btn">Airports</button>
+    <button id="dockBtn" class="btn">Panel</button>
+  </div>
+</header>
+
+<nav class="rail panel" id="rail" aria-label="Tools"></nav>
+<div class="placeopts panel" id="placeopts" hidden>
+  <label>Brush <input type="range" id="brush" min="1" max="12" value="4"><span id="brushV" class="v">4</span></label>
+  <span id="toolNote" class="note"></span>
+</div>
+
+<aside class="dock panel" id="dock">
+  <div class="tabs" role="tablist"><button class="tab" role="tab" data-tab="world" aria-selected="true">Tower</button><button class="tab" role="tab" data-tab="stats" aria-selected="false">Airport</button><button class="tab" role="tab" data-tab="insp" aria-selected="false">Inspect</button><button class="tab" id="dockClose" title="Close this panel" aria-label="Close panel" style="flex:0 0 40px">✕</button></div>
+  <div class="pane" id="pane-world">
+    <span class="k">Your stock</span>
+    <div class="inv" id="inv"></div>
+    <div class="row"><span class="k">Relaxed mode (no crashes)</span><button class="btn" id="relaxBtn" aria-pressed="false">Off</button></div>
+    <div class="row"><span class="k">Flight labels</span><button class="btn" id="lblBtn" aria-pressed="true">On</button></div>
+    <span class="k">Events · press again to stop</span>
+    <div class="evs">
+      <button class="btn" data-ev="rush">🛬 Rush hour</button><button class="btn" data-ev="storm">⛈ Storms</button>
+      <button class="btn" data-ev="wind">🌬 Strong wind</button><button class="btn" data-ev="normal">↺ Stop all events</button>
+    </div>
+    <span class="k">Views</span>
+    <div class="views"><button class="btn" data-view="normal" aria-pressed="true">Map</button><button class="btn" data-view="radar" aria-pressed="false">Radar</button><button class="btn" data-view="night" aria-pressed="false">Night</button></div>
+    <p class="note">🟡 Small props need a short (yellow) runway or longer. 🔵 Jets and 🔴 jumbos need a long (blue) runway. 🟢 Helicopters land on helipads or any runway. Planes can land from either end of a runway, but they must fly in roughly lined up with it.</p>
+  </div>
+  <div class="pane" id="pane-stats" hidden>
+    <div class="kv" id="cStats"></div>
+    <span class="k">Landings over time</span>
+    <canvas id="graph"></canvas>
+    <div class="splist" id="fList"></div>
+  </div>
+  <div class="pane" id="pane-insp" hidden>
+    <div id="inspEmpty"><p class="note">Click a plane or a runway to inspect it.</p></div>
+    <div id="inspBody" class="hview" hidden></div>
+  </div>
+
+</aside>
+<div class="zoomb panel"><button id="zIn" title="Zoom in">+</button><button id="zOut" title="Zoom out">−</button><button id="zFit" title="Show everything">⤢</button></div>
+<div id="legend" class="legend panel" hidden><span class="k"></span><div class="lbar"></div><div class="lticks"><span></span><span></span><span></span></div></div>
+<div class="hint" id="hint">Drag from a plane to draw its path · right-drag to look around</div>
+<div class="toasts" id="toasts" aria-live="polite"></div>
+
+<div class="scen panel" id="scen" hidden>
+  <div class="row"><span class="k">Choose a airport</span><button class="btn ghost" id="scenClose">×</button></div>
+  <div class="scgrid" id="scgrid"></div>
+</div>
+
+<div id="home" class="home" role="dialog" aria-label="Home">
+  <div class="hcard">
+    <div class="hhead"><h1 class="htitle">Con<b>trail</b></h1><p class="htag">You are the control tower. Draw flight paths, line planes up with the right runway, and keep everyone a safe distance apart</p>
+      <div class="hacct"><button class="chip" id="hAcctBtn">👤 <span id="hAcctName">Guest</span></button><button class="chip" id="hPlays" title="Total plays by everyone">▶ <b id="hPlaysN">0</b> <span id="hPlaysL">plays</span></button><style>.sims{position:relative;display:inline-block;z-index:70}.hhead{position:relative;z-index:20}.sims>summary{list-style:none;cursor:pointer}.sims>summary::-webkit-details-marker{display:none}
+.sims[open]>summary{background:rgba(255,255,255,.08)}.simsP{position:absolute;left:0;top:calc(100% + 6px);z-index:60;width:min(320px,86vw);padding:8px;border-radius:12px;background:#0c101c;border:1px solid rgba(255,255,255,.14);box-shadow:0 12px 40px rgba(0,0,0,.55);display:grid;gap:6px;text-align:left}
+.simsP a{display:grid;grid-template-columns:auto 1fr;gap:2px 10px;align-items:center;padding:9px 10px;border-radius:9px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.03);color:#e3e8f4;text-decoration:none;font:inherit}
+.simsP a:hover,.simsP a:focus-visible{background:rgba(255,255,255,.08);border-color:var(--sc,#7fe0a8)}.simsP .si{grid-row:span 2;font-size:24px}.simsP b{color:var(--sc,#fff);font-size:14px}.simsP small{color:#8b95ae;font-size:11.5px;line-height:1.3}.simsP .sn{color:#8b95ae;font-size:11px;padding:2px 4px}</style><details class="sims" id="hSims"><summary class="chip" title="Our other simulators">🧪 Try our other simulators ▾</summary><div class="simsP" id="hSimsP"></div></details><script>(()=>{const ME="contrail",LIST=[{"id": "barycenter", "icon": "🪐", "name": "Barycenter", "tag": "Gravity, planets, stars and black holes", "url": "https://jacob711-oss.github.io/barycenter/", "color": "#e8b04a"}, {"id": "biosphere", "icon": "🌿", "name": "Biosphere", "tag": "A living world of animals, plants and people", "url": "https://jacob711-oss.github.io/barycenter/life/", "color": "#7fe0a8"}, {"id": "lithosphere", "icon": "🌋", "name": "Lithosphere", "tag": "Drift continents, raise mountains and set off volcanoes", "url": "https://jacob711-oss.github.io/barycenter/lithosphere/", "color": "#ff8a5c"}, {"id": "troposphere", "icon": "🌀", "name": "Troposphere", "tag": "Steer winds, brew hurricanes and change the climate", "url": "https://jacob711-oss.github.io/barycenter/troposphere/", "color": "#60d6e6"}, {"id": "catalyst", "icon": "⚛️", "name": "Catalyst", "tag": "Mix atoms, spark reactions and build molecules", "url": "https://jacob711-oss.github.io/barycenter/catalyst/", "color": "#c48bff"}, {"id": "abyssal", "icon": "🐋", "name": "Abyssal", "tag": "Dive into a living ocean, from coral reefs to the deep sea", "url": "https://jacob711-oss.github.io/barycenter/abyssal/", "color": "#4fa3ff"}, {"id": "interchange", "icon": "🚉", "name": "Interchange", "tag": "Draw the transit lines of a growing city and keep everyone moving", "url": "https://jacob711-oss.github.io/barycenter/interchange/", "color": "#ff5ab4"}, {"id": "gridlock", "icon": "🚗", "name": "Gridlock", "tag": "Draw the roads of a growing town and keep the traffic flowing", "url": "https://jacob711-oss.github.io/barycenter/gridlock/", "color": "#ffd23a"}, {"id": "hivemind", "icon": "🐜", "name": "Hivemind", "tag": "Ant colonies that find food by following each other's scent trails", "url": "https://jacob711-oss.github.io/barycenter/hivemind/", "color": "#ff9a3d"}, {"id": "flux", "icon": "⚡", "name": "Flux", "tag": "Place charges and magnets, and watch the fields bend particles through space", "url": "https://jacob711-oss.github.io/barycenter/flux/", "color": "#5ae0ff"}, {"id": "seaway", "icon": "🚢", "name": "Seaway", "tag": "Run the shipping lanes of a sea full of islands and keep the cargo moving", "url": "https://jacob711-oss.github.io/barycenter/seaway/", "color": "#3ab8e0"}, {"id": "contrail", "icon": "✈️", "name": "Contrail", "tag": "Guide planes onto runways, keep them apart and run a busy airport", "url": "https://jacob711-oss.github.io/barycenter/contrail/", "color": "#9fa8ff"}],P=document.getElementById('hSimsP'),D=document.getElementById('hSims');
+const draw=l=>{P.textContent='';for(const s of l){if(s.id===ME||!s.url)continue;const a=document.createElement('a');a.href=s.url;a.target='_blank';a.rel='noopener';a.style.setProperty('--sc',s.color||'#7fe0a8');
+a.innerHTML='<span class="si"></span><b></b><small></small>';a.children[0].textContent=s.icon||'🧪';a.children[1].textContent=s.name;a.children[2].textContent=s.tag||'';P.appendChild(a)}
+const n=document.createElement('div');n.className='sn';n.textContent='More simulators coming soon.';P.appendChild(n)};draw(LIST);
+try{fetch('https://jacob711-oss.github.io/barycenter/sims.json',{cache:'no-cache'}).then(r=>r.ok?r.json():null).then(l=>{if(Array.isArray(l)&&l.length)draw(l.filter(s=>s&&typeof s.name==='string'&&/^https:\/\//.test(s.url||'')))}).catch(()=>{})}catch(e){}
+document.addEventListener('pointerdown',e=>{if(D.open&&!D.contains(e.target))D.open=false});document.addEventListener('keydown',e=>{if(e.key==='Escape')D.open=false})})()</script></div></div>
+    <div id="hMain" class="hview">
+      <button class="hb" id="hChal"><span class="ht">Challenges</span><span class="hd" id="hChalSub">Goals from easy to fiendish</span></button>
+      <button class="hb" id="hDemo"><span class="ht">Demo &amp; tutorial</span><span class="hd">Watch the highlights, or learn the controls step by step</span></button>
+      <button class="hb primary" id="hFree"><span class="ht">Free play</span><span class="hd">Any airport you like: unlimited runways and helipads, and no crashes</span></button>
+      <p class="hfoot">Small planes land on short runways, jets and jumbos on long ones, helicopters on helipads. Two planes too close together is a crash.</p>
+    </div>
+    <div id="hChalView" class="hview" hidden>
+      <div class="hbar"><button class="btn ghost hback">← Back</button><h2>Challenges</h2><span id="hStars" class="hstars"></span></div>
+      <p class="hfoot">Finish a challenge to unlock the next. Faster solutions earn more stars.</p>
+      <div id="hGrid" class="hgrid"></div>
+    </div>
+    <div id="hDemoView" class="hview" hidden>
+      <div class="hbar"><button class="btn ghost hback">← Back</button><h2>Demo &amp; tutorial</h2></div>
+      <button class="hb" id="hWatch"><span class="ht">Watch the demo</span><span class="hd">A tour of busy skies: regional strips, a giant hub and island hoppers</span></button>
+      <button class="hb primary" id="hTut"><span class="ht">Start the tutorial</span><span class="hd">Learn every control step by step; each step completes when you do it</span></button>
+    </div>
+  </div>
+</div>
+<div id="chHud" class="chhud panel" hidden aria-live="polite">
+  <div class="chtop"><span id="chNum" class="k"></span><span id="chTime" class="k"></span></div>
+  <div id="chTitle" class="chtitle"></div>
+  <div id="chGoal" class="chgoal"></div>
+  <div class="chbarw"><span id="chBar"></span></div>
+  <div class="chrow"><span id="chProg" class="chprog"></span><div class="chbtns"><button id="chHint" class="btn">Hint</button><button id="chRestart" class="btn">Restart</button><button id="chExit" class="btn ghost">Exit</button></div></div>
+</div>
+<div id="demoCap" class="democap panel" hidden><span class="k" id="demoStep"></span><h2 id="demoTitle"></h2><p id="demoText"></p><div class="actions"><button class="btn" id="demoNext">Next ›</button><button class="btn ghost" id="demoExit">Exit demo</button></div></div>
+<div id="acct" class="ovl" hidden role="dialog" aria-label="Accounts">
+  <div class="obox panel">
+    <div class="hbar"><h2>Accounts</h2><button class="btn" id="acctClose" aria-label="Close">×</button></div>
+    <p class="hfoot">Your stars, plays and time are saved in this browser on this device. Accounts are shared by all our simulators when they are opened from the same site.</p>
+    <div id="acctList" class="hview" style="gap:6px"></div>
+    <form id="acctForm" class="aform"><input id="acctNew" maxlength="20" placeholder="Your name" autocomplete="off"><input id="acctPin" maxlength="4" inputmode="numeric" placeholder="PIN (optional)" autocomplete="off"><button class="btn primary" type="submit">Create account</button></form>
+    <p class="hfoot" id="acctMsg" aria-live="polite"></p>
+  </div>
+</div>
+<div id="chDone" class="home donebg" hidden role="dialog" aria-label="Challenge result">
+  <div class="donecard panel">
+    <div id="dStars" class="dstars"></div><h2 id="dTitle"></h2><p id="dText" class="hfoot" style="font-size:13px"></p>
+    <div class="actions" style="justify-content:center"><button id="dNext" class="btn primary">Next challenge</button><button id="dRetry" class="btn">Try again</button><button id="dList" class="btn ghost">All challenges</button></div>
+  </div>
+</div>
+
+<script>
+const SIMLIST=[{"id": "barycenter", "icon": "🪐", "name": "Barycenter", "tag": "Gravity, planets, stars and black holes", "url": "https://jacob711-oss.github.io/barycenter/", "color": "#e8b04a"}, {"id": "biosphere", "icon": "🌿", "name": "Biosphere", "tag": "A living world of animals, plants and people", "url": "https://jacob711-oss.github.io/barycenter/life/", "color": "#7fe0a8"}, {"id": "lithosphere", "icon": "🌋", "name": "Lithosphere", "tag": "Drift continents, raise mountains and set off volcanoes", "url": "https://jacob711-oss.github.io/barycenter/lithosphere/", "color": "#ff8a5c"}, {"id": "troposphere", "icon": "🌀", "name": "Troposphere", "tag": "Steer winds, brew hurricanes and change the climate", "url": "https://jacob711-oss.github.io/barycenter/troposphere/", "color": "#60d6e6"}, {"id": "catalyst", "icon": "⚛️", "name": "Catalyst", "tag": "Mix atoms, spark reactions and build molecules", "url": "https://jacob711-oss.github.io/barycenter/catalyst/", "color": "#c48bff"}, {"id": "abyssal", "icon": "🐋", "name": "Abyssal", "tag": "Dive into a living ocean, from coral reefs to the deep sea", "url": "https://jacob711-oss.github.io/barycenter/abyssal/", "color": "#4fa3ff"}, {"id": "interchange", "icon": "🚉", "name": "Interchange", "tag": "Draw the transit lines of a growing city and keep everyone moving", "url": "https://jacob711-oss.github.io/barycenter/interchange/", "color": "#ff5ab4"}, {"id": "gridlock", "icon": "🚗", "name": "Gridlock", "tag": "Draw the roads of a growing town and keep the traffic flowing", "url": "https://jacob711-oss.github.io/barycenter/gridlock/", "color": "#ffd23a"}, {"id": "hivemind", "icon": "🐜", "name": "Hivemind", "tag": "Ant colonies that find food by following each other's scent trails", "url": "https://jacob711-oss.github.io/barycenter/hivemind/", "color": "#ff9a3d"}, {"id": "flux", "icon": "⚡", "name": "Flux", "tag": "Place charges and magnets, and watch the fields bend particles through space", "url": "https://jacob711-oss.github.io/barycenter/flux/", "color": "#5ae0ff"}, {"id": "seaway", "icon": "🚢", "name": "Seaway", "tag": "Run the shipping lanes of a sea full of islands and keep the cargo moving", "url": "https://jacob711-oss.github.io/barycenter/seaway/", "color": "#3ab8e0"}, {"id": "contrail", "icon": "✈️", "name": "Contrail", "tag": "Guide planes onto runways, keep them apart and run a busy airport", "url": "https://jacob711-oss.github.io/barycenter/contrail/", "color": "#9fa8ff"}],LB_GAME="contrail";
+/* ===== simulator kit: core helpers shared by every simulator ===== */
+const $=id=>document.getElementById(id);
+const clamp=(v,a,b)=>v<a?a:v>b?b:v,lerp=(a,b,t)=>a+(b-a)*t,rr=(a,b)=>a+Math.random()*(b-a),ri=(a,b)=>Math.floor(rr(a,b+1)),pick=a=>a[Math.floor(Math.random()*a.length)];
+const mod=(a,n)=>((a%n)+n)%n;
+let W=innerWidth,H=innerHeight,DPR=Math.min(2,devicePixelRatio||1);
+const S={t:0,speed:1,speedI:0,paused:false,sel:null,view:'normal',tool:'select',brush:4,follow:false};
+const cam={x:0,y:0,z:4,ox:0};
+const CNT={moved:0,zoomed:0,scen:0,find:0,tool:0,view:0};const bump=k=>{CNT[k]=(CNT[k]||0)+1};
+function toast(msg,ms=3200){const el=document.createElement('div');el.className='toast panel';el.textContent=msg;const box=$('toasts');box.appendChild(el);while(box.children.length>4)box.firstChild.remove();setTimeout(()=>el.remove(),ms)}
+const fmtN=(v,d=0)=>Number(v).toLocaleString(undefined,{maximumFractionDigits:d,minimumFractionDigits:d});
+/* challenges */
+const CH={active:null,idx:-1,events:[],hold:{},t0:0,real0:0,done:false,failed:'',loading:false,ref:{}};
+function chEv(k,d){if(CH.active&&!CH.done&&!CH.loading)CH.events.push({k,...(d||{}),t:S.t})}
+const evN=k=>CH.events.filter(e=>e.k===k).length;
+const evHas=f=>CH.events.some(f);
+// hold a condition for an amount of simulated time (in the simulator's own time units)
+function hold(key,cond,dur){if(!cond){CH.hold[key]=null;return 0}if(CH.hold[key]==null)CH.hold[key]=S.t;return Math.min(1,(S.t-CH.hold[key])/dur)}
+const realSecs=()=>(performance.now()-CH.real0)/1000;
+const byTime=(t3,t2)=>()=>{const s=realSecs();return s<=t3?3:s<=t2?2:1};
+const CHALS=[];const CC=(diff,o)=>CHALS.push({diff,...o});
+const TSTEPS=[];const DEMO=[];
+const since=()=>S.t-CH.t0;
+
+/* ================= Contrail: air traffic control and airports ================= */
+// The airspace is 120 x 80 km. A week lasts 60 seconds of game time.
+const WW=120,WH=80,WEEK=60;
+const PT={prop:{n:'Prop plane',ic:'🛩️',col:'#ffcf4a',sp:3.6,len:1.5,turn:1.6,need:'short'},jet:{n:'Jet',ic:'✈️',col:'#4ab8ff',sp:5.2,len:2.1,turn:1.2,need:'long'},
+  jumbo:{n:'Jumbo jet',ic:'🛫',col:'#ff6a6a',sp:4.6,len:2.9,turn:0.9,need:'long'},heli:{n:'Helicopter',ic:'🚁',col:'#5ad08a',sp:2.6,len:1.4,turn:3,need:'pad'}};
+const PK=Object.keys(PT),AIRL=['CX','QF','LH','AF','NZ','SK','KL','AC','IB','TK','EK','AY'];
+let PL=[],RW=[],PADS=[],LANDS=[],DEPQ=[],STORMS=[],HIST=[],PARTS=[],PID=1;
+const G={week:1,landed:0,departed:0,crashes:0,over:false,relaxed:false,choosing:false,spawnT:4,weekT:0,runways:0,pads:0,rush:false,storm:false,wind:false,heli:false,jumbo:false,labels:true,stormT:0};
+let MODE='classic',ROUTED=0,HOLDS=0,RWADD=0,PADADD=0,UPG=0,ALARMS=0,EVN=0,DRAG=null,HOVER=null,BEEPT=0;
+let RS=1;function R(){RS|=0;RS=RS+0x6D2B79F5|0;let t=Math.imul(RS^RS>>>15,1|RS);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}
+const angD=(a,b)=>{let d=b-a;while(d>Math.PI)d-=2*Math.PI;while(d<-Math.PI)d+=2*Math.PI;return d};
+function inPoly(x,y,P){let c=false;for(let i=0,j=P.length-1;i<P.length;j=i++){const [xi,yi]=P[i],[xj,yj]=P[j];if(((yi>y)!==(yj>y))&&(x<(xj-xi)*(y-yi)/(yj-yi)+xi))c=!c}return c}
+function blob(x,y,rx,ry,k){const P=[];for(let a=0;a<28;a++){const t=a/28*Math.PI*2,r=1+0.2*Math.sin(t*3+k)+0.1*Math.sin(t*5+k*2);P.push([x+Math.cos(t)*rx*r,y+Math.sin(t)*ry*r])}return P}
+let SEA=[],AP=[];// sea shapes for the map, and named airports
+/* ---------- runways and helipads ---------- */
+function addRunway(x1,y1,x2,y2,ap){const L=Math.hypot(x2-x1,y2-y1),r={id:RW.length,x1,y1,x2,y2,len:L,cls:L>=11?'long':'short',ap:ap??nearAP(x1,y1),landed:0,busyT:0};RW.push(r);return r}
+function nearAP(x,y){let b=0,bd=1e9;AP.forEach((a,k)=>{const d=Math.hypot(a.x-x,a.y-y);if(d<bd){bd=d;b=k}});return AP.length?b:0}
+function addPad(x,y,ap){const p={id:PADS.length,x,y,ap:ap??nearAP(x,y),landed:0};PADS.push(p);return p}
+const fits=(t,r)=>t==='heli'||(PT[t].need==='short'?true:r.cls==='long');
+/* ---------- planes ---------- */
+function spawnArrival(type){if(PL.filter(p=>p.state==='fly').length>=30)return null;const side=Math.floor(R()*4),u=0.1+R()*0.8;let x,y;if(side===0){x=u*WW;y=-2}else if(side===1){x=WW+2;y=u*WH}else if(side===2){x=u*WW;y=WH+2}else{x=-2;y=u*WH}
+  if(!type){const pool=['prop','prop','jet','jet','jet'];if(G.jumbo||G.week>=2)pool.push('jumbo');if(G.heli||PADS.length)pool.push('heli');type=pick(pool)}
+  const a=Math.atan2(WH/2+(R()-0.5)*40-y,WW/2+(R()-0.5)*60-x),p={id:PID++,code:pick(AIRL)+' '+(100+Math.floor(R()*899)),type,x,y,a,sp:PT[type].sp,path:[],state:'fly',hold:false,born:S.t,warn:false};PL.push(p);return p}
+function spawnDeparture(q){const rs=RW.filter(r=>fits(q.type,r)&&r.busyT<=0&&!PL.some(p=>Math.hypot(p.x-r.x1,p.y-r.y1)<5||(p.state==='land'&&p.rw===r)));if(!rs.length)return false;const r=pick(rs),a=Math.atan2(r.y2-r.y1,r.x2-r.x1);
+  PL.push({id:PID++,code:pick(AIRL)+' '+(100+Math.floor(R()*899)),type:q.type,x:r.x1,y:r.y1,a,sp:PT[q.type].sp*0.4,path:[],state:'takeoff',rw:r,born:S.t,alt:0});r.busyT=4;return true}
+function tryLand(p){if(p.state!=='fly'||p.hold)return;const t=p.type;
+  if(t==='heli'){for(const pad of PADS)if(Math.hypot(pad.x-p.x,pad.y-p.y)<1.3){land(p,null,pad);return}}
+  for(const r of RW){if(!fits(t,r))continue;for(const [tx,ty,ex,ey] of [[r.x1,r.y1,r.x2,r.y2],[r.x2,r.y2,r.x1,r.y1]]){if(Math.hypot(tx-p.x,ty-p.y)>2.4)continue;const ra=Math.atan2(ey-ty,ex-tx);if(t==='heli'||Math.abs(angD(p.a,ra))<1.0){p.state='land';p.rw=r;p.end=[ex,ey];p.a=ra;p.path=[];r.busyT=3;return}}}}
+function land(p,r,pad){p.dead=true;G.landed++;if(r)r.landed++;if(pad)pad.landed++;LANDS.push({t:S.t,type:p.type});chEv('land',{type:p.type,ap:r?r.ap:pad?pad.ap:0,code:p.code});FX(p.x,p.y,PT[p.type].col,true);if(p.type!=='heli'||RW.length)DEPQ.push({type:p.type==='heli'&&!RW.length?'heli':p.type,t:10+R()*12})}
+function planeStep(p,dt){const T=PT[p.type];let sp=p.sp*(STORMS.some(s=>Math.hypot(s.x-p.x,s.y-p.y)<s.r)?0.55:1);
+  if(p.state==='land'){p.sp=Math.max(T.sp*0.35,p.sp-T.sp*0.5*dt);p.x+=Math.cos(p.a)*p.sp*dt;p.y+=Math.sin(p.a)*p.sp*dt;p.roll=(p.roll||0)+p.sp*dt;if(p.roll>=Math.min(p.rw?p.rw.len*0.6:2,9)){land(p,p.rw)}return}
+  if(p.state==='takeoff'){p.sp=Math.min(T.sp,p.sp+T.sp*0.5*dt);p.x+=Math.cos(p.a)*p.sp*dt;p.y+=Math.sin(p.a)*p.sp*dt;p.alt=Math.min(1,(p.alt||0)+dt*0.25);if(p.alt>=1)p.state='climb';return}
+  if(p.state==='climb'){p.x+=Math.cos(p.a)*sp*dt;p.y+=Math.sin(p.a)*sp*dt;if(p.x<-4||p.y<-4||p.x>WW+4||p.y>WH+4){p.dead=true;G.departed++;chEv('depart',{type:p.type})}return}
+  // flying: follow the drawn path, circle if holding, otherwise fly straight and turn back at the edge
+  let want=null;if(p.path.length){const [tx,ty]=p.path[0];if(Math.hypot(tx-p.x,ty-p.y)<0.6+0.4*T.sp/T.turn){p.path.shift();if(!p.path.length)tryLand(p)}else want=Math.atan2(ty-p.y,tx-p.x)}
+  if(p.hold&&!p.path.length)p.a+=T.turn*0.55*dt;else if(want!=null){const d=angD(p.a,want);p.a+=clamp(d,-T.turn*dt,T.turn*dt)}
+  else if(p.x<3||p.y<3||p.x>WW-3||p.y>WH-3){if(S.t-p.born>4){const d=angD(p.a,Math.atan2(WH/2-p.y,WW/2-p.x));p.a+=clamp(d,-T.turn*dt,T.turn*dt)}}
+  if(G.wind){p.x+=0.6*dt;}p.x+=Math.cos(p.a)*sp*dt;p.y+=Math.sin(p.a)*sp*dt;tryLand(p)}
+function separation(dt){const air=PL.filter(p=>!p.dead&&(p.state==='fly'||p.state==='climb'));for(const p of air)p.warn=false;
+  for(let i=0;i<air.length;i++)for(let j=i+1;j<air.length;j++){const a=air[i],b=air[j],d=Math.hypot(a.x-b.x,a.y-b.y);if(d<4.5){a.warn=b.warn=true}
+    if(d<1.3&&!G.relaxed){crash(a,b);return}}
+  if(air.some(p=>p.warn)){BEEPT-=dt;if(BEEPT<=0){BEEPT=2.5;ALARMS++;chEv('alarm',{});if(!quiet())beep(1046,0.12,0.04)}}}
+function crash(a,b){G.crashes++;chEv('crash',{});FX(a.x,a.y,'#ff5040');a.dead=b.dead=true;if(G.relaxed)return;G.over=true;if(CH.loading)return;const box=document.createElement('div');box.className='weekbox';box.innerHTML=`<div class="weekcard panel"><span class="k">Week ${G.week}</span><h2>Mid-air collision 💥</h2><p class="hfoot">${a.code} and ${b.code} flew too close. Your tower landed <b>${fmtN(G.landed)}</b> planes.</p><div class="actions" style="justify-content:center"><button class="btn primary" id="goRelax">Keep playing (relaxed)</button><button class="btn" id="goAgain">Start again</button></div></div>`;document.body.appendChild(box);
+  box.querySelector('#goRelax').onclick=()=>{G.over=false;G.relaxed=true;box.remove();syncPanel()};box.querySelector('#goAgain').onclick=()=>{box.remove();loadScen(S.scen)};flyToW(a.x,a.y,Math.max(cam.z,10))}
+const quiet=()=>CH.loading||!$('home').hidden||document.body.classList.contains('mDemo');
+let ACTX=null;function beep(f,d,v){try{ACTX=ACTX||new (window.AudioContext||window.webkitAudioContext)();const o=ACTX.createOscillator(),g=ACTX.createGain();o.type='sine';o.frequency.value=f;o.connect(g);g.connect(ACTX.destination);const t=ACTX.currentTime;g.gain.setValueAtTime(v||0.05,t);g.gain.exponentialRampToValueAtTime(0.0001,t+d);o.start(t);o.stop(t+d)}catch(e){}}
+/* ---------- weeks and upgrades ---------- */
+function weekUp(){G.week++;UPG++;if(MODE==='free'||quiet()){if(!quiet())toast(`Week ${G.week}`);G.runways++;return}const all=[['runway','🛬','New runway','Build another runway anywhere'],['pad','🚁','Helipad','Helicopters start arriving'],['jumbo','🛫','Jumbo jets','Big planes, more passengers'],['slow','🐢','Slower approach','Arriving planes fly 10% slower']].filter(o=>!(o[0]==='jumbo'&&G.jumbo));
+  const opts=[];while(opts.length<2){const o=pick(all);if(!opts.includes(o))opts.push(o)}G.choosing=true;const box=document.createElement('div');box.className='weekbox';box.innerHTML=`<div class="weekcard panel"><span class="k">Week ${G.week}</span><h2>Pick an upgrade ✈️</h2><div class="wopts"></div></div>`;
+  for(const [k,ic,n,d] of opts){const b=document.createElement('button');b.className='wopt';b.innerHTML=`<span class="ic">${ic}</span><b>${n}</b><span>${d}</span>`;b.onclick=()=>{grant(k);box.remove();G.choosing=false;toast(`${ic} ${n}`)};box.querySelector('.wopts').appendChild(b)}document.body.appendChild(box)}
+function grant(k){if(k==='runway')G.runways++;else if(k==='pad'){G.pads++;G.heli=true}else if(k==='jumbo')G.jumbo=true;else if(k==='slow')for(const t of PK)PT[t].sp*=0.9;chEv('upgrade',{k});syncPanel()}
+/* ---------- airports ---------- */
+const SPEEDS0=Object.fromEntries(PK.map(k=>[k,PT[k].sp]));
+function clearSky(){PL=[];RW=[];PADS=[];LANDS=[];DEPQ=[];STORMS=[];HIST=[];PARTS=[];SEA=[];AP=[];for(const k of PK)PT[k].sp=SPEEDS0[k];Object.assign(G,{week:1,landed:0,departed:0,crashes:0,over:false,relaxed:false,choosing:false,spawnT:3,weekT:0,runways:0,pads:0,rush:false,storm:false,wind:false,heli:false,jumbo:false,stormT:0});document.querySelectorAll('.weekbox').forEach(b=>b.remove())}
+const SCENS={
+  regional:()=>{RS=5;SEA.push(blob(110,70,22,16,1));AP.push({n:'Millbrook Regional',x:60,y:40});addRunway(52,40,68,40,0);addRunway(56,34,63,46,0)},
+  hub:()=>{RS=9;SEA.push(blob(-6,10,22,24,2));AP.push({n:'Grand Central Intl',x:62,y:40});addRunway(50,34,72,34,0);addRunway(50,46,72,46,0);addRunway(76,30,82,38,0);addPad(62,40,0);G.jumbo=true;G.heli=true},
+  islands:()=>{RS=13;SEA.push([[-5,-5],[125,-5],[125,85],[-5,85]]);SEA.push(blob(32,40,16,13,1),blob(90,38,15,14,3));AP.push({n:'West Isle',x:32,y:40},{n:'East Isle',x:90,y:38});addRunway(24,40,40,40,0);addRunway(86,32,94,44,1)},
+  twin:()=>{RS=17;SEA.push(blob(60,90,40,14,1));AP.push({n:'North Field',x:36,y:24},{n:'South Field',x:84,y:56});addRunway(28,24,44,24,0);addRunway(33,29,38,20,0);addRunway(76,56,92,56,1);addPad(84,62,1);G.heli=true},
+  mountain:()=>{RS=21;AP.push({n:'Alpine Strip',x:60,y:44});addRunway(54,44,63,44,0);addPad(66,48,0);G.heli=true},
+};
+const SCENLIST=[{id:'regional',name:'Millbrook Regional',desc:'A small airport with two crossing runways. A gentle start.'},{id:'hub',name:'Grand Central',desc:'A giant hub: parallel runways, jumbos and a helipad.'},{id:'islands',name:'Island hopper',desc:'Two island airports over open sea.'},{id:'twin',name:'Twin fields',desc:'Two airports share one busy sky.'},{id:'mountain',name:'Alpine strip',desc:'One short runway and a helipad in the mountains.'}];
+/* ---------- panel ---------- */
+function FX(x,y,col,small){PARTS.push({x,y,col,age:0,small:!!small})}
+const inf=v=>v>=1e5?'∞':v;
+function syncPanel(){const inv=$('inv');if(!inv)return;inv.innerHTML=`<div>🛬 Landed <b>${fmtN(G.landed)}</b></div><div>🛫 Departed <b>${fmtN(G.departed)}</b></div><div>✈️ In the air <b>${PL.filter(p=>p.state==='fly').length}</b></div><div>⏳ Waiting to leave <b>${DEPQ.length}</b></div><div>🛣️ Spare runways <b>${inf(G.runways)}</b></div><div>🚁 Spare helipads <b>${inf(G.pads)}</b></div>`;
+  $('relaxBtn').setAttribute('aria-pressed',G.relaxed);$('relaxBtn').textContent=G.relaxed?'On':'Off';$('lblBtn').setAttribute('aria-pressed',G.labels);$('lblBtn').textContent=G.labels?'On':'Off';
+  const lab={rush:'🛬 Rush hour',storm:'⛈ Storms',wind:'🌬 Strong wind'};document.querySelectorAll('[data-ev]').forEach(b=>{const L=lab[b.dataset.ev];if(!L)return;b.setAttribute('aria-pressed',G[b.dataset.ev]);b.textContent=G[b.dataset.ev]?'■ Stop '+L.slice(2).trim().toLowerCase():L})}
+$('relaxBtn').onclick=()=>{G.relaxed=!G.relaxed;chEv('relax',{});syncPanel()};$('lblBtn').onclick=()=>{G.labels=!G.labels;syncPanel()};
+document.querySelectorAll('[data-ev]').forEach(b=>b.onclick=()=>{const ev=b.dataset.ev;EVN++;chEv('event',{ev});if(ev==='normal'){G.rush=G.storm=G.wind=false;STORMS=[];toast('All events stopped')}else{G[ev]=!G[ev];if(!G[ev]&&ev==='storm')STORMS=[];if(G[ev])toast({rush:'🛬 Rush hour: twice as many arrivals',storm:'⛈ Storm cells drift across the sky: planes slow right down inside',wind:'🌬 A strong wind pushes every plane east'}[ev])}syncPanel()});
+/* ---------- drawing ---------- */
+function planeShape(c,type,L){c.beginPath();if(type==='heli'){c.ellipse(0,0,L*0.45,L*0.3,0,0,7);c.moveTo(-L*0.4,0);c.lineTo(-L*1.0,0);c.lineWidth=Math.max(1,L*0.12);return 'heli'}
+  const w=type==='prop'?0.9:type==='jumbo'?1.05:0.95;c.moveTo(L*0.55,0);c.quadraticCurveTo(L*0.45,-L*0.1,L*0.2,-L*0.09);c.lineTo(0.02*L,-L*0.55*w);c.lineTo(-L*0.12,-L*0.55*w);c.lineTo(-L*0.08,-L*0.09);c.lineTo(-L*0.38,-L*0.08);c.lineTo(-L*0.48,-L*0.26);c.lineTo(-L*0.55,-L*0.26);c.lineTo(-L*0.5,0);
+  c.lineTo(-L*0.55,L*0.26);c.lineTo(-L*0.48,L*0.26);c.lineTo(-L*0.38,L*0.08);c.lineTo(-L*0.08,L*0.09);c.lineTo(-L*0.12,L*0.55*w);c.lineTo(0.02*L,L*0.55*w);c.lineTo(L*0.2,L*0.09);c.quadraticCurveTo(L*0.45,L*0.1,L*0.55,0);c.closePath();return 'plane'}
+function render(c,now){const z=cam.z,v=S.view,radar=v==='radar',night=v==='night';c.fillStyle=radar?'#020a06':night?'#04060e':'#2a3a2c';c.fillRect(0,0,W,H);
+  c.fillStyle=radar?'#04140b':night?'#0a1018':'#9db58a';c.fillRect(sx(0),sy(0),WW*z,WH*z);
+  if(!radar){c.save();c.beginPath();c.rect(sx(0),sy(0),WW*z,WH*z);c.clip();c.beginPath();for(const P of SEA){P.forEach(([x,y],i)=>i?c.lineTo(sx(x),sy(y)):c.moveTo(sx(x),sy(y)));c.closePath()}c.fillStyle=night?'#071a30':'#6aa9cf';c.fill('evenodd');
+    if(S.scen==='mountain'){c.strokeStyle=night?'rgba(150,170,200,.18)':'rgba(70,60,40,.25)';c.lineWidth=1.5;for(const [x,y,r] of [[25,20,10],[95,22,12],[30,64,9],[98,62,11]])for(let k=1;k<=4;k++){c.beginPath();c.arc(sx(x),sy(y),r*z*k/4,0,7);c.stroke()}}c.restore()}
+  // radar rings and range lines
+  c.strokeStyle=radar?'rgba(80,255,140,.18)':'rgba(255,255,255,.08)';c.lineWidth=1;for(let r=10;r<80;r+=10){c.beginPath();c.arc(sx(WW/2),sy(WH/2),r*z,0,7);c.stroke()}
+  if(radar){const a=(now/1000)%(Math.PI*2);const g=c.createConicGradient?c.createConicGradient(a,sx(WW/2),sy(WH/2)):null;if(g){g.addColorStop(0,'rgba(80,255,140,.25)');g.addColorStop(0.08,'rgba(80,255,140,0)');g.addColorStop(1,'rgba(80,255,140,0)');c.fillStyle=g;c.fillRect(sx(0),sy(0),WW*z,WH*z)}}
+  for(const s of STORMS){const g=c.createRadialGradient(sx(s.x),sy(s.y),0,sx(s.x),sy(s.y),s.r*z);g.addColorStop(0,'rgba(120,60,200,.45)');g.addColorStop(1,'rgba(120,60,200,0)');c.fillStyle=g;c.beginPath();c.arc(sx(s.x),sy(s.y),s.r*z,0,7);c.fill()}
+  // airports, runways and helipads
+  for(const a of AP){if(z>3){c.fillStyle=radar?'rgba(80,255,140,.7)':'rgba(255,255,255,.8)';c.font=`600 ${Math.max(10,z*0.9)|0}px "IBM Plex Mono",monospace`;c.textAlign='center';c.fillText(a.n,sx(a.x),sy(a.y+9))}}
+  for(const r of RW){const a=Math.atan2(r.y2-r.y1,r.x2-r.x1),w=Math.max(5,z*1.1),col=r.cls==='long'?'#4ab8ff':'#ffcf4a';c.save();c.translate(sx(r.x1),sy(r.y1));c.rotate(a);const L=r.len*z;
+    c.fillStyle=radar?'#0c2a18':'#2b2d33';c.fillRect(-w*0.3,-w/2,L+w*0.6,w);c.strokeStyle=col;c.lineWidth=2;c.strokeRect(-w*0.3,-w/2,L+w*0.6,w);c.strokeStyle='rgba(255,255,255,.7)';c.lineWidth=Math.max(1,w*0.08);c.setLineDash([w*0.6,w*0.5]);c.beginPath();c.moveTo(w*0.5,0);c.lineTo(L-w*0.5,0);c.stroke();c.setLineDash([]);
+    c.fillStyle=col;for(const [x,d] of [[0,1],[L,-1]]){c.beginPath();c.moveTo(x-d*w*1.4,0);c.lineTo(x-d*w*0.4,-w*0.4);c.lineTo(x-d*w*0.4,w*0.4);c.closePath();c.fill()}c.restore()}
+  for(const p of PADS){const X=sx(p.x),Y=sy(p.y),r=Math.max(6,z*0.9);c.fillStyle=radar?'#0c2a18':'#2b2d33';c.beginPath();c.arc(X,Y,r,0,7);c.fill();c.strokeStyle='#5ad08a';c.lineWidth=2;c.stroke();c.fillStyle='#5ad08a';c.font=`700 ${r|0}px sans-serif`;c.textAlign='center';c.textBaseline='middle';c.fillText('H',X,Y+1);c.textBaseline='alphabetic'}
+  if(DRAG&&DRAG.rw){c.strokeStyle='rgba(255,255,255,.6)';c.setLineDash([6,6]);c.lineWidth=Math.max(5,z*1.1);c.beginPath();c.moveTo(sx(DRAG.rw[0]),sy(DRAG.rw[1]));c.lineTo(sx(DRAG.rw[2]),sy(DRAG.rw[3]));c.stroke();c.setLineDash([])}
+  // flight paths, then planes
+  for(const p of PL){if(!p.path.length)continue;c.strokeStyle=PT[p.type].col;c.globalAlpha=0.7;c.lineWidth=2;c.setLineDash([4,5]);c.beginPath();c.moveTo(sx(p.x),sy(p.y));for(const [x,y] of p.path)c.lineTo(sx(x),sy(y));c.stroke();c.setLineDash([]);c.globalAlpha=1}
+  for(const p of PL){if(p.dead)continue;const T=PT[p.type],X=sx(p.x),Y=sy(p.y);let L=Math.max(14,z*T.len);if(p.state==='land')L*=Math.max(0.6,p.sp/T.sp*0.6+0.4);if(p.state==='takeoff')L*=0.6+0.4*(p.alt||0);
+    if(radar){c.fillStyle='#50ff8c';c.beginPath();c.arc(X,Y,3,0,7);c.fill()}else{c.save();c.translate(X+L*0.25,Y+L*0.35);c.rotate(p.a);c.fillStyle='rgba(0,0,0,.22)';planeShape(c,p.type,L);c.fill();c.restore();
+      c.save();c.translate(X,Y);c.rotate(p.a);const kind=planeShape(c,p.type,L);c.fillStyle=night?T.col:'#f6f6fa';if(night){c.shadowColor=T.col;c.shadowBlur=10}c.fill();c.shadowBlur=0;c.strokeStyle=T.col;c.lineWidth=Math.max(1.5,L*0.06);c.stroke();
+      if(kind==='heli'){c.strokeStyle='rgba(30,30,30,.55)';c.lineWidth=1.5;const ra=now*0.03;c.beginPath();c.moveTo(Math.cos(ra)*L*0.7,Math.sin(ra)*L*0.7);c.lineTo(-Math.cos(ra)*L*0.7,-Math.sin(ra)*L*0.7);c.moveTo(-Math.sin(ra)*L*0.7,Math.cos(ra)*L*0.7);c.lineTo(Math.sin(ra)*L*0.7,-Math.cos(ra)*L*0.7);c.stroke()}c.restore()}
+    if(p.warn){c.strokeStyle=`rgba(255,60,60,${0.5+0.5*Math.sin(now*0.02)})`;c.lineWidth=2;c.beginPath();c.arc(X,Y,2.25*z,0,7);c.stroke()}
+    if(p.hold){c.strokeStyle='rgba(255,255,255,.35)';c.setLineDash([3,4]);c.beginPath();c.arc(X,Y,L*1.2,0,7);c.stroke();c.setLineDash([])}
+    if(G.labels&&p.state==='fly'){c.fillStyle=radar?'#50ff8c':'#fff';c.font=`600 ${Math.max(10,Math.min(14,z*0.8))|0}px "IBM Plex Mono",monospace`;c.textAlign='left';c.fillText(`${p.code}`,X+L*0.6,Y-L*0.5)}
+    if(S.sel&&S.sel.p===p){c.strokeStyle='#ffd23a';c.lineWidth=2;c.beginPath();c.arc(X,Y,L*1.1,0,7);c.stroke()}}
+  for(const p of PARTS){c.strokeStyle=p.col;c.globalAlpha=Math.max(0,1-p.age);c.lineWidth=2;c.beginPath();c.arc(sx(p.x),sy(p.y),z*(p.small?1:2)+p.age*z*(p.small?2:6),0,7);c.stroke()}c.globalAlpha=1}
+/* ---------- tools ---------- */
+function nearPlane(x,y,r){let b=null,bd=r;for(const p of PL){if(p.dead||p.state!=='fly')continue;const d=Math.hypot(p.x-x,p.y-y);if(d<bd){bd=d;b=p}}return b}
+function distSeg(px,py,r){const dx=r.x2-r.x1,dy=r.y2-r.y1,t=clamp(((px-r.x1)*dx+(py-r.y1)*dy)/(dx*dx+dy*dy||1),0,1);return Math.hypot(r.x1+dx*t-px,r.y1+dy*t-py)}
+const SIM={id:'contrail',name:'Contrail',defTool:'route',world:{w:WW,h:WH,wrapX:false,maxZ:30,followZ:14},home:'hub',freeScen:'hub',tutScen:'regional',defSpeed:1,homeSpeed:1,inspectTab:'insp',canFollow:true,
+  speeds:[['½×',0.5],['1×',1],['2×',2],['3×',3]],fmtRate:v=>`${v}× speed`,
+  dateTxt:()=>`Week ${G.week}`,dateSub:()=>`${fmtN(G.landed)} landed · ${fmtN(G.departed)} departed`,stepSize:()=>0.04,
+  tools:[['',[['select','👆','Inspect']]],['Tower',[['route','✏️','Flight path','Drag from a plane to draw where it should fly. End the path at a runway end, lined up with it, to land.'],['hold','🔁','Hold','Click a plane to make it circle until you give it a new path.']]],
+    ['Build',[['runway','🛬','Runway','Drag to build a runway. 11 km or longer is a long runway for jets.'],['pad','🚁','Helipad','Click to build a helipad.'],['erase','🧽','Remove','Click a runway or helipad to remove it.']]]],
+  scens:SCENLIST,
+  load(id){clearSky();(SCENS[id]||SCENS.regional)();if(MODE==='free'&&$('home').hidden){G.runways=G.pads=1e6;G.relaxed=true;G.jumbo=G.heli=true}syncPanel()},
+  after(){if(!$('home').hidden)return;setTool('route')},
+  step(dt){if(G.over||G.choosing)return;G.weekT+=dt;G.spawnT-=dt*(G.rush?2:1);if(G.spawnT<=0){G.spawnT=Math.max(3.2,9-G.week*0.6)*(0.8+R()*0.4);spawnArrival()}
+    for(const q of DEPQ)q.t-=dt;for(let i=0;i<DEPQ.length;i++)if(DEPQ[i].t<=0&&spawnDeparture(DEPQ[i])){DEPQ.splice(i,1);break}
+    for(const r of RW)r.busyT-=dt;
+    if(G.storm){G.stormT-=dt;if(G.stormT<=0&&STORMS.length<4){G.stormT=6;STORMS.push({x:-8,y:10+R()*60,r:6+R()*5,vx:1.2+R(),vy:(R()-0.5)})}for(const s of STORMS){s.x+=s.vx*dt;s.y+=s.vy*dt}STORMS=STORMS.filter(s=>s.x<WW+15)}
+    for(const p of PL)planeStep(p,dt);separation(dt);PL=PL.filter(p=>!p.dead);
+    if(G.weekT>=WEEK){G.weekT=0;weekUp()}},
+  frame(dt){for(const p of PARTS)p.age+=dt*1.2;PARTS=PARTS.filter(p=>p.age<1)},
+  render,
+  stats:()=>[['Landed',fmtN(G.landed)],['Departed',fmtN(G.departed)],['In the air',PL.filter(p=>p.state==='fly').length],['Week',G.week]],
+  hud(){const last=HIST[HIST.length-1];if(!last||S.t-last.t>=2)HIST.push({t:S.t,l:G.landed});if(HIST.length>300)HIST.shift();syncPanel();renderStats();renderInspect()},
+  pick(wx,wy){const p=nearPlane(wx,wy,2.5)||PL.find(q=>Math.hypot(q.x-wx,q.y-wy)<2.5);if(p)return{p};for(const r of RW)if(distSeg(wx,wy,r)<1.5)return{r};for(const pad of PADS)if(Math.hypot(pad.x-wx,pad.y-wy)<1.5)return{pad};return null},
+  selPos(s){return s.p&&!s.p.dead?[s.p.x,s.p.y]:null},
+  pointer(type,wx,wy){HOVER=[wx,wy];const t=S.tool;
+    if(t==='route'){if(type==='down'){const p=nearPlane(wx,wy,3);if(p){p.path=[];p.hold=false;DRAG={p,last:[p.x,p.y]}}else DRAG=null}else if(type==='drag'&&DRAG&&DRAG.p){const [lx,ly]=DRAG.last;if(Math.hypot(wx-lx,wy-ly)>0.7){DRAG.p.path.push([wx,wy]);DRAG.last=[wx,wy]}}
+      else if(type==='up'&&DRAG&&DRAG.p){if(DRAG.p.path.length>1){ROUTED++;chEv('route',{})}DRAG=null}return}
+    if(t==='runway'){if(type==='down')DRAG={rw:[wx,wy,wx,wy]};else if(type==='drag'&&DRAG&&DRAG.rw){const [x0,y0]=DRAG.rw,L=Math.hypot(wx-x0,wy-y0),k=L>22?22/L:1;DRAG.rw[2]=x0+(wx-x0)*k;DRAG.rw[3]=y0+(wy-y0)*k}
+      else if(type==='up'&&DRAG&&DRAG.rw){const [x1,y1,x2,y2]=DRAG.rw;DRAG=null;if(Math.hypot(x2-x1,y2-y1)<5){toast('Drag further: a runway must be at least 5 km long');return}if(G.runways<=0){toast('No runways left: pick one as a weekly upgrade');return}G.runways--;if(!AP.length)AP.push({n:'New Field',x:(x1+x2)/2,y:(y1+y2)/2});const r=addRunway(x1,y1,x2,y2);RWADD++;chEv('runway',{cls:r.cls});toast(`🛬 ${r.cls==='long'?'Long':'Short'} runway open`);syncPanel()}return}
+    if(type!=='down')return;
+    if(t==='hold'){const p=nearPlane(wx,wy,3);if(!p){toast('Click a plane in the air');return}p.hold=true;p.path=[];HOLDS++;chEv('hold',{});toast(`🔁 ${p.code} is holding`);return}
+    if(t==='pad'){if(G.pads<=0){toast('No helipads left: pick one as a weekly upgrade');return}G.pads--;G.heli=true;if(!AP.length)AP.push({n:'Heliport',x:wx,y:wy});addPad(wx,wy);PADADD++;chEv('pad',{});toast('🚁 Helipad open');syncPanel();return}
+    if(t==='erase'){const r=RW.find(r=>distSeg(wx,wy,r)<1.5);if(r){RW.splice(RW.indexOf(r),1);G.runways++;syncPanel();return}const p=PADS.find(p=>Math.hypot(p.x-wx,p.y-wy)<1.5);if(p){PADS.splice(PADS.indexOf(p),1);G.pads++;syncPanel()}}},
+  hover(wx,wy){HOVER=[wx,wy]},
+  find(q){const out=[],add=(label,sub,go)=>out.push({label,sub,go});const Q=q.toLowerCase();
+    for(const p of PL)if(p.code.toLowerCase().replace(' ','').includes(Q.replace(' ',''))||PT[p.type].n.toLowerCase().includes(Q))add(`${PT[p.type].ic} ${p.code}`,PT[p.type].n,()=>{S.sel={p};S.follow=true;flyToW(p.x,p.y,12);showTab('insp')});
+    for(const a of AP)if(a.n.toLowerCase().includes(Q))add(`🛬 ${a.n}`,'airport',()=>flyToW(a.x,a.y,8));
+    for(const [,items] of SIM.tools)for(const [id,ico,name] of items)if(id!=='select'&&name.toLowerCase().includes(Q))add(`${ico} ${name}`,'tool',()=>setTool(id));
+    for(const s of SCENLIST)if(s.name.toLowerCase().includes(Q))add('Airport: '+s.name,s.desc,()=>{loadScen(s.id);toast(s.name)});return out.slice(0,12)},
+  tabShown(id){if(id==='stats')renderStats(true)},selChanged(){renderInspect()},
+};
+function kv(rows){return rows.map(([k,v])=>`<div><span class="k">${k}</span><span class="v">${v}</span></div>`).join('')}
+function renderStats(force){if($('pane-stats').hidden&&!force)return;const by={};for(const l of LANDS)by[l.type]=(by[l.type]||0)+1;
+  $('cStats').innerHTML=kv([['Landed',fmtN(G.landed)],['Departed',fmtN(G.departed)],...PK.map(k=>[PT[k].ic+' '+PT[k].n+' landings',by[k]||0]),['Near misses',ALARMS],['Crashes',G.crashes]]);
+  const g=$('graph'),gc=g.getContext('2d'),w=g.width=g.clientWidth*DPR,hh=g.height=g.clientHeight*DPR;gc.clearRect(0,0,w,hh);if(HIST.length>1){const t0=HIST[0].t,t1=HIST[HIST.length-1].t,m=Math.max(5,HIST[HIST.length-1].l);gc.strokeStyle='#9fa8ff';gc.lineWidth=2*DPR;gc.beginPath();HIST.forEach((p,i)=>{const x=8+(w-16)*(p.t-t0)/Math.max(1e-6,t1-t0),y=hh-6-(hh-12)*p.l/m;i?gc.lineTo(x,y):gc.moveTo(x,y)});gc.stroke()}
+  const L=$('fList');L.textContent='';for(const p of PL.filter(p=>p.state==='fly').slice(0,10)){const r=document.createElement('button');r.className='sprow';r.innerHTML='<i></i><span></span><b></b>';r.children[0].style.background=PT[p.type].col;r.children[1].textContent=`${PT[p.type].ic} ${p.code}`;r.children[2].textContent=p.hold?'holding':p.path.length?'on a path':'no path';r.onclick=()=>{S.sel={p};flyToW(p.x,p.y,12);showTab('insp')};L.appendChild(r)}}
+function renderInspect(){const s=S.sel;$('inspEmpty').hidden=!!s;$('inspBody').hidden=!s;if(!s)return;const body=$('inspBody');
+  if(s.p){const p=s.p,T=PT[p.type];if(p.dead){body.innerHTML=`<h2 class="ititle">${T.ic} ${p.code}</h2><p class="note">This flight has left your airspace.</p>`;return}
+    body.innerHTML=`<h2 class="ititle" style="color:${T.col}">${T.ic} ${p.code}</h2><div class="isub">${T.n}</div><div class="kv">${kv([['Status',{fly:p.hold?'Holding':p.path.length?'Following your path':'Waiting for a path',land:'Landing',takeoff:'Taking off',climb:'Climbing away'}[p.state]],['Lands on',T.need==='short'?'any runway':T.need==='long'?'long runways':'helipads or runways'],['Speed',Math.round(p.sp*60)+' km/h'],['Heading',Math.round(((p.a*180/Math.PI)+450)%360)+'°']])}</div>`;return}
+  if(s.r){const r=s.r;body.innerHTML=`<h2 class="ititle" style="color:${r.cls==='long'?'#4ab8ff':'#ffcf4a'}">🛬 ${r.cls==='long'?'Long':'Short'} runway</h2><div class="isub">${AP[r.ap]?AP[r.ap].n:''}</div><div class="kv">${kv([['Length',r.len.toFixed(1)+' km'],['Landings',r.landed],['Takes',r.cls==='long'?'every plane':'prop planes and helicopters']])}</div>`;return}
+  if(s.pad){body.innerHTML=`<h2 class="ititle" style="color:#5ad08a">🚁 Helipad</h2><div class="kv">${kv([['Landings',s.pad.landed]])}</div>`}}
+// home page: Classic mode button; Free play means anything goes
+{const f=$('hFree');const b=document.createElement('button');b.className='hb';b.id='hClassic';b.innerHTML='<span class="ht">Classic</span><span class="hd">Planes keep coming. Build runways as weekly upgrades. One mid-air collision and it is over.</span>';f.before(b);
+  b.onclick=()=>{MODE='classic';leaveHome();loadScen('regional');setSpeed(SIM.defSpeed);countPlay();toast('Classic: land them all, safely!')};
+  document.addEventListener('pointerdown',e=>{if(e.target.closest('#hFree'))MODE='free';else if(e.target.closest('#home,#chDone,#hClassic'))MODE='classic'},true)}
+
+/* ================= Contrail: autopilot for the home screen and demo, challenges, tutorial ================= */
+// autopilot: line each plane up with a fitting runway end (or helipad) and send it in
+function autoPilot(){for(const p of PL){if(p.state!=='fly'||p.path.length||p.hold)continue;let best=null,bd=1e9;
+    if(p.type==='heli')for(const pad of PADS){const d=Math.hypot(pad.x-p.x,pad.y-p.y);if(d<bd){bd=d;best=[[pad.x,pad.y]]}}
+    for(const r of RW){if(!fits(p.type,r))continue;for(const [tx,ty,ex,ey] of [[r.x1,r.y1,r.x2,r.y2],[r.x2,r.y2,r.x1,r.y1]]){const a=Math.atan2(ey-ty,ex-tx),fx=tx-Math.cos(a)*9,fy=ty-Math.sin(a)*9,d=Math.hypot(fx-p.x,fy-p.y);if(d<bd){bd=d;best=[[fx,fy],[tx-Math.cos(a)*4,ty-Math.sin(a)*4],[tx,ty]]}}}
+    if(best)p.path=best}}
+{const l0=SIM.load;SIM.load=function(id){const show=!$('home').hidden||document.body.classList.contains('mDemo');if(show)MODE='classic';l0.call(this,id);if(show){G.relaxed=true;G.auto=true;for(let k=0;k<6;k++)spawnArrival()}else G.auto=false}}
+{const s0=SIM.step;SIM.step=function(dt){s0.call(this,dt);if(G.auto)autoPilot()}}
+const landed=t=>CH.events.filter(e=>e.k==='land'&&(!t||e.type===t)).length,sname=id=>SCENLIST.find(s=>s.id===id).name;
+const landCh=(t,d,n,sc,hint)=>CC(d,{t,g:`Land ${fmtN(n)} planes at ${sname(sc)} without a crash.`,hint:hint||'Draw each path out past the runway end, then turn in so the plane flies straight down the runway.',scen:sc,setup:()=>{G.relaxed=false},check:()=>{const n2=landed();return[n2>=n,n2/n,`${n2} of ${n} landed`]},fail:()=>G.over?'Two planes collided':'',stars:byTime(n*5+30,n*9+90)});
+CC(1,{t:'First landing',g:'Land one plane.',hint:'Pick ✏️ Flight path, drag from a plane to the end of a runway, coming in lined up with it.',scen:'regional',check:()=>[landed()>=1,landed()>=1?1:0,''],stars:byTime(30,80)});
+CC(1.1,{t:'Busy skies',g:'Land 10 planes.',hint:'Yellow runways take small props, blue runways take everything.',scen:'regional',setup:()=>{G.relaxed=false},check:()=>[landed()>=10,landed()/10,`${landed()} of 10`],fail:()=>G.over?'Two planes collided':'',stars:byTime(90,200)});
+CC(1.2,{t:'Holding pattern',g:'Put a plane into a holding circle.',hint:'Pick 🔁 Hold and click a plane.',scen:'regional',check:()=>[evN('hold')>0,evN('hold')>0?1:0,''],stars:byTime(15,40)});
+CC(1.3,{t:'New runway',g:'Build a runway of your own and land a plane on it.',hint:'Pick 🛬 Runway and drag at least 11 km for a long one. Then guide a plane onto it.',scen:'regional',setup:()=>{G.runways=1},check:()=>{const r=RW.slice(2).find(r=>r.landed>0);return[!!r,RW.length>2?(r?1:0.5):0,RW.length>2?(r?'':'Now land on it'):'Build a runway']},stars:byTime(60,150)});
+CC(1.4,{t:'Chopper',g:'Build a helipad and land 3 helicopters.',hint:'Pick 🚁 Helipad and click. Helicopters start arriving; draw them to the H.',scen:'regional',setup:()=>{G.pads=1;G.heli=true;spawnArrival('heli')},check:()=>{const n=landed('heli');return[n>=3,n/3,`${n} of 3`]},stars:byTime(90,200)});
+CC(1.5,{t:'Departures board',g:'See 10 planes take off.',hint:'Planes you land get refuelled and take off again. Keep the runway ends clear.',scen:'regional',check:()=>[G.departed>=10,G.departed/10,`${G.departed} of 10`],fail:()=>G.over?'Two planes collided':'',stars:byTime(150,300)});
+landCh('Rush hour',2,30,'regional');landCh('Hub controller',2.6,50,'hub','Use the two parallel runways for jets and the short one for props.');landCh('Island hopper',3,40,'islands','The two islands are far apart: send each plane to the closer airport.');landCh('Mountain flying',3.2,25,'mountain','Only one short runway: jets cannot land here. Send them round, or build a long runway.');
+CC(2.4,{t:'Survive 5 weeks',g:'Keep the skies safe until week 6.',hint:'Each week brings an upgrade. Hold planes when the runways are busy.',scen:'regional',setup:()=>{G.relaxed=false},check:()=>[G.week>=6,(G.week-1)/5,`Week ${G.week}`],fail:()=>G.over?'Two planes collided':'',stars:byTime(330,480)});
+CC(2.8,{t:'Jumbo',g:'Land 5 jumbo jets.',hint:'Jumbos are slow to turn: start lining them up early.',scen:'hub',setup:()=>{G.relaxed=false;for(let k=0;k<2;k++)spawnArrival('jumbo')},check:()=>{const n=landed('jumbo');return[n>=5,n/5,`${n} of 5`]},fail:()=>G.over?'Two planes collided':'',stars:byTime(150,320)});
+CC(3.4,{t:'Twin fields',g:'Land 15 planes at each airport.',hint:'Split the traffic: planes from the north to North Field, from the south to South Field.',scen:'twin',setup:()=>{G.relaxed=false},check:()=>{const a=CH.events.filter(e=>e.k==='land'&&e.ap===0).length,b=CH.events.filter(e=>e.k==='land'&&e.ap===1).length;return[a>=15&&b>=15,(Math.min(a,15)+Math.min(b,15))/30,`North ${a} · South ${b}`]},fail:()=>G.over?'Two planes collided':'',stars:byTime(200,420)});
+CC(3.6,{t:'Storm front',g:'Land 25 planes while storms drift through.',hint:'Planes crawl inside storm cells. Route them round.',scen:'hub',setup:()=>{G.relaxed=false;G.storm=true},check:()=>[landed()>=25,landed()/25,`${landed()} of 25`],fail:()=>G.over?'Two planes collided':'',stars:byTime(200,400)});
+CC(4,{t:'Tower legend',g:'Land 150 planes at Grand Central without a crash.',hint:'Hold planes when it gets busy, and keep departures in mind.',scen:'hub',setup:()=>{G.relaxed=false},check:()=>[landed()>=150,landed()/150,`${landed()} of 150`],fail:()=>G.over?'Two planes collided':'',stars:byTime(700,1200)});
+TSTEPS.push(
+ ['Look around','Right-drag (or two fingers) to move around the sky. Scroll or pinch to zoom.',r=>CNT.moved+CNT.zoomed*50>r.m+150,r=>{r.m=CNT.moved+CNT.zoomed*50}],
+ ['Draw a flight path','With ✏️ Flight path, drag from a plane to somewhere else. It follows your line.',r=>ROUTED>r.n,r=>{r.n=ROUTED}],
+ ['Land a plane','End a path at a runway end, lined up with the runway. Yellow runways are short (props only); blue are long.',r=>G.landed>r.n,r=>{r.n=G.landed}],
+ ['Hold','Pick 🔁 Hold and click a plane: it circles until you draw it a new path.',r=>HOLDS>r.n,r=>{r.n=HOLDS}],
+ ['Keep apart','When two planes get close a red ring flashes and an alarm beeps. If they touch, they crash. Land 3 more.',r=>G.landed>=r.n+3,r=>{r.n=G.landed}],
+ ['Build a runway','Pick 🛬 Runway and drag. 11 km or more makes a long runway.',r=>RWADD>r.n,r=>{r.n=RWADD;G.runways=Math.max(G.runways,1)}],
+ ['Helipad','Pick 🚁 Helipad and click. Helicopters start arriving.',r=>PADADD>r.n,r=>{r.n=PADADD;G.pads=Math.max(G.pads,1)}],
+ ['Radar','Switch to the Radar view in the Tower tab.',()=>S.view==='radar'],
+ ['Weather','Press ⛈ Storms in the Tower tab.',()=>G.storm],
+ ['Other airports','Press Airports in the top bar and pick another one.',r=>CNT.scen>r.n,r=>{r.n=CNT.scen}],
+);
+DEMO.push(
+ ['hub','Grand Central','Arrivals line up with the runways, land, refuel and take off again.',()=>{setSpeed(2)}],
+ ['islands','Island hopper','Two airports, one ocean.',()=>{setSpeed(2)}],
+ ['twin','Twin fields at night','Two airports share one busy sky.',()=>{setSpeed(2);setView('night')}],
+ ['regional','Radar','How the tower sees it.',()=>{setSpeed(2);setView('radar')}],
+);
+
+/* ===== simulator kit: UI, home, accounts, challenges, tutorial, demo, main loop ===== */
+const cv=$('world'),ctx=cv.getContext('2d');
+function resize(){W=innerWidth;H=innerHeight;DPR=Math.min(2,devicePixelRatio||1);cv.width=Math.round(W*DPR);cv.height=Math.round(H*DPR);measureHud();if(SIM.resize)SIM.resize()}
+function measureHud(){const h=document.querySelector('.hud-top');if(h)document.documentElement.style.setProperty('--hudH',Math.round(h.getBoundingClientRect().height)+'px')}
+const sx=wx=>(wx-cam.x)*cam.z+W/2+cam.ox,sy=wy=>(wy-cam.y)*cam.z+H/2;
+const wxOf=px=>(px-W/2-cam.ox)/cam.z+cam.x,wyOf=py=>(py-H/2)/cam.z+cam.y;
+function freeRect(){let l=0,r=W,t=0,b=H;if(!$('home').hidden)return{l,r,t,b};const vis=e=>e&&getComputedStyle(e).display!=='none'&&e.getBoundingClientRect().width>0;const hud=document.querySelector('.hud-top'),rail=$('rail'),dock=$('dock');
+  if(vis(hud))t=hud.getBoundingClientRect().bottom+8;if(innerWidth>760){if(vis(rail))l=rail.getBoundingClientRect().right+8;if(vis(dock))r=dock.getBoundingClientRect().left-8;b=H-50}else{if(vis(rail))b=rail.getBoundingClientRect().top-8;if(vis(dock)&&document.body.classList.contains('dockOpen'))b=Math.min(b,dock.getBoundingClientRect().top-8)}
+  if(r-l<200){l=0;r=W}if(b-t<150){t=0;b=H}return{l,r,t,b}}
+function fitWorld(){const w=SIM.world.w,h=SIM.world.h;if(SIM.world.wrapX){cam.z=Math.max(W/w,H/h);cam.x=w/2;cam.y=h/2;clampCam();return}const f=freeRect(),fw=f.r-f.l,fh=f.b-f.t;cam.z=Math.min(fw/w,fh/h)*0.96;cam.x=w/2-((f.l+f.r)/2-W/2-cam.ox)/cam.z;cam.y=h/2-((f.t+f.b)/2-H/2)/cam.z;clampCam()}
+function minZoom(){const w=SIM.world.w,h=SIM.world.h;return SIM.world.wrapX?H/h:Math.min(W/w,H/h)*0.5}
+function clampCam(){const h=SIM.world.h,w=SIM.world.w;cam.z=clamp(cam.z,minZoom(),SIM.world.maxZ||40);if(SIM.world.wrapX){const hy=H/2/cam.z;cam.y=clamp(cam.y,Math.min(h/2,hy),Math.max(h/2,h-hy))}else cam.y=clamp(cam.y,-h*0.5,h*1.5);if(SIM.world.wrapX)cam.x=mod(cam.x,w);else cam.x=clamp(cam.x,-w*0.5,w*1.5)}
+function zoomAt(f,px,py){const wx=wxOf(px),wy=wyOf(py);cam.z*=f;clampCam();cam.x+=wx-wxOf(px);cam.y+=wy-wyOf(py);clampCam();bump('zoomed')}
+function flyToW(x,y,z){S.follow=false;cam.x=x;cam.y=y;if(z)cam.z=Math.max(cam.z,z);clampCam()}
+
+/* speeds */
+function buildSpeeds(){const b=$('spds');b.textContent='';SIM.speeds.forEach(([l,v],i)=>{const e=document.createElement('button');e.className='spd';e.textContent=l;e.onclick=()=>{setSpeed(i);setPaused(false)};b.appendChild(e)})}
+function setSpeed(i){i=clamp(i,0,SIM.speeds.length-1);S.speedI=i;S.speed=SIM.speeds[i][1];[...$('spds').children].forEach((e,k)=>e.setAttribute('aria-pressed',k===i));updateRate()}
+function setPaused(p){S.paused=p;$('pauseBtn').textContent=p?'▶':'⏸';$('pauseBtn').setAttribute('aria-label',p?'Resume':'Pause');updateRate()}
+function updateRate(){$('rateTxt').textContent=S.paused?'Paused':SIM.fmtRate(S.speed)+(S.achieved<S.speed*0.8&&!S.paused?` (running ${SIM.fmtRate(Math.max(S.achieved,S.speed*0.01))})`:'')}
+$('pauseBtn').onclick=()=>setPaused(!S.paused);
+
+/* tools */
+function buildRail(){const r=$('rail');r.textContent='';for(const [g,items] of SIM.tools){if(g){const h=document.createElement('h3');h.textContent=g;r.appendChild(h)}
+  for(const [id,ico,name] of items){const b=document.createElement('button');b.className='tool';b.dataset.tool=id;b.innerHTML='<span class="ico"></span><span></span>';b.children[0].textContent=ico;b.children[1].textContent=name;b.onclick=()=>setTool(id);r.appendChild(b)}}}
+function toolInfo(id){for(const [,items] of SIM.tools)for(const t of items)if(t[0]===id)return t;return null}
+function setTool(id){S.tool=id;document.querySelectorAll('.tool').forEach(b=>b.setAttribute('aria-pressed',b.dataset.tool===id));const t=toolInfo(id);
+  $('placeopts').hidden=id==='select'||!t;$('toolNote').textContent=t&&t[3]||'';$('brush').parentElement.hidden=!(t&&t[4]);cv.classList.toggle('place',id!=='select');if(id!=='select')bump('tool');if(SIM.toolChanged)SIM.toolChanged(id)}
+$('brush').oninput=e=>{S.brush=+e.target.value;$('brushV').textContent=S.brush};
+
+/* dock tabs */
+function showTab(id){document.body.classList.remove('dockHidden');document.querySelectorAll('.tab').forEach(t=>t.setAttribute('aria-selected',t.dataset.tab===id));document.querySelectorAll('#dock .pane').forEach(p=>p.hidden=p.id!=='pane-'+id);bump('tab_'+id);if(SIM.tabShown)SIM.tabShown(id)}
+document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>showTab(t.dataset.tab));
+$('dockBtn').onclick=()=>{if(document.body.classList.contains('dockHidden')){document.body.classList.remove('dockHidden');document.body.classList.add('dockOpen')}else document.body.classList.toggle('dockOpen');setTimeout(()=>{if(!SIM.world.wrapX)fitWorld()},30)};
+$('dockClose').onclick=()=>{document.body.classList.add('dockHidden');document.body.classList.remove('dockOpen');bump('dockclose');setTimeout(()=>{if(!SIM.world.wrapX)fitWorld()},30)};
+function setView(v){S.view=v;document.querySelectorAll('[data-view]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.view===v));bump('view');if(SIM.viewChanged)SIM.viewChanged(v)}
+document.querySelectorAll('[data-view]').forEach(b=>b.onclick=()=>setView(b.dataset.view));
+function setLegend(title,grad,ticks){const L=$('legend');if(!title){L.hidden=true;return}L.hidden=false;L.children[0].textContent=title;L.children[1].style.background=grad;[...L.children[2].children].forEach((s,i)=>s.textContent=ticks[i]||'')}
+
+/* scenarios */
+function buildScen(){const g=$('scgrid');g.textContent='';for(const s of SIM.scens){const b=document.createElement('button');b.className='scb';b.innerHTML='<b></b><span></span>';b.children[0].textContent=s.name;b.children[1].textContent=s.desc;b.onclick=()=>{$('scen').hidden=true;loadScen(s.id);bump('scen');toast(s.name)};g.appendChild(b)}}
+function loadScen(id){S.t=0;S.sel=null;S.follow=false;SIM.load(id);S.scen=id;fitWorld();if(SIM.after)SIM.after()}
+$('scenBtn').onclick=()=>$('scen').hidden=!$('scen').hidden;$('scenClose').onclick=()=>$('scen').hidden=true;
+
+/* find */
+let findItems=[],findI=0;
+function renderFind(){const L=$('findList'),q=$('find').value.trim();findItems=q?SIM.find(q.toLowerCase()).slice(0,10):[];findI=0;L.hidden=!findItems.length;L.textContent='';
+  findItems.forEach((it,i)=>{const b=document.createElement('button');b.className=i===findI?'on':'';b.innerHTML='<span></span><small></small>';b.children[0].textContent=it.label;b.children[1].textContent=it.sub||'';b.onmousedown=e=>{e.preventDefault();doFind(i)};L.appendChild(b)})}
+function doFind(i){const it=findItems[i];if(!it)return;$('find').value='';$('findList').hidden=true;$('find').blur();it.go();bump('find')}
+$('find').oninput=renderFind;$('find').onblur=()=>setTimeout(()=>$('findList').hidden=true,120);
+$('find').onkeydown=e=>{if(e.key==='Enter'){doFind(findI)}else if(e.key==='ArrowDown'||e.key==='ArrowUp'){findI=clamp(findI+(e.key==='ArrowDown'?1:-1),0,findItems.length-1);[...$('findList').children].forEach((b,k)=>b.className=k===findI?'on':'');e.preventDefault()}else if(e.key==='Escape'){$('find').blur()}};
+
+/* pointer input */
+const ptrs=new Map();let drag=null,pinch=null;
+cv.addEventListener('contextmenu',e=>e.preventDefault());
+cv.addEventListener('pointerdown',e=>{cv.setPointerCapture(e.pointerId);ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY});
+  if(ptrs.size===2){const [a,b]=[...ptrs.values()];pinch={d:Math.hypot(a.x-b.x,a.y-b.y),z:cam.z};if(drag&&drag.tool)SIM.pointer('up',wxOf(e.clientX),wyOf(e.clientY),e);drag=null;return}
+  const pan=S.tool==='select'||e.button===1||e.button===2;
+  drag={x0:e.clientX,y0:e.clientY,lx:e.clientX,ly:e.clientY,moved:0,pan,tool:!pan};
+  if(!pan)SIM.pointer('down',wxOf(e.clientX),wyOf(e.clientY),e)});
+cv.addEventListener('pointermove',e=>{const p=ptrs.get(e.pointerId);if(p){p.x=e.clientX;p.y=e.clientY}
+  if(pinch&&ptrs.size===2){const [a,b]=[...ptrs.values()];const d=Math.hypot(a.x-b.x,a.y-b.y),mx=(a.x+b.x)/2,my=(a.y+b.y)/2;const f=pinch.z*d/pinch.d/cam.z;zoomAt(f,mx,my);if(pinch.mx!=null){S.follow=false;cam.x-=(mx-pinch.mx)/cam.z;cam.y-=(my-pinch.my)/cam.z;clampCam();CNT.moved+=Math.abs(mx-pinch.mx)+Math.abs(my-pinch.my)}pinch.mx=mx;pinch.my=my;return}
+  if(!drag){if(SIM.hover)SIM.hover(wxOf(e.clientX),wyOf(e.clientY));return}
+  const dx=e.clientX-drag.lx,dy=e.clientY-drag.ly;drag.lx=e.clientX;drag.ly=e.clientY;drag.moved+=Math.abs(dx)+Math.abs(dy);
+  if(drag.pan){S.follow=false;cam.x-=dx/cam.z;cam.y-=dy/cam.z;clampCam();CNT.moved+=Math.abs(dx)+Math.abs(dy)}else SIM.pointer('drag',wxOf(e.clientX),wyOf(e.clientY),e)});
+function endPtr(e){ptrs.delete(e.pointerId);if(ptrs.size<2)pinch=null;if(!drag)return;const d=drag;drag=null;
+  if(d.tool)SIM.pointer('up',wxOf(e.clientX),wyOf(e.clientY),e);else if(d.moved<6&&e.button!==2){S.follow=false;S.sel=SIM.pick(wxOf(e.clientX),wyOf(e.clientY))||null;if(S.sel&&SIM.inspectTab){showTab(SIM.inspectTab);document.body.classList.add('dockOpen')}if(SIM.selChanged)SIM.selChanged();deselBtn()}}
+cv.addEventListener('pointerup',endPtr);cv.addEventListener('pointercancel',endPtr);
+cv.addEventListener('dblclick',e=>{if(S.sel&&S.tool==='select'&&SIM.canFollow){S.follow=true;cam.z=Math.max(cam.z,SIM.world.followZ||cam.z)}});
+cv.addEventListener('wheel',e=>{e.preventDefault();zoomAt(Math.exp(-e.deltaY*0.0015),e.clientX,e.clientY)},{passive:false});
+$('zIn').onclick=()=>zoomAt(1.4,W/2+cam.ox,H/2);$('zOut').onclick=()=>zoomAt(1/1.4,W/2+cam.ox,H/2);$('zFit').onclick=()=>{fitWorld();bump('zoomed')};
+const keys=new Set();
+addEventListener('keydown',e=>{if(e.target.tagName==='INPUT'||e.target.tagName==='SELECT'||e.target.tagName==='TEXTAREA')return;const k=e.key.toLowerCase();
+  if(k===' '){e.preventDefault();setPaused(!S.paused)}else if(k==='escape'){if(S.tool!=='select')setTool('select');else{S.sel=null;S.follow=false;if(SIM.selChanged)SIM.selChanged()}}
+  else if(k==='+'||k==='=')zoomAt(1.25,W/2+cam.ox,H/2);else if(k==='-')zoomAt(0.8,W/2+cam.ox,H/2);else keys.add(k)});
+addEventListener('keyup',e=>keys.delete(e.key.toLowerCase()));
+function camKeys(dt){let dx=0,dy=0;if(keys.has('a')||keys.has('arrowleft'))dx--;if(keys.has('d')||keys.has('arrowright'))dx++;if(keys.has('w')||keys.has('arrowup'))dy--;if(keys.has('s')||keys.has('arrowdown'))dy++;
+  if(dx||dy){S.follow=false;const sp=600*dt/cam.z;cam.x+=dx*sp;cam.y+=dy*sp;clampCam();CNT.moved+=600*dt}}
+
+/* accounts (shared by every simulator on the site) */
+const lsGet=k=>{try{return JSON.parse(localStorage.getItem(k)||'null')}catch(e){return null}};
+const lsSet=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}};
+const ACC_KEY='barycenter.accounts',PROG_KEY=SIM.id+'.progress';
+let ACC=lsGet(ACC_KEY);if(!ACC||!Array.isArray(ACC.list))ACC={list:[],cur:'guest',devicePlays:0};if(ACC.cur!=='guest'&&!ACC.list.some(a=>a.id===ACC.cur))ACC.cur='guest';
+let ACCN=0;
+const progKey=id=>id==='guest'?PROG_KEY:PROG_KEY+'.'+id;
+const blankProg=()=>({stars:{},plays:0,secs:0});
+let PROG=blankProg();
+function loadProg(){const v=lsGet(progKey(ACC.cur));PROG=Object.assign(blankProg(),v&&typeof v.stars==='object'?v:{})}
+function saveProg(){lsSet(progKey(ACC.cur),PROG)}
+function saveAcc(){const cur=lsGet(ACC_KEY);if(cur&&Array.isArray(cur.list)){for(const a of ACC.list){const o=cur.list.find(x=>x.id===a.id);if(o)Object.keys(o).forEach(k=>{if(!(k in a))a[k]=o[k]})}for(const o of cur.list)if(!ACC.list.some(a=>a.id===o.id))ACC.list.push(o);if(cur.devicePlays>ACC.devicePlays)ACC.devicePlays=cur.devicePlays}lsSet(ACC_KEY,ACC)}
+const curAcc=()=>ACC.list.find(a=>a.id===ACC.cur);
+const accName=()=>(curAcc()||{name:'Guest'}).name;
+const pinHash=p=>{let h=5381;for(const c of 'bary:'+p)h=((h*33)^c.charCodeAt(0))>>>0;return h.toString(36)};
+const GCOUNT='https://abacus.jasoncameron.dev',GPATH='barycenter-sandbox/'+SIM.id+'-plays';let GLOBAL=null;
+function gCount(op){try{const ctl=new AbortController();setTimeout(()=>ctl.abort(),6000);fetch(`${GCOUNT}/${op}/${GPATH}`,{signal:ctl.signal,cache:'no-store'}).then(r=>r.ok?r.json():null).then(j=>{if(j&&Number.isFinite(+j.value)){GLOBAL=Math.max(GLOBAL||0,+j.value);updateAcctUI()}}).catch(()=>{})}catch(e){}}
+function countPlay(){PROG.plays++;ACC.devicePlays=(ACC.devicePlays||0)+1;saveProg();saveAcc();if(GLOBAL!=null)GLOBAL++;updateAcctUI();gCount('hit')}
+function updateAcctUI(){$('hAcctName').textContent=curAcc()?accName():'Guest · make an account';$('hPlaysN').textContent=(GLOBAL!=null?GLOBAL:PROG.plays).toLocaleString();$('hPlaysL').textContent=GLOBAL!=null?'plays by everyone':'plays';$('acctBtn').title=`Account: ${accName()} (saved on this device)`}
+function switchAcc(id,quiet){if(id===ACC.cur)return;saveProg();ACC.cur=id;saveAcc();loadProg();ACCN++;updateAcctUI();if(!$('home').hidden)homeView($('hChalView').hidden?'hMain':'hChalView');if(!quiet)toast(`Signed in as ${accName()}`);renderAcct()}
+let acctPend=null;
+function renderAcct(msg){const L=$('acctList');L.textContent='';$('acctMsg').textContent=msg||'';
+  for(const a of [{id:'guest',name:'Guest',guest:1},...ACC.list]){const pr=a.id===ACC.cur?PROG:(lsGet(progKey(a.id))||{stars:{},plays:0}),cur=a.id===ACC.cur,r=document.createElement('div');r.className='arow'+(cur?' cur':'');
+    const nm=document.createElement('div');nm.className='an';nm.innerHTML='<div></div><div class="as"></div>';nm.children[0].textContent=(a.pin?'🔒 ':'')+a.name+(cur?' (signed in)':'');nm.children[1].textContent=`★ ${Object.values(pr.stars||{}).reduce((x,y)=>x+y,0)} in ${SIM.name} · ${pr.plays||0} plays`;r.appendChild(nm);
+    if(!cur){if(acctPend===a.id){const inp=document.createElement('input');inp.placeholder='PIN';inp.maxLength=4;const go=document.createElement('button');go.className='btn primary';go.textContent='OK';const t=()=>{if(pinHash(inp.value)===a.pin){acctPend=null;switchAcc(a.id)}else renderAcct('Wrong PIN')};go.onclick=t;inp.onkeydown=e=>{if(e.key==='Enter')t()};r.append(inp,go);setTimeout(()=>inp.focus(),0)}
+      else{const b=document.createElement('button');b.className='btn';b.textContent=a.guest?'Use guest':'Sign in';b.onclick=()=>{if(a.pin){acctPend=a.id;renderAcct()}else switchAcc(a.id)};r.appendChild(b)}}
+    else if(!a.guest){const so=document.createElement('button');so.className='btn';so.textContent='Sign out';so.onclick=()=>switchAcc('guest');r.appendChild(so)}
+    L.appendChild(r)}}
+function openAcct(){acctPend=null;$('acct').hidden=false;renderAcct()}
+$('acctForm').addEventListener('submit',e=>{e.preventDefault();const name=$('acctNew').value.trim().replace(/\s+/g,' ').slice(0,20),pin=$('acctPin').value.trim();
+  if(!name)return renderAcct('Type a name first');if(/^guest$/i.test(name)||ACC.list.some(a=>a.name.toLowerCase()===name.toLowerCase()))return renderAcct('That name is taken on this device');if(pin&&!/^\d{4}$/.test(pin))return renderAcct('A PIN is 4 digits (or leave it empty)');
+  const fromGuest=ACC.cur==='guest'&&(PROG.plays||Object.keys(PROG.stars).length);const a={id:'a'+Date.now().toString(36)+Math.floor(Math.random()*1e4).toString(36),name,created:Date.now()};if(pin)a.pin=pinHash(pin);
+  if(fromGuest){lsSet(progKey(a.id),PROG);lsSet(PROG_KEY,blankProg())}ACC.list.push(a);saveAcc();$('acctNew').value='';$('acctPin').value='';switchAcc(a.id,true);toast(`Account ${name} created`);renderAcct(fromGuest?'Your guest progress moved into this account.':'')});
+$('hAcctBtn').onclick=openAcct;$('acctBtn').onclick=openAcct;$('acctClose').onclick=()=>$('acct').hidden=true;$('acct').addEventListener('click',e=>{if(e.target.id==='acct')$('acct').hidden=true});
+$('hPlays').onclick=()=>{gCount('get');toast(GLOBAL!=null?`${GLOBAL.toLocaleString()} plays by everyone · ${PROG.plays} by you`:`${PROG.plays} plays by you on this device`)};
+
+/* challenges */
+CHALS.sort((a,b)=>a.diff-b.diff);loadProg();
+const NCH=CHALS.length;
+const starsOf=i=>(CHALS[i]&&PROG.stars[CHALS[i].t])||0;
+const unlocked=i=>{if(i===0||starsOf(i-1)||starsOf(i))return true;for(let j=i+1;j<NCH;j++)if(starsOf(j))return true;return false};
+function totalStars(){let n=0;for(let i=0;i<NCH;i++)n+=starsOf(i);return n}
+const doneCount=()=>CHALS.filter((c,i)=>starsOf(i)>0).length;
+function setMode(m){document.body.classList.toggle('mHome',m==='home');document.body.classList.toggle('mDemo',m==='demo')}
+function homeView(v){for(const id of ['hMain','hChalView','hDemoView'])$(id).hidden=id!==v;if(v==='hChalView')renderGrid();const d=doneCount();$('hChalSub').textContent=d?`${d} of ${NCH} complete · ${totalStars()} of ${NCH*3} stars`:`${NCH} goals, from easy to fiendish`;updateAcctUI()}
+function showHome(){stopDemo(true);if(CH.active)endChallenge();if(TUT.on)endTutorial();$('chDone').hidden=true;$('scen').hidden=true;
+  CH.loading=true;loadScen(SIM.home);CH.loading=false;setSpeed(SIM.homeSpeed??SIM.defSpeed);setPaused(false);setTool('select');setView('normal');
+  cam.ox=innerWidth>900?innerWidth*0.2:0;setMode('home');$('home').hidden=false;homeView('hMain')}
+function leaveHome(){cam.ox=0;$('home').hidden=true;setMode('');fitWorld()}
+$('homeBtn').onclick=showHome;document.querySelectorAll('.hback').forEach(b=>b.onclick=()=>homeView('hMain'));
+$('hChal').onclick=()=>homeView('hChalView');$('hDemo').onclick=()=>homeView('hDemoView');
+function startFree(){leaveHome();loadScen(SIM.freeScen||SIM.home);setSpeed(SIM.defSpeed);countPlay()}
+$('hFree').onclick=startFree;
+function renderGrid(){const g=$('hGrid');g.textContent='';let next=-1;
+  CHALS.forEach((c,i)=>{const st=starsOf(i),un=unlocked(i);if(un&&!st&&next<0)next=i;const b=document.createElement('button');b.className='ct'+(i===next?' next':'');b.disabled=!un;b.title=un?`${c.t}: ${c.g}`:'Finish the previous challenge to unlock';
+    b.innerHTML='<span class="cn"></span><span class="ctt"></span><span class="cs"></span>';b.children[0].textContent=`#${i+1}`;b.children[1].textContent=un?c.t:'Locked';b.children[2].textContent=un?(st?'★'.repeat(st)+'☆'.repeat(3-st):'☆☆☆'):'🔒';b.onclick=()=>startChallenge(i);g.appendChild(b)});
+  $('hStars').textContent=`★ ${totalStars()} / ${NCH*3}`;if(next>=0)setTimeout(()=>{const el=g.children[next];if(el)el.scrollIntoView({block:'nearest'})},30)}
+function startChallenge(i){const c=CHALS[i];if(!c||!unlocked(i))return;leaveHome();countPlay();$('chDone').hidden=true;
+  CH.active=c;CH.idx=i;CH.events=[];CH.hold={};CH.ref={};CH.done=false;CH.failed='';CH.loading=true;try{loadScen(c.scen||SIM.home);setSpeed(c.speed??SIM.defSpeed);if(c.setup)c.setup()}finally{CH.loading=false}
+  CH.t0=S.t;CH.real0=performance.now();setPaused(false);setTool(SIM.defTool||'select');
+  $('chHud').hidden=false;$('chNum').textContent=`Challenge ${i+1} of ${NCH}`;$('chTitle').textContent=c.t;$('chGoal').textContent=c.g;$('chProg').textContent='';$('chBar').style.width='0%';$('chHint').hidden=!c.hint;$('chRestart').textContent='Restart'}
+function endChallenge(){CH.active=null;$('chHud').hidden=true}
+function chTick(){if(TUT.on)tutTick();if(!CH.active||CH.done)return;const c=CH.active;let r;try{r=c.check()}catch(e){console.warn(e);r=[false,0,'']}
+  const [done,p,txt]=r;$('chProg').textContent=txt||'';$('chBar').style.width=Math.round(clamp(p||0,0,1)*100)+'%';const t=realSecs();$('chTime').textContent=`${Math.floor(t/60)}:${String(Math.floor(t%60)).padStart(2,'0')}`;
+  if(done){CH.done=true;const st=clamp((c.stars||byTime(60,150))(),1,3),prev=starsOf(CH.idx);if(st>prev)PROG.stars[c.t]=st;saveProg();
+    $('dStars').innerHTML='★'.repeat(st)+'<span class="off">'+'★'.repeat(3-st)+'</span>';$('dTitle').textContent=`Challenge ${CH.idx+1} complete!`;$('dText').textContent=`${c.t} · ${Math.floor(t/60)}:${String(Math.floor(t%60)).padStart(2,'0')}${st<3?' · Faster solutions earn more stars.':' · Perfect!'}${prev>st?` Your best is still ${prev} ★.`:''}`;
+    $('dNext').hidden=CH.idx>=NCH-1;$('dNext').textContent='Next challenge';$('dRetry').hidden=false;$('dList').textContent='All challenges';$('chDone').hidden=false;$('chHud').hidden=true;return}
+  const f=c.fail&&c.fail();if(f){CH.done=true;$('dStars').innerHTML='<span class="off">★★★</span>';$('dTitle').textContent='Not this time';$('dText').textContent=f+'. Try again?';$('dNext').hidden=true;$('dRetry').hidden=false;$('dList').textContent='All challenges';$('chDone').hidden=false;$('chHud').hidden=true}}
+$('chRestart').addEventListener('click',()=>{if(TUT.on){TUT.i++;tutStep();return}startChallenge(CH.idx)});
+$('chExit').addEventListener('click',()=>{if(TUT.on){endTutorial();showHome();homeView('hDemoView');return}endChallenge();showHome();homeView('hChalView')});
+$('chHint').onclick=()=>{if(CH.active)toast('Hint: '+CH.active.hint,6000)};
+$('dNext').onclick=()=>{if(TUT.finished){TUT.finished=false;showHome();homeView('hChalView');return}startChallenge(CH.idx+1)};
+$('dRetry').onclick=()=>{if(TUT.finished){TUT.finished=false;startTutorial();return}startChallenge(CH.idx)};
+$('dList').onclick=()=>{if(TUT.finished){TUT.finished=false;$('chDone').hidden=true;startFree();return}endChallenge();showHome();homeView('hChalView')};
+
+/* tutorial */
+const TUT={on:false,i:0,ref:{},finished:false};
+function startTutorial(){leaveHome();countPlay();$('chDone').hidden=true;CH.loading=true;loadScen(SIM.tutScen||SIM.home);CH.loading=false;setSpeed(SIM.defSpeed);setPaused(false);setTool(SIM.defTool||'select');TUT.on=true;TUT.i=0;TUT.finished=false;tutStep()}
+function tutStep(){const st=TSTEPS[TUT.i];if(!st){TUT.on=false;TUT.finished=true;$('chHud').hidden=true;$('dStars').innerHTML='★★★';$('dTitle').textContent='Tutorial complete!';$('dText').textContent='You know all the controls. Try the challenges, or build anything in free play.';$('dNext').hidden=false;$('dNext').textContent='Challenges';$('dRetry').hidden=false;$('dList').textContent='Free play';$('chDone').hidden=false;$('chRestart').textContent='Restart';return}
+  TUT.ref={};if(st[3])st[3](TUT.ref);$('chHud').hidden=false;$('chNum').textContent=`Tutorial · step ${TUT.i+1} of ${TSTEPS.length}`;$('chTitle').textContent=st[0];$('chGoal').textContent=st[1];$('chProg').textContent='';$('chTime').textContent='';$('chBar').style.width=Math.round(TUT.i/TSTEPS.length*100)+'%';$('chHint').hidden=true;$('chRestart').textContent='Skip step'}
+function tutTick(){const st=TSTEPS[TUT.i];let ok=false;try{ok=st&&st[2](TUT.ref)}catch(e){}if(ok){TUT.i++;toast('✓ '+st[0]);tutStep()}}
+function endTutorial(){TUT.on=false;$('chHud').hidden=true;$('chRestart').textContent='Restart'}
+$('hTut').onclick=startTutorial;
+
+/* demo */
+let demoI=-1,demoTimer=0;
+function startDemo(){leaveHome();countPlay();setMode('demo');$('demoCap').hidden=false;demoI=-1;nextDemo()}
+function nextDemo(){clearTimeout(demoTimer);demoI=(demoI+1)%DEMO.length;const [id,t,x,f]=DEMO[demoI];CH.loading=true;loadScen(id);CH.loading=false;setView('normal');setPaused(false);if(f)f();
+  $('demoStep').textContent=`Demo · ${demoI+1} of ${DEMO.length}`;$('demoTitle').textContent=t;$('demoText').textContent=x;demoTimer=setTimeout(nextDemo,12000)}
+function stopDemo(quiet){clearTimeout(demoTimer);if(demoI<0&&quiet)return;demoI=-1;$('demoCap').hidden=true;setMode('');if(!quiet)showHome()}
+$('hWatch').onclick=startDemo;$('demoExit').onclick=()=>stopDemo();$('demoNext').onclick=nextDemo;
+
+/* main loop */
+let last=performance.now(),uiT=0,achAcc=0,achT=0,renderMs=4,stepMs=1;S.achieved=1;
+function frame(now){const dtR=Math.min(0.1,(now-last)/1000);last=now;camKeys(dtR);
+  try{
+    if(!S.paused){const want=S.speed*dtR,step=SIM.stepSize(S.speed),t0=performance.now(),budget=clamp((SIM.budget||12.5)-renderMs,2,9);let done=0;
+      while(done<want-1e-12){const el=performance.now()-t0;if(el+stepMs*0.9>budget&&done>0)break;const s0=performance.now(),d=Math.min(step,want-done);SIM.step(d);S.t+=d;done+=d;stepMs=stepMs*0.8+(performance.now()-s0)*0.2}
+      achAcc+=done}
+    achT+=dtR;if(achT>=0.5){S.achieved=achAcc/achT;achAcc=0;achT=0}
+    if(SIM.frame)SIM.frame(dtR);
+    if(S.follow&&S.sel&&SIM.selPos){const p=SIM.selPos(S.sel);if(p){cam.x=lerp(cam.x,p[0],Math.min(1,dtR*6));cam.y=lerp(cam.y,p[1],Math.min(1,dtR*6));clampCam()}}
+    const r0=performance.now();ctx.setTransform(DPR,0,0,DPR,0,0);SIM.render(ctx,now);renderMs=renderMs*0.85+(performance.now()-r0)*0.15;
+    uiT+=dtR;if(uiT>0.25){uiT=0;updateHud()}
+  }catch(err){console.error('['+SIM.name+']',err)}
+  requestAnimationFrame(frame)}
+function deselect(){S.sel=null;S.follow=false;if(SIM.selChanged)SIM.selChanged()}
+function deselBtn(){const p=$('pane-insp');if(!p)return;let b=$('kitDesel');if(!b){b=document.createElement('button');b.id='kitDesel';b.className='btn';b.textContent='✕ Stop inspecting';b.onclick=deselect;p.insertBefore(b,p.firstChild)}b.hidden=!S.sel}
+function updateHud(){deselBtn();measureHud();const st=SIM.stats(),box=$('stats');if(box.children.length!==st.length){box.textContent='';for(const [k] of st){const d=document.createElement('div');d.className='stat';d.innerHTML='<span class="k"></span><span class="v"></span>';d.children[0].textContent=k;box.appendChild(d)}}
+  st.forEach(([k,v],i)=>{box.children[i].children[1].textContent=v});$('dateTxt').textContent=SIM.dateTxt();$('dateSub').textContent=SIM.dateSub?SIM.dateSub():'';updateRate();SIM.hud();chTick();
+  if(document.visibilityState==='visible'&&$('home').hidden)PROG.secs=(PROG.secs||0)+0.25}
+addEventListener('resize',resize);addEventListener('pagehide',saveProg);
+resize();buildRail();buildSpeeds();buildScen();if(SIM.init)SIM.init();setSpeed(SIM.defSpeed);setTool('select');updateAcctUI();gCount('get');showHome();requestAnimationFrame(frame);
+
+/* ===== account helpers shared by every simulator: a sign-out button on the home page while signed in ===== */
+{const h=$('hAcctBtn');if(h&&!$('hOut')){const b=document.createElement('button');b.className='chip';b.id='hOut';b.textContent='↩ Sign out';b.title='Sign out (back to guest)';b.onclick=()=>switchAcc('guest');h.after(b)}
+  setInterval(()=>{const b=$('hOut');if(b)b.hidden=!curAcc()},500)}
+
+</script>
+</body>
+</html>
