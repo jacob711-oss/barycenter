@@ -353,7 +353,7 @@ const COLS=[{n:'Red',c:'#ff5d5d'},{n:'Blue',c:'#4ea6ff'},{n:'Yellow',c:'#ffc23a'
 let TER=new Uint8Array(N),ROAD=new Uint8Array(N),BLD=new Int16Array(N).fill(-1),DEG=new Uint8Array(N),OCC=new Uint8Array(N);
 let BL=[],CARS=[],WP=[],MP=[],MW=[],MWADJ={},RB=new Set(),LT=new Set(),PARTS=[],HIST=[];
 const G={roads:40,bridges:0,tunnels:0,rbs:0,lights:0,mways:1,buses:1,week:1,trips:0,over:false,relaxed:false,houseT:0,destT:0,weekT:0,dispT:0,choosing:false,rush:false,snow:false,boom:false,auto:false,colours:1};
-let BUSES=[],BUSADD=0,BUSTRIPS=0;let MODE='classic',PAINTED=0,ERASED=0,RBADD=0,LTADD=0,MWADD=0,UPG=0,ALARMS=0,EVN=0,DRAG=null,HOVER=null;
+let BUSES=[],BUSADD=0,BUSTRIPS=0,BUSPEND=null;let MODE='classic',PAINTED=0,ERASED=0,RBADD=0,LTADD=0,MWADD=0,UPG=0,ALARMS=0,EVN=0,DRAG=null,HOVER=null;
 let RS=1;function R(){RS|=0;RS=RS+0x6D2B79F5|0;let t=Math.imul(RS^RS>>>15,1|RS);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}
 const ix=(x,y)=>y*WW+x,cx=i=>i%WW,cy=i=>(i/WW)|0,inside=(x,y)=>x>=0&&y>=0&&x<WW&&y<WH;
 const N4=i=>{const x=cx(i),y=cy(i),o=[];if(x>0)o.push(i-1);if(x<WW-1)o.push(i+1);if(y>0)o.push(i-WW);if(y<WH-1)o.push(i+WW);return o};
@@ -420,8 +420,8 @@ function carPos(car){if(car.state==='home'||!car.p)return null;const k=Math.min(
 /* ---------- buses: shuttle between two stops, carrying up to 6 people a trip ---------- */
 const nearB=(b,i,r)=>b.cells.some(q=>Math.abs(cx(q)-cx(i))<=r&&Math.abs(cy(q)-cy(i))<=r);
 function addBus(a,b){if(G.buses<=0){toast('🚌 No buses left: pick one as a weekly upgrade');return false}if(a===b)return false;const p=path([a],u=>u===b);if(!p){toast('🚌 The two stops must be joined by road');return false}
-  const hasD=e=>BL.some(q=>q.kind==='d'&&nearB(q,e,3)),hasH=e=>BL.some(q=>q.kind==='h'&&nearB(q,e,3));if(!((hasD(a)&&hasH(b))||(hasD(b)&&hasH(a)))){toast('🚌 Put one stop near homes and the other near a building');return false}
-  G.buses--;BUSES.push({id:BUSES.length,a,b,p,s:0,dir:1,wait:0.5,load:0,stuck:false});BUSADD++;chEv('bus',{});toast('🚌 Bus route open');return true}
+  const hasD=e=>BL.some(q=>q.kind==='d'&&nearB(q,e,3)),hasH=e=>BL.some(q=>q.kind==='h'&&nearB(q,e,3));const good=(hasD(a)&&hasH(b))||(hasD(b)&&hasH(a));
+  G.buses--;BUSES.push({id:BUSES.length,a,b,p,s:0,dir:1,wait:0.5,load:0,stuck:false});BUSADD++;chEv('bus',{});toast(good?'🚌 Bus route open':'🚌 Bus route open. Tip: a stop near homes and one near their building fills the bus');return true}
 function busServe(r,end,other){let room=6;for(const d of BL){if(room<=0)break;if(d.kind!=='d'||!d.pins||!nearB(d,end,3))continue;if(!BL.some(h=>h.kind==='h'&&h.c===d.c&&nearB(h,other,3)))continue;const k=Math.min(room,d.pins);if(!k)continue;
     d.pins-=k;d.served+=k;G.trips+=k;BUSTRIPS+=k;room-=k;for(let q=0;q<k;q++)chEv('trip',{c:d.c,bus:1});FX(d.x+1,d.y+1,'#ffd23a',true)}r.load=6-room}
 function busStep(r,dt){if(r.wait>0){r.wait-=dt;return}if(r.p.some(c=>!ROAD[c])){const np=path([r.a],u=>u===r.b);if(!np){r.stuck=true;return}r.p=np;r.s=Math.min(r.s,np.length-1)}r.stuck=false;
@@ -496,6 +496,7 @@ function render(c,now){const night=S.view==='night',traffic=S.view==='traffic',z
       const home=b.cars.filter(q=>q.state==='home').length;for(let k=0;k<home;k++){c.fillStyle=night?'#fff':'#333';c.fillRect(X+z*(0.3+k*0.24),Y+z*0.64,z*0.16,z*0.1)}}
     if(S.sel&&S.sel.b===b){c.strokeStyle='#ffd23a';c.lineWidth=2;c.beginPath();c.arc(X+s/2,Y+s/2,s*0.85,0,7);c.stroke()}}
   // bus routes and buses
+  if(BUSPEND!=null&&S.tool==='bus'){const X=sx(cx(BUSPEND)+0.5),Y=sy(cy(BUSPEND)+0.5);c.strokeStyle='#ffd23a';c.lineWidth=2;c.beginPath();c.arc(X,Y,z*(0.6+0.1*Math.sin(now*0.01)),0,7);c.stroke();c.font=`${Math.max(12,z*0.6)|0}px sans-serif`;c.textAlign='center';c.fillText('🚏',X,Y-z*0.7)}
   for(const r of BUSES){c.strokeStyle=r.stuck?'rgba(255,90,90,.6)':'rgba(255,210,58,.55)';c.lineWidth=Math.max(1.5,z*0.08);c.setLineDash([z*0.25,z*0.2]);c.beginPath();r.p.forEach((q,k)=>{const X=sx(cx(q)+0.5),Y=sy(cy(q)+0.5);k?c.lineTo(X,Y):c.moveTo(X,Y)});c.stroke();c.setLineDash([]);
     for(const e of [r.a,r.b]){const X=sx(cx(e)+0.5),Y=sy(cy(e)+0.5);c.fillStyle='#ffd23a';c.beginPath();c.arc(X,Y,Math.max(4,z*0.22),0,7);c.fill();c.fillStyle='#222';c.font=`${Math.max(8,z*0.28)|0}px sans-serif`;c.textAlign='center';c.textBaseline='middle';c.fillText('🚏',X,Y-z*0.45);c.textBaseline='alphabetic'}
     const [x,y,a]=busPos(r),bl=Math.max(10,z*0.85),bw=Math.max(5,z*0.38);c.save();c.translate(sx(x),sy(y));c.rotate(a);if(night){c.shadowColor='#ffd23a';c.shadowBlur=10}c.fillStyle='#ffd23a';rr2(c,-bl/2,-bw/2,bl,bw,bw*0.25);c.fill();c.shadowBlur=0;c.fillStyle='rgba(30,40,60,.75)';for(let k=0;k<3;k++)c.fillRect(-bl/2+bl*(0.12+k*0.26),-bw*0.3,bl*0.17,bw*0.6);c.restore()}
@@ -509,7 +510,7 @@ function nearMw(wx,wy){let best=null,bd=0.6;for(const m of MW){const ax=cx(m.a)+
 const SIM={id:'gridlock',name:'Gridlock',defTool:'road',world:{w:WW,h:WH,wrapX:false,maxZ:90,followZ:40},home:'meadow',freeScen:'riverside',tutScen:'meadow',defSpeed:1,homeSpeed:1,inspectTab:'insp',
   speeds:[['½×',0.5],['1×',1],['2×',2],['4×',4]],fmtRate:v=>`${v}× speed`,
   dateTxt:()=>`Week ${G.week}`,dateSub:()=>`${fmtN(G.trips)} trips made`,stepSize:()=>0.05,
-  tools:[['',[['select','👆','Inspect']]],['Build',[['road','🛣️','Road','Drag to paint road tiles. Over water it uses bridge pieces, through hills tunnel pieces.'],['erase','🧽','Erase','Drag over roads to remove them and get the tiles back.'],['rb','⭕','Roundabout','Click a junction: traffic flows through without slowing down.'],['lights','🚦','Traffic lights','Click a junction: busy traffic flows a bit better.'],['mway','🛫','Motorway','Drag from one road tile to another far away: a fast link that flies over everything.'],['bus','🚌','Bus route','Drag from a road tile near homes to a road tile near a building of the same colour. A bus shuttles between, carrying up to 6 people a trip.']]]],
+  tools:[['',[['select','👆','Inspect']]],['Build',[['road','🛣️','Road','Drag to paint road tiles. Over water it uses bridge pieces, through hills tunnel pieces.'],['erase','🧽','Erase','Drag over roads to remove them and get the tiles back.'],['rb','⭕','Roundabout','Click a junction: traffic flows through without slowing down.'],['lights','🚦','Traffic lights','Click a junction: busy traffic flows a bit better.'],['mway','🛫','Motorway','Drag from one road tile to another far away: a fast link that flies over everything.'],['bus','🚌','Bus route','Tap a road tile for the first bus stop, then tap another for the second (or drag between them). Put one near homes and one near their building. A bus shuttles between, carrying 6 people a trip.']]]],
   scens:SCENLIST,
   load(id){clearTown();(SCENS[id]||SCENS.meadow)();rasterTer();this.t0=0;
     if(MODE==='free'&&$('home').hidden){G.roads=G.bridges=G.tunnels=G.rbs=G.lights=G.mways=G.buses=1e6;G.relaxed=true;G.colours=3}
@@ -532,7 +533,7 @@ const SIM={id:'gridlock',name:'Gridlock',defTool:'road',world:{w:WW,h:WH,wrapX:f
   pick(wx,wy){const i=cellAt(wx,wy);if(i<0)return null;if(BLD[i]>=0)return{b:BL[BLD[i]]};if(ROAD[i])return{r:i};return null},
   pointer(type,wx,wy){const t=S.tool,i=cellAt(wx,wy);HOVER=[wx,wy];
     if(t==='road'||t==='erase'){const fn=t==='road'?paint:unpaint;if(type==='down'){if(i>=0){fn(i);DRAG={last:i}}}else if(type==='drag'&&DRAG&&DRAG.last!=null&&i>=0&&i!==DRAG.last){let stop=false;stroke(DRAG.last,i,q=>{if(!stop&&q!==DRAG.last&&t==='road'&&!ROAD[q]&&!paint(q)&&BLD[q]<0)stop=true;else if(t==='erase')unpaint(q)});DRAG.last=i}else if(type==='up')DRAG=null;syncPanel();return}
-    if(t==='bus'){if(type==='down'){DRAG=i>=0&&ROAD[i]?{bus:i}:null;if(!DRAG)toast('Start the bus route on a road tile')}else if(type==='up'&&DRAG&&DRAG.bus!=null){if(i>=0&&ROAD[i])addBus(DRAG.bus,i);else toast('End the bus route on a road tile');DRAG=null;syncPanel()}return}
+    if(t==='bus'){if(type==='down'){if(i<0||!ROAD[i]){toast('🚏 Bus stops go on a road tile');DRAG=null;return}if(BUSPEND!=null&&BUSPEND!==i){addBus(BUSPEND,i);BUSPEND=null;DRAG=null;syncPanel();return}DRAG={bus:i}}else if(type==='up'&&DRAG&&DRAG.bus!=null){if(i>=0&&ROAD[i]&&i!==DRAG.bus){addBus(DRAG.bus,i);BUSPEND=null}else{BUSPEND=DRAG.bus;toast('🚏 First stop placed. Now tap a road at the other end of the route')}DRAG=null;syncPanel()}return}
     if(t==='mway'){if(type==='down'){if(i>=0&&ROAD[i])DRAG={mw:i};else{const m=nearMw(wx,wy);toast(m?'Use 🧽 Erase on a motorway end to remove it':'Start the motorway on a road tile');DRAG=null}}else if(type==='up'&&DRAG&&DRAG.mw!=null){if(i>=0&&ROAD[i])addMw(DRAG.mw,i);else if(i!==DRAG.mw)toast('End the motorway on a road tile');DRAG=null;syncPanel()}return}
     if(type!=='down')return;
     if(t==='rb'||t==='lights'){if(i<0||!ROAD[i]){toast('Click a road junction');return}if(DEG[i]<3){toast('That is not a junction: roads must meet from 3 or 4 sides');return}
@@ -566,6 +567,8 @@ function renderInspect(){const s=S.sel;$('inspEmpty').hidden=!!s;$('inspBody').h
   const draw=()=>{sig=typeof sigOf==='function'?sigOf():'';bar.innerHTML='';const pz=document.createElement('button');pz.className='btn';pz.textContent=S.paused?'▶ Play':'⏸ Pause';pz.onclick=()=>{setPaused(!S.paused);draw()};bar.appendChild(pz);const vl=document.createElement('span');vl.className='k';vl.textContent='Build';vl.style.margin='0 2px 0 6px';bar.appendChild(vl);
     for(const [tool,ic,k] of [['road','🛣️','roads'],['road','🌉','bridges'],['road','⛰️','tunnels'],['rb','⭕','rbs'],['lights','🚦','lights'],['mway','🛫','mways'],['bus','🚌','buses']]){if(!['roads','mways','buses'].includes(k)&&!G[k]&&!(k==='bridges'&&ROAD.includes(2))&&!(k==='tunnels'&&ROAD.includes(3)))continue;const b=document.createElement('button');b.className='btn tb';b.title={roads:'Roads for cars',bridges:'Bridge pieces',tunnels:'Tunnel pieces',rbs:'Roundabouts',lights:'Traffic lights',mways:'Motorways: drag between two far-apart roads',buses:'Bus routes: drag from homes to a building'}[k];b.innerHTML=`${ic}<span>${inf(G[k])}</span>`;b.setAttribute('aria-pressed',S.tool===tool&&k!=='bridges'&&k!=='tunnels');b.onclick=()=>{setTool(tool);draw()};bar.appendChild(b)}};
   const sigOf=()=>[S.paused,S.tool,G.roads,G.bridges,G.tunnels,G.rbs,G.lights,G.mways,G.buses,ROAD.includes(2),ROAD.includes(3)].join('|');let sig='';setInterval(()=>{if(sigOf()!==sig)draw()},300);draw()}
+
+SIM.toolChanged=id=>{if(id!=='bus')BUSPEND=null};
 
 /* ================= Gridlock: home/demo towns, challenges, tutorial ================= */
 {const l0=SIM.load;SIM.load=function(id){const show=!$('home').hidden||document.body.classList.contains('mDemo');if(show)MODE='classic';l0.call(this,id);
