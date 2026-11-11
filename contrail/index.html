@@ -379,8 +379,8 @@ function planeStep(p,dt){const T=PT[p.type];let sp=p.sp*(STORMS.some(s=>Math.hyp
   if(p.state==='takeoff'){p.sp=Math.min(T.sp,p.sp+T.sp*0.5*dt);p.x+=Math.cos(p.a)*p.sp*dt;p.y+=Math.sin(p.a)*p.sp*dt;p.alt=Math.min(1,(p.alt||0)+dt*0.25);if(p.alt>=1)p.state='climb';return}
   if(p.state==='climb'){p.x+=Math.cos(p.a)*sp*dt;p.y+=Math.sin(p.a)*sp*dt;if(p.x<-4||p.y<-4||p.x>WW+4||p.y>WH+4){p.dead=true;G.departed++;chEv('depart',{type:p.type})}return}
   // flying: follow the drawn path, circle if holding, otherwise fly straight and turn back at the edge
-  let want=null;if(p.path.length){const [tx,ty]=p.path[0];if(Math.hypot(tx-p.x,ty-p.y)<0.6+0.4*T.sp/T.turn){p.path.shift();if(!p.path.length)tryLand(p)}else want=Math.atan2(ty-p.y,tx-p.x)}
-  if(p.hold&&!p.path.length)p.a+=T.turn*0.55*dt;else if(want!=null){const d=angD(p.a,want);p.a+=clamp(d,-T.turn*dt,T.turn*dt)}
+  let want=null;if(p.path.length){const [tx,ty]=p.path[0];if(Math.hypot(tx-p.x,ty-p.y)<0.9){p.path.shift();if(!p.path.length)tryLand(p)}else want=Math.atan2(ty-p.y,tx-p.x)}
+  if(p.hold&&!p.path.length)p.a+=T.turn*0.55*dt;else if(want!=null){const d=angD(p.a,want);p.a+=clamp(d,-12*dt,12*dt)}
   else if(p.x<3||p.y<3||p.x>WW-3||p.y>WH-3){if(S.t-p.born>4){const d=angD(p.a,Math.atan2(WH/2-p.y,WW/2-p.x));p.a+=clamp(d,-T.turn*dt,T.turn*dt)}}
   if(G.wind){p.x+=0.6*dt;}p.x+=Math.cos(p.a)*sp*dt;p.y+=Math.sin(p.a)*sp*dt;tryLand(p)}
 function separation(dt){const air=PL.filter(p=>!p.dead);for(const p of air)p.warn=false;
