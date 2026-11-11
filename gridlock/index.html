@@ -98,6 +98,7 @@ input[type=range]{accent-color:var(--cool);width:100%}
 .note{font-size:12px;color:var(--dim);line-height:1.5;margin:0}
 #iPic{width:100%;height:120px;border-radius:8px;background:rgb(var(--deepRGB));display:block}
 .toasts{position:fixed;left:50%;transform:translateX(-50%);top:calc(var(--top) + var(--hudH,64px) + 16px);z-index:8;display:flex;flex-direction:column;gap:6px;align-items:center;pointer-events:none}
+#toasts,.toast{pointer-events:none}
 .toast{font-size:13px;padding:8px 14px;border-radius:99px;background:var(--panel);border:1px solid var(--line-strong);animation:tin .25s ease-out}
 @keyframes tin{from{opacity:0;transform:translateY(-6px)}}
 .hint{position:fixed;left:50%;transform:translateX(-50%);bottom:var(--bot);font-family:var(--f-mono);font-size:11.5px;color:var(--dim);background:var(--panel);border:1px solid var(--line);border-radius:99px;padding:7px 14px;white-space:nowrap;z-index:3;pointer-events:none}
@@ -562,9 +563,9 @@ function renderInspect(){const s=S.sel;$('inspEmpty').hidden=!!s;$('inspBody').h
 // top bar: pause, then your stock; tap one to pick that tool
 {const bar=document.createElement('div');bar.id='toolBar';bar.className='panel';document.querySelector('.hud-top .time').after(bar);
   const css=document.createElement('style');css.textContent='#toolBar .tb{display:flex;align-items:center;gap:4px;font-family:var(--f-mono);font-size:13px}#toolBar .tb[aria-pressed="true"]{border-color:var(--cool);background:rgba(var(--accRGB),.18)}';document.head.appendChild(css);
-  const draw=()=>{bar.innerHTML='';const pz=document.createElement('button');pz.className='btn';pz.textContent=S.paused?'▶ Play':'⏸ Pause';pz.onclick=()=>{setPaused(!S.paused);draw()};bar.appendChild(pz);const vl=document.createElement('span');vl.className='k';vl.textContent='Build';vl.style.margin='0 2px 0 6px';bar.appendChild(vl);
+  const draw=()=>{sig=typeof sigOf==='function'?sigOf():'';bar.innerHTML='';const pz=document.createElement('button');pz.className='btn';pz.textContent=S.paused?'▶ Play':'⏸ Pause';pz.onclick=()=>{setPaused(!S.paused);draw()};bar.appendChild(pz);const vl=document.createElement('span');vl.className='k';vl.textContent='Build';vl.style.margin='0 2px 0 6px';bar.appendChild(vl);
     for(const [tool,ic,k] of [['road','🛣️','roads'],['road','🌉','bridges'],['road','⛰️','tunnels'],['rb','⭕','rbs'],['lights','🚦','lights'],['mway','🛫','mways'],['bus','🚌','buses']]){if(!['roads','mways','buses'].includes(k)&&!G[k]&&!(k==='bridges'&&ROAD.includes(2))&&!(k==='tunnels'&&ROAD.includes(3)))continue;const b=document.createElement('button');b.className='btn tb';b.title={roads:'Roads for cars',bridges:'Bridge pieces',tunnels:'Tunnel pieces',rbs:'Roundabouts',lights:'Traffic lights',mways:'Motorways: drag between two far-apart roads',buses:'Bus routes: drag from homes to a building'}[k];b.innerHTML=`${ic}<span>${inf(G[k])}</span>`;b.setAttribute('aria-pressed',S.tool===tool&&k!=='bridges'&&k!=='tunnels');b.onclick=()=>{setTool(tool);draw()};bar.appendChild(b)}};
-  setInterval(draw,400);draw()}
+  const sigOf=()=>[S.paused,S.tool,G.roads,G.bridges,G.tunnels,G.rbs,G.lights,G.mways,G.buses,ROAD.includes(2),ROAD.includes(3)].join('|');let sig='';setInterval(()=>{if(sigOf()!==sig)draw()},300);draw()}
 
 /* ================= Gridlock: home/demo towns, challenges, tutorial ================= */
 {const l0=SIM.load;SIM.load=function(id){const show=!$('home').hidden||document.body.classList.contains('mDemo');if(show)MODE='classic';l0.call(this,id);

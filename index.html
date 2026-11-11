@@ -228,6 +228,7 @@ body.mDemo .rail,body.mDemo .campad,body.mDemo .hint,body.mDemo .insp,body.mDemo
 @media (max-width:760px){.home{background:rgba(4,6,12,.72)}.chhud{width:auto;left:var(--gut);right:var(--gutR);transform:none;top:auto;bottom:100px;max-height:40vh;overflow:auto}.hgrid{grid-template-columns:repeat(auto-fill,minmax(84px,1fr))}}
 .hint{position:fixed;left:50%;transform:translateX(-50%);bottom:var(--bot);font-family:var(--f-mono);font-size:11.5px;color:var(--dim);background:var(--panel);border:1px solid var(--line);border-radius:99px;padding:7px 14px;white-space:nowrap;z-index:4;pointer-events:none}
 .toasts{position:fixed;left:50%;transform:translateX(-50%);top:calc(var(--top) + 84px);display:flex;flex-direction:column;align-items:center;gap:6px;z-index:6;pointer-events:none}
+.toast{pointer-events:none}
 .toast{font-family:var(--f-mono);font-size:12px;padding:7px 14px;border-radius:99px;background:rgba(30,20,10,.85);border:1px solid rgba(255,180,84,.45);color:#ffe1b8;transition:opacity .4s,transform .4s}
 .toast.out{opacity:0;transform:translateY(-6px)}
 
