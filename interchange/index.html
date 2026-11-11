@@ -402,9 +402,9 @@ function insertStation(L,gap,s){const seq=L.loop?L.st.concat([L.st[0]]):L.st;con
 function removeLine(L){G.trains+=L.trains.length;G.cars+=L.trains.reduce((s,t)=>s+t.cars,0);for(const t of L.trains)for(const p of t.pax){const s=ST[L.st[0]];if(s)s.pax.push(p)}L.st=[];L.trains=[];L.loop=false;geom(L);routes();REMOVED++;chEv('remove',{})}
 function trimLine(L,end){if(L.st.length<=2){removeLine(L);return}if(L.loop){L.loop=false}else if(end>0)L.st.pop();else L.st.shift();geom(L);for(const t of L.trains)t.d=clamp(t.d,0,L.len);routes();REMOVED++}
 /* ---------- routing: from every station, the next station on the quickest way to each kind of place ---------- */
-function routes(){NEXT={};const adj=ST.map(()=>[]);for(const L of LINES){if(!lineActive(L))continue;const seq=L.loop?L.st.concat([L.st[0]]):L.st;for(let i=1;i<seq.length;i++){adj[seq[i-1]].push([seq[i],L.id]);adj[seq[i]].push([seq[i-1],L.id])}}
+let DIST={};function routes(){if(MODE==='free'&&$('home').hidden)for(const L of LINES){if(!lineActive(L))continue;while(L.trains.length<Math.min(8,Math.ceil(L.st.length/4))&&G.trains>0){const n=TRADD;if(!addTrain(L))break;TRADD=n}}NEXT={};DIST={};const adj=ST.map(()=>[]);for(const L of LINES){if(!lineActive(L))continue;const seq=L.loop?L.st.concat([L.st[0]]):L.st;for(let i=1;i<seq.length;i++){adj[seq[i-1]].push([seq[i],L.id]);adj[seq[i]].push([seq[i-1],L.id])}}
   for(const t of TK){const dist=new Array(ST.length).fill(1e9),nx=new Array(ST.length).fill(-1),q=[];for(const s of ST)if(s.type===t){dist[s.id]=0;q.push(s.id)}
-    for(let h=0;h<q.length;h++){const u=q[h];for(const [v] of adj[u])if(dist[v]>dist[u]+1){dist[v]=dist[u]+1;nx[v]=u;q.push(v)}}NEXT[t]=nx}}
+    for(let h=0;h<q.length;h++){const u=q[h];for(const [v] of adj[u])if(dist[v]>dist[u]+1){dist[v]=dist[u]+1;nx[v]=u;q.push(v)}}NEXT[t]=nx;DIST[t]=dist}}
 /* ---------- the game ---------- */
 function spawnPax(s,dt){const rate=(0.12+G.week*0.018)*(G.rush?2:1)*(s.type==='home'?1.3:1);s.spawn-=dt*rate;if(s.spawn>0)return;s.spawn=1.5+R()*3;
   let pool=TK.filter(t=>t!==s.type&&ST.some(o=>o.type===t));if(!pool.length)return;if(G.match&&ST.some(o=>o.type==='stadium')&&s.type!=='stadium'&&R()<0.6)pool=['stadium'];
@@ -418,9 +418,9 @@ function trainStep(L,t,dt){if(!lineActive(L))return;const M=MOD(L);let base=M.sp
 function nextStopOf(L,t,s){const seq=L.loop?L.st.concat([L.st[0]]):L.st;const i=seq.indexOf(s.id,L.loop&&t.d>=L.len-1e-6?seq.length-1:0);let j=i+(L.loop?1:t.dir);if(L.loop&&j>=seq.length)j=1;if(j<0||j>=seq.length){j=i-(t.dir)}return seq[j]}
 function exchange(L,t,s){const cap=MOD(L).cap*(1+t.cars);const nxt=nextStopOf(L,t,s);
   // drop off: arrived, or need to change here
-  const keep=[];for(const p of t.pax){if(s.type===p.to){G.delivered++;s.served++;chEv('deliver',{to:p.to,mode:L.mode});FX(s.x,s.y,TYPES[p.to].col,true)}else if(NEXT[p.to]&&NEXT[p.to][s.id]!==nxt&&NEXT[p.to][s.id]!==-1){s.pax.push(p)}else keep.push(p)}t.pax=keep;
+  const keep=[];for(const p of t.pax){if(s.type===p.to){G.delivered++;s.served++;chEv('deliver',{to:p.to,mode:L.mode});FX(s.x,s.y,TYPES[p.to].col,true)}else if(DIST[p.to]&&DIST[p.to][s.id]<1e9&&!(DIST[p.to][nxt]<DIST[p.to][s.id])){s.pax.push(p)}else keep.push(p)}t.pax=keep;
   // board passengers whose route continues on this train
-  const stay=[];for(const p of s.pax){const nh=NEXT[p.to]?NEXT[p.to][s.id]:-1;if(nh===nxt&&t.pax.length<cap){t.pax.push(p)}else stay.push(p)}s.pax=stay}
+  const stay=[];for(const p of s.pax){const d=DIST[p.to];if(d&&nxt!=null&&d[nxt]<d[s.id]&&t.pax.length<cap){t.pax.push(p)}else stay.push(p)}s.pax=stay}
 function weekUp(){G.week++;G.trains++;UPG++;if(MODE==='free'){toast(`Week ${G.week}`);return}const all=[['line','🛤️','New line','Another line colour to draw with'],['car','🚃','Carriage','Add 6 seats to a train'],['bridge','🌉','2 bridges','Cross more rivers'],['hub','🔄','Interchange','A station that holds 3× as many people and boards faster'],['train','🚆','Extra vehicle','Another vehicle for any line'],...MK.filter(m=>!G.unlocked.includes(m)).map(m=>[m,MODES[m].ic,MODES[m].n+' lines',MODES[m].d])].filter(o=>!(o[0]==='line'&&G.lines>=LCOL.length));
   const opts=[];while(opts.length<2){const o=pick(all);if(!opts.includes(o))opts.push(o)}showWeek(opts)}
 function grant(k){if(k==='line'){G.lines=Math.min(LCOL.length,G.lines+1);LINES.length<G.lines&&LINES.push(newLine(LINES.length))}else if(k==='car')G.cars++;else if(k==='bridge')G.bridges+=2;else if(k==='hub')G.hubs++;else if(k==='train')G.trains++;if(MODES[k]&&k!=='train'&&!G.unlocked.includes(k)){G.unlocked.push(k);G.mode=k}chEv('upgrade',{k});syncPanel()}
