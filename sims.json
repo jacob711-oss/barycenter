@@ -78,5 +78,13 @@
   "tag": "Place charges and magnets, and watch the fields bend particles through space",
   "url": "https://jacob711-oss.github.io/barycenter/flux/",
   "color": "#5ae0ff"
+ },
+ {
+  "id": "seaway",
+  "icon": "🚢",
+  "name": "Seaway",
+  "tag": "Run the shipping lanes of a sea full of islands and keep the cargo moving",
+  "url": "https://jacob711-oss.github.io/barycenter/seaway/",
+  "color": "#3ab8e0"
  }
 ]
