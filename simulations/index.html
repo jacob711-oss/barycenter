@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Our Simulations!</title>
+<meta name="description" content="Every simulator we have made, in one place.">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Oxanium:wght@500;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+:root{--bg:#06080f;--panel:#0d1220;--ink:#eef2fb;--dim:#93a0bb;--line:rgba(255,255,255,.1)}
+*{box-sizing:border-box}html,body{margin:0}body{background:radial-gradient(1200px 600px at 20% -10%,#1a1f3a 0%,transparent 60%),radial-gradient(900px 500px at 100% 0%,#1d1530 0%,transparent 55%),var(--bg);color:var(--ink);font-family:'IBM Plex Sans',system-ui,sans-serif;min-height:100vh}
+header{max-width:1240px;margin:0 auto;padding:56px 20px 18px}
+h1{font-family:'Oxanium',system-ui,sans-serif;font-weight:700;font-size:clamp(40px,7vw,76px);letter-spacing:.04em;margin:0;line-height:1;background:linear-gradient(90deg,#ffd23a,#ff5ab4 35%,#5ae0ff 70%,#7fe0a8);-webkit-background-clip:text;background-clip:text;color:transparent}
+.sub{color:var(--dim);font-size:17px;margin:14px 0 0;max-width:640px;line-height:1.5}
+.count{display:inline-block;margin-top:16px;font-family:'IBM Plex Mono',monospace;font-size:13px;color:var(--ink);border:1px solid var(--line);border-radius:99px;padding:6px 12px;background:rgba(255,255,255,.03)}
+main{max-width:1240px;margin:0 auto;padding:12px 20px 64px;display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:20px}
+.card{display:flex;flex-direction:column;text-decoration:none;color:inherit;background:var(--panel);border:1px solid var(--line);border-radius:16px;overflow:hidden;transition:transform .18s ease,border-color .18s ease,box-shadow .18s ease}
+.card:hover,.card:focus-visible{transform:translateY(-4px);border-color:var(--c);box-shadow:0 14px 40px -12px var(--c);outline:none}
+.pv{position:relative;aspect-ratio:16/10;background:#000;overflow:hidden}.pv img{width:100%;height:100%;object-fit:cover;display:block;transition:transform .3s ease}.card:hover .pv img{transform:scale(1.04)}
+.ph{width:100%;height:100%;display:grid;place-items:center;font-size:64px;background:linear-gradient(135deg,#111833,#1b1030)}
+.play{position:absolute;right:12px;bottom:12px;font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:500;padding:6px 12px;border-radius:99px;background:rgba(6,8,15,.82);border:1px solid var(--c);color:var(--ink);opacity:0;transform:translateY(6px);transition:all .18s ease}.card:hover .play,.card:focus-visible .play{opacity:1;transform:none}
+.txt{padding:14px 16px 18px;border-top:3px solid var(--c)}
+h2{font-family:'Oxanium',system-ui,sans-serif;font-weight:700;font-size:22px;margin:0 0 6px;display:flex;align-items:center;gap:10px;letter-spacing:.02em}.ic{font-size:22px}
+.txt p{margin:0;color:var(--dim);font-size:14.5px;line-height:1.45}
+footer{text-align:center;color:var(--dim);font-size:13px;padding:0 20px 40px}
+@media (max-width:520px){header{padding:36px 16px 12px}main{padding:8px 16px 48px;grid-template-columns:1fr;gap:16px}.play{opacity:1;transform:none}}
+</style></head>
+<body>
+<header><h1>Our Simulations!</h1><p class="sub">Every simulator we have made, all in one place. Click a preview to jump in. Each one has challenges, a tutorial and a free-play sandbox.</p><span class="count">12 simulators</span></header>
+<main>
+<a class="card" href="https://jacob711-oss.github.io/barycenter/" style="--c:#e8b04a">
+  <div class="pv"><img src="img/barycenter.jpg" alt="" loading="lazy" width="800" height="500"><span class="play">Play ▸</span></div>
+  <div class="txt"><h2><span class="ic">🪐</span>Barycenter</h2><p>Gravity, planets, stars and black holes</p></div>
+</a>
+<a class="card" href="https://jacob711-oss.github.io/barycenter/life/" style="--c:#7fe0a8">
+  <div class="pv"><img src="img/biosphere.jpg" alt="" loading="lazy" width="800" height="500"><span class="play">Play ▸</span></div>
+  <div class="txt"><h2><span class="ic">🌿</span>Biosphere</h2><p>A living world of animals, plants and people</p></div>
+</a>
+<a class="card" href="https://jacob711-oss.github.io/barycenter/lithosphere/" style="--c:#ff8a5c">
+  <div class="pv"><img src="img/lithosphere.jpg" alt="" loading="lazy" width="800" height="500"><span class="play">Play ▸</span></div>
+  <div class="txt"><h2><span class="ic">🌋</span>Lithosphere</h2><p>Drift continents, raise mountains and set off volcanoes</p></div>
+</a>
+<a class="card" href="https://jacob711-oss.github.io/barycenter/troposphere/" style="--c:#60d6e6">
+  <div class="pv"><img src="img/troposphere.jpg" alt="" loading="lazy" width="800" height="500"><span class="play">Play ▸</span></div>
+  <div class="txt"><h2><span class="ic">🌀</span>Troposphere</h2><p>Steer winds, brew hurricanes and change the climate</p></div>
+</a>
+<a class="card" href="https://jacob711-oss.github.io/barycenter/catalyst/" style="--c:#c48bff">
+  <div class="pv"><img src="img/catalyst.jpg" alt="" loading="lazy" width="800" height="500"><span class="play">Play ▸</span></div>
+  <div class="txt"><h2><span class="ic">⚛️</span>Catalyst</h2><p>Mix atoms, spark reactions and build molecules</p></div>
+</a>
+<a class="card" href="https://jacob711-oss.github.io/barycenter/abyssal/" style="--c:#4fa3ff">
+  <div class="pv"><img src="img/abyssal.jpg" alt="" loading="lazy" width="800" height="500"><span class="play">Play ▸</span></div>
+  <div class="txt"><h2><span class="ic">🐋</span>Abyssal</h2><p>Dive into a living ocean, from coral reefs to the deep sea</p></div>
+</a>
+<a class="card" href="https://jacob711-oss.github.io/barycenter/interchange/" style="--c:#ff5ab4">
+  <div class="pv"><img src="img/interchange.jpg" alt="" loading="lazy" width="800" height="500"><span class="play">Play ▸</span></div>
+  <div class="txt"><h2><span class="ic">🚉</span>Interchange</h2><p>Draw the transit lines of a growing city and keep everyone moving</p></div>
+</a>
+<a class="card" href="https://jacob711-oss.github.io/barycenter/gridlock/" style="--c:#ffd23a">
+  <div class="pv"><img src="img/gridlock.jpg" alt="" loading="lazy" width="800" height="500"><span class="play">Play ▸</span></div>
+  <div class="txt"><h2><span class="ic">🚗</span>Gridlock</h2><p>Draw the roads of a growing town and keep the traffic flowing</p></div>
+</a>
+<a class="card" href="https://jacob711-oss.github.io/barycenter/hivemind/" style="--c:#ff9a3d">
+  <div class="pv"><img src="img/hivemind.jpg" alt="" loading="lazy" width="800" height="500"><span class="play">Play ▸</span></div>
+  <div class="txt"><h2><span class="ic">🐜</span>Hivemind</h2><p>Ant colonies that find food by following each other&#x27;s scent trails</p></div>
+</a>
+<a class="card" href="https://jacob711-oss.github.io/barycenter/flux/" style="--c:#5ae0ff">
+  <div class="pv"><img src="img/flux.jpg" alt="" loading="lazy" width="800" height="500"><span class="play">Play ▸</span></div>
+  <div class="txt"><h2><span class="ic">⚡</span>Flux</h2><p>Place charges and magnets, and watch the fields bend particles through space</p></div>
+</a>
+<a class="card" href="https://jacob711-oss.github.io/barycenter/seaway/" style="--c:#3ab8e0">
+  <div class="pv"><img src="img/seaway.jpg" alt="" loading="lazy" width="800" height="500"><span class="play">Play ▸</span></div>
+  <div class="txt"><h2><span class="ic">🚢</span>Seaway</h2><p>Run the shipping lanes of a sea full of islands and keep the cargo moving</p></div>
+</a>
+<a class="card" href="https://jacob711-oss.github.io/barycenter/contrail/" style="--c:#9fa8ff">
+  <div class="pv"><img src="img/contrail.jpg" alt="" loading="lazy" width="800" height="500"><span class="play">Play ▸</span></div>
+  <div class="txt"><h2><span class="ic">✈️</span>Contrail</h2><p>Guide planes onto runways, keep them apart and run a busy airport</p></div>
+</a>
+</main>
+<footer>New simulators appear here as soon as they are made.</footer>
+</body></html>
