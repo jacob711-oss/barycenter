@@ -98,7 +98,7 @@ footer{text-align:center;color:var(--dim);font-size:13px;padding:0 20px 40px}
 </form></div></section>
 <footer>New simulators appear here as soon as they are made.</footer>
 <script>
-(()=>{const to=['lwpiano50002016','gmail.com'].join('@'),cc=['nicholas4yan','gmail.com'].join('@'),f=document.getElementById('rvForm'),msg=document.getElementById('rvMsg');let rating=5;
+(()=>{const to=['nicholas4yan','gmail.com'].join('@'),cc=['lwpiano50002016','gmail.com'].join('@'),f=document.getElementById('rvForm'),msg=document.getElementById('rvMsg');let rating=5;
 const st=[...document.querySelectorAll('#stars button')];const paint=()=>st.forEach((b,i)=>{b.classList.toggle('on',i<rating);b.setAttribute('aria-checked',i+1===rating)});st.forEach((b,i)=>b.onclick=e=>{e.preventDefault();rating=i+1;paint()});paint();
 const sel=f.simulator,q=new URLSearchParams(location.search).get('sim');if(q)for(const o of sel.options)if(o.text.toLowerCase()===q.toLowerCase())sel.value=o.text;
 f.onsubmit=async e=>{e.preventDefault();if(f._honey.value)return;const stars='★'.repeat(rating)+'☆'.repeat(5-rating);
