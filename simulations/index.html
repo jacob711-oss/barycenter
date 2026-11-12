@@ -6,25 +6,35 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Oxanium:wght@500;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
 <style>
 :root{--bg:#06080f;--panel:#0d1220;--ink:#eef2fb;--dim:#93a0bb;--line:rgba(255,255,255,.1)}
-*{box-sizing:border-box}html,body{margin:0}body{background:radial-gradient(1200px 600px at 20% -10%,#1a1f3a 0%,transparent 60%),radial-gradient(900px 500px at 100% 0%,#1d1530 0%,transparent 55%),var(--bg);color:var(--ink);font-family:'IBM Plex Sans',system-ui,sans-serif;min-height:100vh}
+*{box-sizing:border-box}html,body{margin:0}html{scroll-behavior:smooth}body{background:radial-gradient(1200px 600px at 20% -10%,#1a1f3a 0%,transparent 60%),radial-gradient(900px 500px at 100% 0%,#1d1530 0%,transparent 55%),var(--bg);color:var(--ink);font-family:'IBM Plex Sans',system-ui,sans-serif;min-height:100vh}
 header{max-width:1240px;margin:0 auto;padding:56px 20px 18px}
 h1{font-family:'Oxanium',system-ui,sans-serif;font-weight:700;font-size:clamp(40px,7vw,76px);letter-spacing:.04em;margin:0;line-height:1;background:linear-gradient(90deg,#ffd23a,#ff5ab4 35%,#5ae0ff 70%,#7fe0a8);-webkit-background-clip:text;background-clip:text;color:transparent}
 .sub{color:var(--dim);font-size:17px;margin:14px 0 0;max-width:640px;line-height:1.5}
-.count{display:inline-block;margin-top:16px;font-family:'IBM Plex Mono',monospace;font-size:13px;color:var(--ink);border:1px solid var(--line);border-radius:99px;padding:6px 12px;background:rgba(255,255,255,.03)}
-main{max-width:1240px;margin:0 auto;padding:12px 20px 64px;display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:20px}
+.chips{display:flex;gap:8px;flex-wrap:wrap;margin-top:16px}.count{display:inline-block;font-family:'IBM Plex Mono',monospace;font-size:13px;color:var(--ink);border:1px solid var(--line);border-radius:99px;padding:6px 12px;background:rgba(255,255,255,.03);text-decoration:none}a.count:hover{border-color:#ffd23a}
+main{max-width:1240px;margin:0 auto;padding:12px 20px 56px;display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:20px}
 .card{display:flex;flex-direction:column;text-decoration:none;color:inherit;background:var(--panel);border:1px solid var(--line);border-radius:16px;overflow:hidden;transition:transform .18s ease,border-color .18s ease,box-shadow .18s ease}
 .card:hover,.card:focus-visible{transform:translateY(-4px);border-color:var(--c);box-shadow:0 14px 40px -12px var(--c);outline:none}
 .pv{position:relative;aspect-ratio:16/10;background:#000;overflow:hidden}.pv img{width:100%;height:100%;object-fit:cover;display:block;transition:transform .3s ease}.card:hover .pv img{transform:scale(1.04)}
 .ph{width:100%;height:100%;display:grid;place-items:center;font-size:64px;background:linear-gradient(135deg,#111833,#1b1030)}
 .play{position:absolute;right:12px;bottom:12px;font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:500;padding:6px 12px;border-radius:99px;background:rgba(6,8,15,.82);border:1px solid var(--c);color:var(--ink);opacity:0;transform:translateY(6px);transition:all .18s ease}.card:hover .play,.card:focus-visible .play{opacity:1;transform:none}
 .txt{padding:14px 16px 18px;border-top:3px solid var(--c)}
-h2{font-family:'Oxanium',system-ui,sans-serif;font-weight:700;font-size:22px;margin:0 0 6px;display:flex;align-items:center;gap:10px;letter-spacing:.02em}.ic{font-size:22px}
+.txt h2{font-family:'Oxanium',system-ui,sans-serif;font-weight:700;font-size:22px;margin:0 0 6px;display:flex;align-items:center;gap:10px;letter-spacing:.02em}.ic{font-size:22px}
 .txt p{margin:0;color:var(--dim);font-size:14.5px;line-height:1.45}
+.rv{max-width:760px;margin:0 auto 56px;padding:0 20px}.rvcard{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:22px}
+.rv h2{font-family:'Oxanium',system-ui,sans-serif;font-size:30px;margin:0 0 6px}.rv .lead{color:var(--dim);margin:0 0 18px;font-size:15px}
+.rv form{display:grid;gap:14px}.rv label{display:grid;gap:6px;font-size:13px;color:var(--dim);font-family:'IBM Plex Mono',monospace;text-transform:uppercase;letter-spacing:.06em}
+.rv input,.rv select,.rv textarea{font-family:'IBM Plex Sans',system-ui,sans-serif;font-size:16px;text-transform:none;letter-spacing:0;color:var(--ink);background:#080b15;border:1px solid var(--line);border-radius:10px;padding:10px 12px;width:100%}
+.rv textarea{min-height:120px;resize:vertical}.rv input:focus,.rv select:focus,.rv textarea:focus{outline:2px solid #9fa8ff;outline-offset:1px}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:14px}@media (max-width:560px){.row2{grid-template-columns:1fr}}
+.stars{display:flex;gap:4px}.stars button{font-size:32px;line-height:1;background:none;border:0;cursor:pointer;color:#3a4260;padding:2px}.stars button.on{color:#ffd23a}
+.send{justify-self:start;font:600 16px 'IBM Plex Sans',system-ui,sans-serif;color:#06080f;background:linear-gradient(90deg,#ffd23a,#ff9a3d);border:0;border-radius:99px;padding:12px 26px;cursor:pointer}.send:disabled{opacity:.6;cursor:default}
+.msg{font-size:15px;margin:0}.msg.ok{color:#7fe0a8}.msg.err{color:#ff8a8a}.hp{position:absolute;left:-9999px}
 footer{text-align:center;color:var(--dim);font-size:13px;padding:0 20px 40px}
-@media (max-width:520px){header{padding:36px 16px 12px}main{padding:8px 16px 48px;grid-template-columns:1fr;gap:16px}.play{opacity:1;transform:none}}
+@media (max-width:520px){header{padding:36px 16px 12px}main{padding:8px 16px 40px;grid-template-columns:1fr;gap:16px}.play{opacity:1;transform:none}.rv{padding:0 16px}.rvcard{padding:18px}}
 </style></head>
 <body>
-<header><h1>Our Simulations!</h1><p class="sub">Every simulator we have made, all in one place. Click a preview to jump in. Each one has challenges, a tutorial and a free-play sandbox.</p><span class="count">12 simulators</span></header>
+<header><h1>Our Simulations!</h1><p class="sub">Every simulator we have made, all in one place. Click a preview to jump in. Each one has challenges, a tutorial and a free-play sandbox.</p>
+<div class="chips"><span class="count">12 simulators</span><a class="count" href="#review">✍️ Leave a review</a></div></header>
 <main>
 <a class="card" href="https://jacob711-oss.github.io/barycenter/" style="--c:#e8b04a">
   <div class="pv"><img src="img/barycenter.jpg" alt="" loading="lazy" width="800" height="500"><span class="play">Play ▸</span></div>
@@ -75,5 +85,28 @@ footer{text-align:center;color:var(--dim);font-size:13px;padding:0 20px 40px}
   <div class="txt"><h2><span class="ic">✈️</span>Contrail</h2><p>Guide planes onto runways, keep them apart and run a busy airport</p></div>
 </a>
 </main>
+<section class="rv" id="review"><div class="rvcard">
+<h2>✍️ Leave a review</h2><p class="lead">Tell us what you think: what you love, what is broken, and what we should build next.</p>
+<form id="rvForm">
+<div class="row2"><label>Your name<input name="name" maxlength="60" placeholder="Optional"></label>
+<label>Which simulator?<select name="simulator"><option>All of them</option><option>Barycenter</option><option>Biosphere</option><option>Lithosphere</option><option>Troposphere</option><option>Catalyst</option><option>Abyssal</option><option>Interchange</option><option>Gridlock</option><option>Hivemind</option><option>Flux</option><option>Seaway</option><option>Contrail</option></select></label></div>
+<label>Rating<div class="stars" id="stars" role="radiogroup" aria-label="Rating"><button type="button" role="radio" aria-label="1 star">★</button><button type="button" role="radio" aria-label="2 stars">★</button><button type="button" role="radio" aria-label="3 stars">★</button><button type="button" role="radio" aria-label="4 stars">★</button><button type="button" role="radio" aria-label="5 stars">★</button></div></label>
+<label>Your review<textarea name="review" required maxlength="3000" placeholder="Write your review here…"></textarea></label>
+<label>Your email (so we can reply)<input name="email" type="email" maxlength="120" placeholder="Optional"></label>
+<input class="hp" name="_honey" tabindex="-1" autocomplete="off" aria-hidden="true">
+<button class="send" type="submit">Send review</button><p class="msg" id="rvMsg" role="status"></p>
+</form></div></section>
 <footer>New simulators appear here as soon as they are made.</footer>
+<script>
+(()=>{const to=['nicholas4yan','gmail.com'].join('@'),cc=['lwpiano50002016','gmail.com'].join('@'),f=document.getElementById('rvForm'),msg=document.getElementById('rvMsg');let rating=5;
+const st=[...document.querySelectorAll('#stars button')];const paint=()=>st.forEach((b,i)=>{b.classList.toggle('on',i<rating);b.setAttribute('aria-checked',i+1===rating)});st.forEach((b,i)=>b.onclick=e=>{e.preventDefault();rating=i+1;paint()});paint();
+const sel=f.simulator,q=new URLSearchParams(location.search).get('sim');if(q)for(const o of sel.options)if(o.text.toLowerCase()===q.toLowerCase())sel.value=o.text;
+f.onsubmit=async e=>{e.preventDefault();if(f._honey.value)return;const stars='★'.repeat(rating)+'☆'.repeat(5-rating);
+  const d={name:f.name.value.trim()||'Anonymous',simulator:sel.value,rating:stars+' ('+rating+'/5)',review:f.review.value.trim(),email:f.email.value.trim(),_subject:'New review: '+sel.value+' '+'★'.repeat(rating),_cc:cc,_template:'table',_captcha:'false'};
+  if(!d.review){msg.className='msg err';msg.textContent='Please write a review first.';return}const btn=f.querySelector('.send');btn.disabled=true;msg.className='msg';msg.textContent='Sending…';
+  try{const r=await fetch('https://formsubmit.co/ajax/'+to,{method:'POST',headers:{'Content-Type':'application/json',Accept:'application/json'},body:JSON.stringify(d)});const j=await r.json().catch(()=>({}));if(!r.ok||j.success==='false'||j.success===false)throw new Error(j.message||'failed');
+    msg.className='msg ok';msg.textContent='Thank you! Your review has been sent. 🎉';f.reset();rating=5;paint()}
+  catch(err){msg.className='msg err';msg.textContent='Could not send it right now. You can ';const a=document.createElement('a');a.href='mailto:'+to+'?cc='+cc+'&subject='+encodeURIComponent(d._subject)+'&body='+encodeURIComponent(d.review+'\n\nRating: '+d.rating+'\nSimulator: '+d.simulator+'\nFrom: '+d.name+(d.email?' ('+d.email+')':''));a.textContent='send it by email instead';a.style.color='#ffd23a';msg.append(a,'.')}
+  btn.disabled=false}})();
+</script>
 </body></html>
